@@ -252,7 +252,7 @@ export function run() {
     ok('95% 以上且场上没有 COMPRESS -> 限时保底生成', comps.length >= 1,
        G.tokens.map((t) => t.type).join(','));
     ok('保底 COMPRESS 不会出现在玩家头顶',
-       comps.length > 0 && Math.abs(comps[0].x + 17 - (G.player.x + 20)) >= 60,
+       comps.length > 0 && Math.abs(comps[0].x + 17 - (G.player.x + G.playerW / 2)) >= 60,
        comps.length ? 'x=' + Math.round(comps[0].x) : 'none');
   }
   {

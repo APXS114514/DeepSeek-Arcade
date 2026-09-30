@@ -76,12 +76,10 @@
   var TOKEN_W = 34, TOKEN_H = 34;
   var HIT = { token: 5, compress: 5, noise: 6, think: 6 };   // 每种掉落物的判定内缩
 
-  var PLAYER_W = 40, PLAYER_H = 32;
-  var PLAYER_TOP = H - 46;
-  var PLAYER_EDGE = 6;
-  var PLAYER_HIT = { x: 6, y: 8 };     // 鲸鱼透明区域不计入碰撞
+  var PLAYER_EDGE = 6;                 // 左右留边
   var PLAYER_SPEED = 340;              // px/s
   var PLAYER_ACCEL = 2200;             // px/s²（平滑加减速，不做瞬移）
+  /* 鲸鱼的尺寸 / 站位 / 判定盒都由下面的字符画推导，见 WHALE_A */
 
   var SPEED_START = 95, SPEED_GROWTH = 2.1, SPEED_MAX = 230;      // px/s，约 64s 到顶
   var SPAWN_START = 1150, SPAWN_MIN = 520, SPAWN_DECAY = 11;      // 生成间隔 ms
@@ -104,28 +102,76 @@
     think: { body: '#ffd76a', hi: '#fff4cd', core: '#5c3b00', glow: '#ffe9a3', text: '#3f2f08' }
   };
 
-  /* 小鲸鱼：和游戏大厅卡片预览同一套字符画（DeepSeek logo 的像素化造型）。
-   * 两帧只让尾鳍上下摆一下，身体逐格对齐，所以判定盒完全不受影响。 */
+  /* ---------------- 小鲸鱼（和 Whale Runner 是同一只） ----------------
+   * DeepSeek 官方 logo 的那条 cubic 路径光栅化成 24×18 像素网格（镜像成朝右），
+   * 字符画与 Whale Runner 里的 WHALE_A / WHALE_B 完全一致：两帧只差尾鳍摆动，
+   * 身体逐格对齐，所以换帧不影响判定。
+   * X = 主色, o = 肚皮, . = 透明；想改造型直接改字符即可，尺寸会自动跟着走。 */
   var WHALE_A = [
-    'XX........',
-    '.XX.......',
-    '..XXXXXXXX',
-    '.XXXXXXXXX',
-    'XXXXXXXXeX',
-    'XXXXXXXXXX',
-    '.XXXXXXXX.',
-    '..XXXXXX..'
+    '.......X....X...........',
+    '......XX....XXXXXXXX....',
+    'XXX..XXX....XXXXXXXXX...',
+    'XXXXXXXX...XXXXXXXXXXX..',
+    '.XXXXXX...XXXXXXXXXXXXX.',
+    '..XXXX...XXXXXXXXXXXXXXX',
+    '....XX.XXXXXXXXXXXXXXXXX',
+    '....XXXXXXoXXXXXXoooooXX',
+    '....XXXXXoXXXXXXooooooXX',
+    '....XXXXooXXXXXoooooooXX',
+    '.....XXXXXXXXXooooooooXX',
+    '.....XXXXXXXXooooooooXXX',
+    '......XXXXXXXooooooooXX.',
+    '......XXXXXXoooXooooXXX.',
+    '.......XXXXooXXXoooXXX..',
+    '.....XXXXXooXXXXXXXXX...',
+    '......XX..XXXXXXXXXX....',
+    '...........XXXXXXX......'
   ];
   var WHALE_B = [
-    '.XX.......',
-    'XX........',
-    '..XXXXXXXX',
-    '.XXXXXXXXX',
-    'XXXXXXXXeX',
-    'XXXXXXXXXX',
-    '.XXXXXXXX.',
-    '..XXXXXX..'
+    '............X...........',
+    '.......X....XXXXXXXX....',
+    '......XX....XXXXXXXXX...',
+    'X....XXX...XXXXXXXXXXX..',
+    'XXXXXXXX..XXXXXXXXXXXXX.',
+    'XXXXXXX..XXXXXXXXXXXXXXX',
+    '.XXXXX..XXXXXXXXXXXXXXXX',
+    '...XXXXXXXoXXXXXXoooooXX',
+    '....XXXXXoXXXXXXooooooXX',
+    '....XXXXooXXXXXoooooooXX',
+    '....XXXXoXXXXXooooooooXX',
+    '.....XXXXXXXXooooooooXXX',
+    '.....XXXXXXXXooooooooXX.',
+    '......XXXXXXoooXooooXXX.',
+    '.......XXXXooXXXoooXXX..',
+    '......XXXXooXXXXXXXXX...',
+    '.....XXXXXXXXXXXXXXX....',
+    '...........XXXXXXX......'
   ];
+
+  /* 尺寸直接由字符画推导（改鲸鱼造型不用改这里） */
+  var SHEET_PX = 3;                              // 每个精灵格子在画布上的像素大小
+  var PLAYER_W = WHALE_A[0].length * SHEET_PX;   // 24 格 × 3 = 72px
+  var PLAYER_H = WHALE_A.length * SHEET_PX;      // 18 格 × 3 = 54px
+  var PLAYER_TOP = H - PLAYER_H - 6;             // 贴着画面底部，留 6px 海床
+
+  /* 判定盒用「精灵格子」表达：只取身体中段，
+   * 尾鳍和上下留白这些透明区域不算碰撞（和 Whale Runner 一个套路）。 */
+  var PLAYER_HIT_CELLS = { dx: 7, dy: 8, w: 10, h: 6 };
+  var PLAYER_HIT = {
+    x: PLAYER_HIT_CELLS.dx * SHEET_PX,
+    y: PLAYER_HIT_CELLS.dy * SHEET_PX,
+    w: PLAYER_HIT_CELLS.w * SHEET_PX,
+    h: PLAYER_HIT_CELLS.h * SHEET_PX
+  };
+
+  (function hitboxCheck() {
+    var inside = PLAYER_HIT.x >= 0 && PLAYER_HIT.y >= 0 &&
+      PLAYER_HIT.x + PLAYER_HIT.w <= PLAYER_W && PLAYER_HIT.y + PLAYER_HIT.h <= PLAYER_H;
+    if (!inside && window.console && window.console.warn) {
+      window.console.warn("[token-fall] 鲸鱼判定盒超出精灵范围，" +
+        "碰撞会变得莫名其妙（检查 PLAYER_HIT_CELLS 与 SHEET_PX）");
+    }
+  })();
 
   /* ================= 工具 ================= */
   function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
@@ -151,6 +197,8 @@
     tokens: [],
     particles: [],
     player: { x: 0, vx: 0, wobbleMs: 0 },
+    playerW: PLAYER_W,
+    playerH: PLAYER_H,
     elapsedMs: 0,
     thinkMs: 0,
     thinkCooldownMs: 0,
@@ -377,8 +425,8 @@
     return {
       x: game.player.x + PLAYER_HIT.x,
       y: PLAYER_TOP + PLAYER_HIT.y,
-      w: PLAYER_W - PLAYER_HIT.x * 2,
-      h: PLAYER_H - PLAYER_HIT.y * 2
+      w: PLAYER_HIT.w,
+      h: PLAYER_HIT.h
     };
   }
 
@@ -829,10 +877,10 @@
     }
 
     /* Context Buffer：鲸鱼背上的几个发光小槽，很轻，不挡画面 */
-    var slots = 8, cw = 6, gap = 2;
+    var slots = 8, cw = 5, gap = 3;
     var tw = slots * cw + (slots - 1) * gap;
     var bx = Math.round(x + PLAYER_W / 2 - tw / 2);
-    var by = y - 11;
+    var by = y - 12;
     var filled = Math.round(clamp(ratio, 0, 1) * slots);
     for (var i = 0; i < slots; i++) {
       ctx.globalAlpha = i < filled ? 0.55 : 0.16;
@@ -841,9 +889,19 @@
     }
     ctx.globalAlpha = 1;
 
-    /* 摆尾两帧，110ms 一换 */
+    /* 摆尾两帧，110ms 一换；X 主色 / o 肚皮（和 Whale Runner 同一套配色） */
     var frame = Math.floor(game.player.wobbleMs / 110) % 2 === 0 ? WHALE_A : WHALE_B;
-    drawSprite(frame, 4, x, y, { X: think ? '#8fc4ff' : '#4d6bfe', e: '#ffffff' });
+    var ink = { X: think ? '#93c8ff' : '#4d6bfe', o: think ? '#e3f1ff' : '#c9dcff' };
+    if (game.player.vx < -20) {
+      /* 往左游就把精灵镜像一下，头始终朝前 */
+      ctx.save();
+      ctx.translate(x + PLAYER_W, y);
+      ctx.scale(-1, 1);
+      drawSprite(frame, SHEET_PX, 0, 0, ink);
+      ctx.restore();
+    } else {
+      drawSprite(frame, SHEET_PX, x, y, ink);
+    }
   }
 
   function drawParticles() {

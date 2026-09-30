@@ -109,7 +109,8 @@ clone 下来双击 `index.html`，或用任意静态服务器打开就能玩。
   切走标签页自动暂停、回来不自动继续；时间差过大（切页回来）会被钳住，掉落物不会瞬移。
 - **最高分**：`arcade.tokenFall.high`；静音开关 `arcade.tokenFall.sound`（与另外两款完全分开）。
 
-> 同样零图片：小鲸鱼用的是大厅卡片那套字符画精灵（两帧摆尾），四类掉落物、背景数据粒子、网格、HUD、
+> 同样零图片：小鲸鱼和 Whale Runner 是同一只 —— 由 **DeepSeek 官方 logo 路径**光栅化出的 24×18 字符画精灵
+> （两帧摆尾，向左游时镜像；判定盒同样按精灵格子内缩，透明区域不算碰撞）。四类掉落物、背景数据粒子、网格、HUD、
 > 发光效果全部用 `fillRect` / `fillText` 画出来。音效用 `shared/audio.js` 现场合成
 > （TOKEN 短促提示音、COMPRESS 压缩下坠音、NOISE 错误音、THINK 上行音、Overflow 警告音、Game Over 音）。
 

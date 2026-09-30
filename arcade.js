@@ -26,16 +26,6 @@
   }
 
   /* ---------------- 卡片预览：纯代码像素画，不引用任何图片 ---------------- */
-  var WHALE = [
-    'XX........',
-    '.XX.......',
-    '..XXXXXXXX',
-    '.XXXXXXXXX',
-    'XXXXXXXXeX',
-    'XXXXXXXXXX',
-    '.XXXXXXXX.',
-    '..XXXXXX..'
-  ];
   var QMARK = [
     '.XXXX.',
     'XX..XX',
@@ -51,6 +41,29 @@
     'XXXXXXXX',
     'XXXXXXXX',
     '..X..X..'
+  ];
+
+  /* Token Fall 预览用的鲸鱼：和 Whale Runner / Token Fall 游戏里同一只
+   * （DeepSeek logo 光栅化出的 24×18 字符画，这里只取第一帧）。 */
+  var WHALE_LOGO = [
+    '.......X....X...........',
+    '......XX....XXXXXXXX....',
+    'XXX..XXX....XXXXXXXXX...',
+    'XXXXXXXX...XXXXXXXXXXX..',
+    '.XXXXXX...XXXXXXXXXXXXX.',
+    '..XXXX...XXXXXXXXXXXXXXX',
+    '....XX.XXXXXXXXXXXXXXXXX',
+    '....XXXXXXoXXXXXXoooooXX',
+    '....XXXXXoXXXXXXooooooXX',
+    '....XXXXooXXXXXoooooooXX',
+    '.....XXXXXXXXXooooooooXX',
+    '.....XXXXXXXXooooooooXXX',
+    '......XXXXXXXooooooooXX.',
+    '......XXXXXXoooXooooXXX.',
+    '.......XXXXooXXXoooXXX..',
+    '.....XXXXXooXXXXXXXXX...',
+    '......XX..XXXXXXXXXX....',
+    '...........XXXXXXX......'
   ];
 
   /* 预览图上的字也要跟着语言走（切语言时整个预览会重画一次） */
@@ -85,8 +98,8 @@
 
   function previewRunner(ctx, w, h) {
     seaBackground(ctx, w, h, '#08152c', '#2a4a86');
-    var px = 6;
-    pixels(ctx, WHALE, px, 24, h - 14 - 8 * px, { X: '#4d6bfe', e: '#ffffff' });
+    var px = 2;
+    pixels(ctx, WHALE_LOGO, px, 24, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
     pixels(ctx, URCHIN, 5, w - 78, h - 14 - 5 * 5, { X: '#8d6ce0' });
     pixels(ctx, URCHIN, 4, w - 44, h - 14 - 5 * 4, { X: '#e07a8e' });
   }
@@ -113,8 +126,8 @@
   /* TOKEN FALL：小鲸鱼 + 往下掉的 TOKEN / COMPRESS / NOISE */
   function previewTokenFall(ctx, w, h) {
     seaBackground(ctx, w, h, '#07132a', '#16305c');
-    var px = 4;
-    pixels(ctx, WHALE, px, 30, h - 14 - 8 * px, { X: '#4d6bfe', e: '#ffffff' });
+    var px = 2;
+    pixels(ctx, WHALE_LOGO, px, 30, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
     var items = [
       { x: 34, y: 22, color: '#4d6bfe', hi: '#a8c4ff', ch: 'T' },
       { x: 100, y: 12, color: '#2ee6ff', hi: '#d4fbff', ch: 'C' },
