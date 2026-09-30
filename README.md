@@ -14,6 +14,14 @@
 玩法规则、手感（重力、起跳、递增速度、随机障碍）都照着断网小恐龙那一套做的，
 只是把沙漠换成了海底。纯 **HTML + CSS + 原生 JavaScript (Canvas 2D)** 实现，**零依赖、零构建**，打开即玩。
 
+## 在线试玩
+
+**https://apxs114514.github.io/whale-runner/** —— 打开即玩，不用装任何东西。
+手机上建议横屏（画布宽度是竖屏的 2.2 倍），或者点右下角 `⛶ 全屏`。
+
+> 仓库根目录就是入口 `index.html`；推送到 `main` 后由
+> [`.github/workflows/pages.yml`](.github/workflows/pages.yml) 自动重新发布，无需手工操作。
+
 ## 运行方式
 
 任选一种：
