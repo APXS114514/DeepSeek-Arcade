@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>小鲸鱼跑酷 · DeepSeek Whale Runner</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <header class="head">
+      <h1 data-i18n="h1">🐳 小鲸鱼跑酷</h1>
+      <p class="sub" data-i18n="sub">空格 / ↑ 上浮跳跃　·　↓ 下潜　·　P 暂停　·　M 静音</p>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" aria-label="小鲸鱼跑酷游戏画面" data-i18n-aria="canvas.aria"></canvas>
+    </div>
+
+    <div class="controls">
+      <button id="jump" class="btn primary" type="button" data-i18n="btn.jump">跳跃</button>
+      <button id="duck" class="btn" type="button" data-i18n="btn.dive">下潜</button>
+      <button id="lang" class="btn ghost" type="button"
+              title="切换语言 / Switch language" aria-label="切换语言 / Switch language">🌐 English</button>
+      <button id="sound" class="btn ghost" type="button" aria-pressed="true">🔊 音效</button>
+      <button id="fullscreen" class="btn ghost touch-only" type="button">⛶ 全屏</button>
+    </div>
+    <p class="rotate-hint" data-i18n="canvas.rotateHint">↻ 把手机横过来，画面更大</p>
+
+    <footer class="tips" data-i18n-html="tips">
+      海床上的<b>海胆 · 珊瑚 · 低浮水母</b>要跳过去；中层垂着触手的<b>水母</b>和迎面游来的<b>小鱼</b>要下潜躲开。
+      游得越远速度越快，每 100 分响一声，每 700 分从浅海潜入深海。最高分存在本地浏览器里。
+    </footer>
+  </main>
+
+  <script src="i18n.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
