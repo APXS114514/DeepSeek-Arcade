@@ -1,0 +1,103 @@
+/* DeepSeek Arcade 大厅专属样式（外壳见 shared/arcade.css） */
+
+.hero { text-align: center; position: relative; margin: 4px 0 20px; }
+
+.brand {
+  margin: 0;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 5px;
+  color: var(--accent);
+  text-shadow: 3px 3px 0 rgba(77, 107, 254, 0.16);
+}
+
+.brand-underline {
+  width: 74px;
+  height: 4px;
+  margin: 10px auto 0;
+  background: var(--accent);
+  box-shadow: 12px 0 0 var(--accent), -12px 0 0 var(--accent);
+}
+
+.hero .sub { margin-top: 12px; }
+
+.hero-lang { position: absolute; top: 0; right: 0; }
+
+.games { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: 1fr; }
+
+.game {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  background: #fbfdff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+
+.game:not(.soon):hover { border-color: var(--accent); box-shadow: 0 8px 22px rgba(77, 107, 254, 0.14); }
+
+.thumb {
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--deep);
+  border: 1px solid #16305c;
+}
+
+.thumb canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+
+.name {
+  margin: 12px 0 4px;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 18px;
+  letter-spacing: 1.5px;
+}
+
+.desc { margin: 0; font-size: 13px; color: var(--muted); }
+
+.foot { margin-top: auto; padding-top: 14px; display: flex; align-items: flex-end; gap: 12px; }
+
+.hi { margin: 0; font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.hi b {
+  display: block;
+  margin-top: 2px;
+  font-family: "Courier New", ui-monospace, monospace;
+  font-size: 20px;
+  color: var(--accent);
+}
+
+.foot .play { margin-left: auto; min-width: 108px; }
+
+/* 敬请期待：明显不可玩，不给出 PLAY 按钮 */
+.game.soon { opacity: .6; }
+.game.soon .thumb canvas { filter: grayscale(.5); }
+.game.soon .name { color: var(--muted); }
+
+.badge {
+  display: inline-block;
+  align-self: flex-start;
+  margin-left: auto;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  background: #eef3fb;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.lobby-foot { margin: 18px 0 0; font-size: 12px; line-height: 1.7; color: var(--muted); text-align: center; }
+
+@media (min-width: 760px) {
+  .games { grid-template-columns: 1fr 1fr; gap: 16px; }
+}
+
+@media (max-width: 720px) {
+  .brand { font-size: 24px; letter-spacing: 3px; }
+  .brand-underline { width: 56px; margin-top: 8px; }
+  .hero { margin-bottom: 14px; }
+  .hero-lang { position: static; margin-top: 12px; }
+  .hero-lang .btn { width: 100%; }
+  .foot .play { min-width: 96px; }
+}

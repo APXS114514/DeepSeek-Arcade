@@ -1,5 +1,6 @@
 /* ============================================================
- * 多语言模块 i18n —— 中文 / English
+ * DeepSeek Arcade — 共享多语言模块 i18n（中文 / English）
+ * 全站只有这一份词典：大厅 / Whale Runner / Context Snake 共用。
  *
  * 用法：
  *   I18N.t('key')              取当前语言的文案
@@ -40,10 +41,49 @@
       'canvas.pausedHint': '按 P 继续',
       'canvas.over': 'G A M E   O V E R',
       'canvas.restart': '按 空格 / 点击画面 重新开始',
-      'hud.hi': 'HI'
+      'hud.hi': 'HI',
+
+      /* ---------- 游戏大厅 ---------- */
+      'lobby.title': 'DEEPSEEK ARCADE',
+      'lobby.sub': '一个 DeepSeek 同人小游戏合集。',
+      'lobby.hi': '最高分',
+      'lobby.play': '开始游戏',
+      'lobby.soon': '敬请期待',
+      'lobby.whale.name': 'WHALE RUNNER',
+      'lobby.whale.desc': '上浮 · 下潜 · 活下来',
+      'lobby.snake.name': 'CONTEXT SNAKE',
+      'lobby.snake.desc': '吃 TOKEN · 增长 Context',
+      'lobby.soon1.name': 'TOKEN FALL',
+      'lobby.soon1.desc': '掉落的 TOKEN，贪吃的小鲸鱼',
+      'lobby.soon2.name': 'ATTENTION MAZE',
+      'lobby.soon2.desc': '在上下文里找一条路',
+      'lobby.footer': '非官方同人作品，与 DeepSeek 官方无关联。',
+      'lobby.aria': 'DeepSeek Arcade 游戏大厅',
+
+      /* ---------- 全站共用控件 ---------- */
+      'ui.back': '← 返回游戏厅',
+
+      /* ---------- Context Snake ---------- */
+      'snake.title': 'Context 贪吃蛇 · DeepSeek Arcade',
+      'snake.h1': '🐳 Context 贪吃蛇',
+      'snake.sub': '方向键 / WASD 控制　·　吃 TOKEN 增长 Context　·　P 暂停',
+      'snake.aria': 'Context Snake 游戏画面',
+      'snake.ctx': 'CONTEXT',
+      'snake.think': 'DEEP THINK',
+      'snake.ready': '按 方向键 / 滑动屏幕 开始',
+      'snake.hint': '方向键 · WASD · 滑动或十字键',
+      'snake.paused': '已暂停',
+      'snake.pausedHint': '按 P 继续',
+      'snake.over': 'G A M E   O V E R',
+      'snake.restart': '按 空格 / 点击画面 重新开始',
+      'snake.ariaUp': '向上',
+      'snake.ariaDown': '向下',
+      'snake.ariaLeft': '向左',
+      'snake.ariaRight': '向右',
+      'snake.tips': '经典贪吃蛇玩法：吃 <b>TOKEN</b> 让 Context 变长，别撞墙也别咬到自己。低概率出现的 <b>THINK</b> 会进入 4 秒 <b>DEEP THINK</b> —— 速度变慢并泛蓝光。最高分存在本地浏览器里。'
     },
     en: {
-      'app.title': 'Whale Runner · DeepSeek Whale',
+      'app.title': 'Whale Runner · DeepSeek Arcade',
       'h1': '🐳 Whale Runner',
       'sub': 'Space / ↑ jump　·　↓ dive　·　P pause　·　M mute',
       'btn.jump': 'Jump',
@@ -63,16 +103,56 @@
       'canvas.pausedHint': 'Press P to resume',
       'canvas.over': 'G A M E   O V E R',
       'canvas.restart': 'Press Space / tap to restart',
-      'hud.hi': 'HI'
+      'hud.hi': 'HI',
+
+      'lobby.title': 'DEEPSEEK ARCADE',
+      'lobby.sub': 'A tiny collection of DeepSeek-inspired games.',
+      'lobby.hi': 'HIGH SCORE',
+      'lobby.play': 'PLAY',
+      'lobby.soon': 'COMING SOON',
+      'lobby.whale.name': 'WHALE RUNNER',
+      'lobby.whale.desc': 'Jump · Dive · Survive',
+      'lobby.snake.name': 'CONTEXT SNAKE',
+      'lobby.snake.desc': 'Eat tokens · Grow context',
+      'lobby.soon1.name': 'TOKEN FALL',
+      'lobby.soon1.desc': 'Falling tokens, one greedy whale',
+      'lobby.soon2.name': 'ATTENTION MAZE',
+      'lobby.soon2.desc': 'Find a path through the context',
+      'lobby.footer': 'Unofficial fan project — not affiliated with DeepSeek.',
+      'lobby.aria': 'DeepSeek Arcade game lobby',
+
+      'ui.back': '← Back to Arcade',
+
+      'snake.title': 'Context Snake · DeepSeek Arcade',
+      'snake.h1': '🐳 Context Snake',
+      'snake.sub': 'Arrows / WASD　·　eat TOKENs to grow your Context　·　P pause',
+      'snake.aria': 'Context Snake game canvas',
+      'snake.ctx': 'CONTEXT',
+      'snake.think': 'DEEP THINK',
+      'snake.ready': 'Press an arrow key / swipe to start',
+      'snake.hint': 'Arrows · WASD · swipe or D-pad',
+      'snake.paused': 'PAUSED',
+      'snake.pausedHint': 'Press P to resume',
+      'snake.over': 'G A M E   O V E R',
+      'snake.restart': 'Press Space / tap to restart',
+      'snake.ariaUp': 'Up',
+      'snake.ariaDown': 'Down',
+      'snake.ariaLeft': 'Left',
+      'snake.ariaRight': 'Right',
+      'snake.tips': 'Classic snake: eat <b>TOKEN</b>s to grow your Context, and avoid the walls and your own trail. A rare <b>THINK</b> drops you into 4 seconds of <b>DEEP THINK</b> — slower pace, blue glow. Your best score is saved in this browser.'
     }
   };
 
-  var STORAGE_KEY = 'whaleRunner.lang';
+  var STORAGE_KEY = 'arcade.lang';
+  var LEGACY_KEY = 'whaleRunner.lang';   // 旧版单游戏时代的键：读到就沿用，不丢用户已有选择
   var DEFAULT_LANG = 'zh';
   var listeners = [];
 
   function readSaved() {
-    try { return global.localStorage ? global.localStorage.getItem(STORAGE_KEY) : null; } catch (e) { return null; }
+    try {
+      if (!global.localStorage) return null;
+      return global.localStorage.getItem(STORAGE_KEY) || global.localStorage.getItem(LEGACY_KEY);
+    } catch (e) { return null; }
   }
   function save(lang) {
     try { if (global.localStorage) global.localStorage.setItem(STORAGE_KEY, lang); } catch (e) { /* 隐私模式忽略 */ }
@@ -114,7 +194,7 @@
     if (doc.documentElement && doc.documentElement.setAttribute) {
       doc.documentElement.setAttribute('lang', current === 'zh' ? 'zh-CN' : 'en');
     }
-    doc.title = t('app.title');
+    // <title> 也带 data-i18n，所以不用为每个页面写单独的标题逻辑
     each('[data-i18n]', function (el) { el.textContent = t(el.getAttribute('data-i18n')); });
     each('[data-i18n-html]', function (el) { el.innerHTML = t(el.getAttribute('data-i18n-html')); });
     each('[data-i18n-aria]', function (el) { el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria'))); });

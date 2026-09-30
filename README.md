@@ -1,162 +1,179 @@
-# 小鲸鱼跑酷 (DeepSeek Whale Runner)
+# DeepSeek Arcade
 
-这是一个**仿造 Chrome 断网小恐龙（Chrome Dino）的网页跑酷小游戏** —— 就是断网时那只小恐龙：
+一个 **DeepSeek 同人小游戏合集**（非官方）—— 从最初那只「仿 Chrome 断网小恐龙」的小鲸鱼跑酷，
+长成了一个带游戏大厅的小 Arcade。
+
+> **在线试玩：<https://apxs114514.github.io/whale-runner/>**
+> 首页是游戏大厅，选一款开始；每个游戏页左上角都有 **← 返回游戏厅**。
+
+全部是纯 **HTML + CSS + 原生 JavaScript（Canvas 2D）**：**零依赖、零构建、零图片**。
+clone 下来双击 `index.html`，或用任意静态服务器打开就能玩。
+
+## 收录的游戏
+
+| 游戏 | 一句话 | 状态 |
+| --- | --- | --- |
+| 🐳 **Whale Runner** | 跑酷：上浮 / 下潜躲开海洋生物 | ✅ 可玩 |
+| 🐳 **Context Snake** | 贪吃蛇：吃 TOKEN 让 CONTEXT 变长 | ✅ 可玩 |
+| TOKEN FALL | 占位卡片 | 🔜 敬请期待 |
+| ATTENTION MAZE | 占位卡片 | 🔜 敬请期待 |
+
+---
+
+## 🐳 Whale Runner — `games/runner/`
+
+玩法就是 Chrome 断网小恐龙那一套，把沙漠换成了海底：
 
 | Chrome 断网小恐龙 | 这个版本 |
 | --- | --- |
 | 小恐龙 | **DeepSeek 小鲸鱼**（造型取自官方 logo） |
 | 仙人掌 | 海床上的 **海胆 / 珊瑚 / 低浮水母** |
-| 翼龙（低飞 / 中空） | **小鱼**（低飞，跳过去）/ **中空水母**（触手垂到头顶，下潜躲开） |
+| 翼龙（低飞 / 中空） | **小鱼**（跳过去）/ **中空水母**（下潜躲开） |
 | 跳跃 / 下蹲 | 上浮跳跃 / 下潜 |
 | 昼夜黑白反转 | 浅海 ⇄ 深海（颜色渐变 + 发光浮游生物） |
 | 分数 + 最高分 | 一样，另加音效、中英双语、手机适配 |
 
-玩法规则、手感（重力、起跳、递增速度、随机障碍）都照着断网小恐龙那一套做的，
-只是把沙漠换成了海底。纯 **HTML + CSS + 原生 JavaScript (Canvas 2D)** 实现，**零依赖、零构建**，打开即玩。
+**操作**：`空格` / `↑` / `W` 上浮跳跃（点画面也行）· `↓` / `S` 下潜（空中按 = 加速下坠）·
+`P` 暂停 · `M` 静音 · 触屏：跳跃 / 下潜按钮、`🌐` 切换语言、`⛶` 全屏（仅触屏显示）
 
-## 在线试玩
+**规则**：撞到任何海洋生物即结束；游得越远速度越快；每 100 分提示音一响，每 700 分浅海 ⇄ 深海。
+最高分存在 `localStorage: whaleRunner.high`。
 
-**https://apxs114514.github.io/whale-runner/** —— 打开即玩，不用装任何东西。
-手机上建议横屏（画布宽度是竖屏的 2.2 倍），或者点右下角 `⛶ 全屏`。
+### 小鲸鱼的来历
 
-> 仓库根目录就是入口 `index.html`；推送到 `main` 后由
-> [`.github/workflows/pages.yml`](.github/workflows/pages.yml) 自动重新发布，无需手工操作。
+不是随手画的像素图，而是把 **DeepSeek 官方 logo 的那条 cubic 路径**光栅化来的：
+
+- **本体**：路径渲染成 24×18 像素网格（镜像成朝右），所以游戏里的鲸鱼和浏览器标签页上的图标是同一个形状。
+- **摆尾两帧** `WHALE_A` / `WHALE_B`：尾鳍在 logo 里和主体轮廓属于同一条子路径、没法单独旋转，
+  于是对整条路径做**沿 x 的平滑剪切**（身体处位移为 0，越靠尾鳍越大）后重新光栅化，两帧身体位置逐格对齐。
+- **下潜两帧** `WHALE_DIVE_A` / `WHALE_DIVE_B`：整条路径纵向压扁到 0.72（24×13 的滑行姿态），再叠加同样的尾鳍剪切。
+
+### 值得知道的技术点
+
+- `PX` 是**整个世界缩放的总开关**：画布、重力/初速/速度、判定盒、字号都跟着 `S = PX/3` 走，
+  所以把 `PX` 从 3 改成 2 或 4 是等比放大缩小，玩法不变（测试里有 2/3/4 三档回归）。
+- 判定盒用「精灵格子 × PX」表达（`BOX` / `MID_BOTTOM` / `LOW_BOTTOM`），三者的咬合关系是
+  `下潜盒上沿 11 格 < 中层障碍盒下沿 13 格 < 站立盒上沿 16 格`；**启动时会自检**，破了会在控制台告警。
+
+---
+
+## 🐳 Context Snake — `games/snake/`
+
+经典贪吃蛇，蓝色像素海域。你是一只小鲸鱼头，吃 **TOKEN** 让身后的 **CONTEXT** 越来越长。
+
+- **TOKEN**：发光蓝色像素方块。吃一个 → 身体 +1 节、`CONTEXT +8`。
+- **THINK**（低概率特殊物品）：吃到进入 **4 秒 DEEP THINK** —— 每格耗时 ×1.7（明显但克制的减速），
+  场地泛蓝光、HUD 出现倒计时条。吃过 3 个 TOKEN 之后才有机会出现，两次之间至少隔 26 格，不会刷屏。
+- **速度**：起始每格 150ms，每吃一个 TOKEN 快 4ms，**封顶 72ms**（第 20 个 TOKEN 到顶），越玩越紧但不失控。
+- **禁止 180° 反向**：输入用长度 2 的队列，并且拿"最后一个已排队方向"做校验 ——
+  所以快速连按（右→上→左）也不会出现非法掉头。
+- **结束条件**：撞墙或咬到自己。
+- **操作**：`方向键` / `WASD` · 触屏**十字键**与**画布滑动**都支持 · 点画面 = 开始 / 暂停 / 重开 · `P` 暂停 · `M` 静音
+- **最高分**：`arcade.snake.high`（与 Whale Runner 的 `whaleRunner.high` 完全分开，互不覆盖）
+
+> 视觉全部由代码绘制：鲸鱼头是一个 8×8 字符画精灵（按方向旋转 90° 整数倍），
+> 身体是发光像素块（越靠尾越暗越细），TOKEN / THINK / 网格 / 粒子都是 `fillRect` 拼的，没有任何图片。
+
+---
+
+## 目录结构
+
+```
+.
+├── index.html                  游戏大厅（GitHub Pages 首页）
+├── arcade.css / arcade.js      大厅样式与脚本（最高分展示、卡片预览像素画）
+├── shared/                     真正共用的部分
+│   ├── arcade.css              设计变量 + 页面外壳（body/卡片/按钮/返回入口）
+│   ├── i18n.js                 全站唯一词典（中 / 英）+ 语言检测与切换
+│   └── audio.js                WebAudio 音效工具（Context Snake 用）
+├── games/
+│   ├── runner/                 小鲸鱼跑酷：index.html / style.css / game.js
+│   └── snake/                  Context Snake：index.html / style.css / game.js
+├── test/                       无头回归测试（桩 DOM + 桩 Canvas，不需要浏览器）
+│   ├── run.mjs / run.sh        一条命令跑全部：bash test/run.sh
+│   ├── helpers.mjs             测试环境（按页面装配 DOM）
+│   ├── collision.test.mjs      Whale Runner 碰撞模型 + 缩放不变性
+│   ├── snake.test.mjs          Context Snake 玩法规则
+│   ├── i18n.test.mjs           三个页面的中英切换 + 词典完整性
+│   ├── smoke.test.mjs          Whale Runner 冒烟 + AI 长跑可玩性
+│   └── paths.test.mjs          死链 / 绝对路径 / localStorage key 冲突
+├── .github/workflows/pages.yml GitHub Pages 自动部署
+└── README.md
+```
 
 ## 运行方式
 
 任选一种：
 
-1. **直接双击** `index.html`（无需服务器）。
-2. 本地起一个静态服务器（推荐，行为与线上一致）：
-
+1. **直接双击** `index.html`（无需服务器）
+2. 本地静态服务器（行为与线上一致）：
    ```bash
-   cd Game
    python3 -m http.server 8080
-   # 然后打开 http://localhost:8080
+   # 打开 http://localhost:8080/
    ```
 
-## 操作
-
-| 操作 | 键盘 | 触屏 / 鼠标 |
-| --- | --- | --- |
-| 开始 / 重新开始 | `空格` 或 `↑` | 点击画面 |
-| 上浮跳跃 | `空格` / `↑` / `W` | 「跳跃」按钮 |
-| 下潜（空中按 = 加速下坠） | `↓` / `S` | 「下潜」按钮 |
-| 暂停 / 继续 | `P` | 点击画面 |
-| 开关音效 | `M` | 「音效」按钮 |
-| 切换语言 | —— | 底部 `🌐` 按钮 |
-| 全屏（手机横屏时画面最大） | —— | `⛶ 全屏` 按钮（仅触屏显示） |
-
-## 多语言（中 / 英）
-
-点右下角的 **🌐 按钮**即可在中英文之间切换，页面文案和画布上的提示会**立刻**跟着变。
-
-- 词典与切换逻辑都在 `i18n.js` 里，**所有文案只有这一处来源**；`game.js` 只通过 `I18N.t('key')` 取值。
-- HTML 里给元素加属性就会自动翻译，不用写一行 JS：
-  ```html
-  <h1 data-i18n="h1">…</h1>            <!-- 写 textContent -->
-  <footer data-i18n-html="tips">…</footer>  <!-- 文案里带 <b> 等标签时用 -->
-  <canvas data-i18n-aria="canvas.aria">…</canvas>  <!-- 写 aria-label -->
-  ```
-- 画布上的文字（开场提示、暂停、GAME OVER、HI 分数）每帧都会重新取名，所以切换后下一帧就生效。
-- 语言优先级：**上次选择（localStorage `whaleRunner.lang`）> 浏览器语言 > 中文**。
-- 想加第三种语言：在 `i18n.js` 的 `DICT` 里加一份词表，再把 `supported` 和切换顺序补上即可。
-
-## 小鲸鱼的来历
-
-小鲸鱼的造型不是随手画的：它直接取自 **DeepSeek 官方 logo 的那条 cubic 路径**，
-光栅化成 24×18 的像素网格（镜像成朝右）。所以游戏里的鲸鱼和浏览器标签页上的 DeepSeek 图标是同一个形状。
-
-- **摆尾两帧** `WHALE_A` / `WHALE_B`：尾鳍在 logo 里和主体轮廓属于同一条子路径，没法单独旋转，
-  所以改成对整条路径做**沿 x 的平滑剪切**（身体处位移为 0，越靠尾鳍越大）后重新光栅化 ——
-  `WHALE_A` 是原姿，`WHALE_B` 是尾鳍下摆，两帧身体位置完全一致，只动尾巴。
-- **下潜两帧** `WHALE_DIVE_A` / `WHALE_DIVE_B`：把整条路径纵向压扁到 0.72 倍，得到 24×13 的滑行姿态，
-  再叠加同样的尾鳍剪切 —— 所以下潜是一套**专门的两帧动画**（滑行 + 摆尾），而不是"把游泳姿态往下沉"。
-  高度刻意与旧版保持一致（13 行），判定盒几何不用动。
-
-> 想换成别的鲸鱼/方块，直接改 `game.js` 里的 `WHALE_A` / `WHALE_B` / `WHALE_DIVE_A` / `WHALE_DIVE_B` 字符画就行，
-> 判定盒是按字符画尺寸推导的，改了宽高要同步看 `BOX`。
-
-## 玩法
-
-- **跳过去**：海床上的海胆、珊瑚，以及贴着海床漂浮的水母。
-- **潜下去**：悬浮在头顶高度的水母（触手垂到头顶）和迎面游来的小鱼。
-- 撞到任何海洋生物就结束；游得越久速度越快。
-- 每 100 分提示音一响；每 700 分**浅海 ⇄ 深海**颜色渐变交替（深海会有发光浮游生物）。
-- 分数实时显示在右上角，最高分保存在浏览器 `localStorage`（键名 `whaleRunner.high`）。
-
-## 手机适配
-
-- **竖屏**：去掉卡片留白、画布占满宽度；主操作按钮（跳跃 / 下潜）拉满一行、最小高度 48px；
-  禁用下拉刷新（`overscroll-behavior: none`），画布上 `touch-action: none`，玩的时候不会误滚页面。
-- **横屏**：`@media (max-height: 520px) and (orientation: landscape)` 收掉标题与说明，把纵向空间全给画布。
-  这是观感提升最大的一档 —— 同一台手机横屏时画布宽度约为竖屏的 2.2 倍
-  （实测：390×844 竖屏画布 368×82，844×390 横屏 784×174）。
-- **横屏提示**：触屏且竖屏时，画布下方显示「↻ 把手机横过来，画面更大」。
-- **全屏按钮**：只在触屏设备出现（`@media (hover: none), (pointer: coarse)`），点击进入全屏并尝试
-  `screen.orientation.lock('landscape')`；不支持的环境（桌面、iOS 锁不了方向）静默跳过，不影响游戏。
-- 画布加了 `image-rendering: pixelated`，被 CSS 放大时保持像素硬边。
-
-> 竖屏下画布是"宽度受限"的：鲸鱼相对屏幕的大小由**逻辑世界宽度（900px）**决定，
-> 等比放大画布并不会让鲸鱼变大，所以竖屏的正解是「提示横屏 + 全屏」，而不是硬缩放任一维度。
-
-## 文件结构
-
-```
-Game/
-├── index.html   页面结构（画布 + 按钮 + data-i18n 标记）
-├── style.css    页面样式（卡片式布局，响应式）
-├── i18n.js      多语言模块：中英词典、语言检测、点击切换
-├── game.js      游戏逻辑：精灵、物理、碰撞、渲染、音效
-├── test/        无头回归测试（桩 DOM + 桩 Canvas，不依赖浏览器）
-│   ├── run.mjs           跑全部测试：node test/run.mjs
-│   ├── run.sh            同上，会自动找 node（含 DSH 自带运行时）
-│   ├── helpers.mjs       测试环境
-│   ├── collision.test.mjs 碰撞模型 + 多 PX 缩放不变性
-│   ├── i18n.test.mjs     中英切换 / 持久化 / 语言检测
-│   └── smoke.test.mjs    冒烟 + 判定盒几何自检 + AI 长跑可玩性
-└── README.md    本说明
-```
+> 所有资源都走**相对路径**，所以放在 `/` 根目录或 `/whale-runner/` 之类的子路径下都能正常工作
+> （测试里的 `paths.test.mjs` 会静态校验这一点）。
 
 ## 测试
 
-改完数值或造型后，跑一条命令就能回归（需要 Node 18+，本机没装也可以用 DSH 自带的运行时）：
-
 ```bash
-bash test/run.sh          # 等价于 node test/run.mjs
+bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```
 
-覆盖 74 项，重点锁住三件事：
+目前 **198 项**，五个套件：
 
-1. **碰撞模型**：海胆/珊瑚/低浮水母必须跳过去；中空水母和小鱼必须下潜；并且在 **PX=2 / 3 / 4** 三种缩放下都成立
-   （这条就是防止"改个缩放把某个机制悄悄改坏"）。
-2. **判定盒几何自检**：`game.js` 启动时会校验 `下潜盒上沿 < 中层障碍盒下沿 < 站立盒上沿`，
-   测试里在 PX=2/3/4/5 下确认没有告警。在浏览器控制台里也能看到这条 `console.warn`。
-3. **可玩性**：一个只会"该跳就跳、该潜就潜"的 AI 连跑 20000 帧必须零死亡并顶到最高速。
+| 套件 | 覆盖 |
+| --- | --- |
+| Whale Runner · 碰撞 | 跳/潜 vs 四类海洋生物，且在 **PX=2/3/4** 三档缩放下都成立 |
+| Context Snake · 玩法 | 移动、禁止反向（含快速连按）、吃 TOKEN 增长、撞墙、撞自身、最高分、速度上限、THINK 触发与结束、触屏输入、离开页面停循环 |
+| 多语言 | 三个页面的中英切换与持久化、旧的 `whaleRunner.lang` 兼容、**全站词典 key 一一对应且无遗漏** |
+| Whale Runner · 冒烟 | 生命周期、暂停/静音/隐藏、判定盒几何自检、AI 连跑 20000 帧零死亡 |
+| 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、两个游戏的 localStorage key 不冲突 |
+
+## 跨游戏约定
+
+| 项 | 说明 |
+| --- | --- |
+| 语言 | `arcade.lang`（`zh`/`en`）；**兼容读取旧的 `whaleRunner.lang`**，老用户的选择不会丢 |
+| Whale Runner 最高分 | `whaleRunner.high`（沿用原 key，历史成绩保留） |
+| Context Snake 最高分 | `arcade.snake.high` |
+| 音效开关 | Whale Runner：`whaleRunner.sound`；Context Snake：`arcade.snake.sound` |
+| 文案 | **只在 `shared/i18n.js` 里维护一份**，页面用 `data-i18n` 属性或 `I18N.t('key')` 取值 |
+| 音效 | Whale Runner 保留自己那套 `beep()`（三段包络专门调过，不动它），新游戏用 `shared/audio.js` |
+| 导航 | 普通 HTML 页面跳转（没有 SPA 路由框架），浏览器返回键正常工作 |
+
+## 手机适配
+
+- **窄屏（≤720px）**：去掉卡片留白、画布占满宽度；按钮最小 48px 高；
+  禁用下拉刷新（`overscroll-behavior: none`），画布上 `touch-action: none`，玩的时候不会误滚页面。
+- **横屏（高度 ≤560px）**：收起标题与说明，把纵向空间让给舞台。
+  Whale Runner 会提示「↻ 把手机横过来」并提供 `⛶ 全屏`（顺带尝试锁定横屏）；
+  Context Snake 则按高度缩放画布、把十字键压成一行，保证「画布 + 操作盘」一屏放得下、不用滚动。
+- **实测（真机尺寸模拟）**：同一台手机跑酷画布竖屏 368×82 → 横屏 784×174（宽 2.2 倍）；
+  贪吃蛇横屏为 339×240 且十字键与按钮都在首屏内。
+- **触屏输入**：跑酷是跳跃 / 下潜按钮；贪吃蛇是十字键 **+** 画布滑动（阈值 22px，小拖动按点击处理，不会误触转向）。
+- 画布都设了 `image-rendering: pixelated`，被 CSS 放大时保持像素硬边；DPR 上限 3，避免高倍屏过度绘制。
 
 ## 想改点什么
 
-游戏本体都集中在 `game.js` 顶部的几组常量和精灵图里：
+- **Whale Runner 难度**：`START_SPEED` / `MAX_SPEED` / `ACCEL`；**手感**：`GRAVITY` / `JUMP_V` / `FAST_FALL`。
+- **Whale Runner 外形**：`WHALE_A` / `WHALE_B` / `WHALE_DIVE_A` / `WHALE_DIVE_B` / `URCHIN` / `CORAL` / `JELLY_*` / `FISH_*`
+  都是字符画（`X` 主色、`o` 肚皮、`.` 透明），直接改字符即可。
+- **Whale Runner 配色**：`PAL` 每项是 `[浅海 RGB, 深海 RGB]`；注意 `PAL.belly` 的深海值刻意贴近 `PAL.whale`（太亮会在暗海里变成白斑）。
+- **Context Snake 手感**：`BASE_STEP_MS`（起始速度）/ `STEP_DEC`（每个 TOKEN 提速）/ `MIN_STEP_MS`（速度上限）/
+  `THINK_MS` / `THINK_SLOW` / `THINK_CHANCE` / `THINK_COOLDOWN` / `CTX_PER_TOKEN`。
+- **文案**：加到 `shared/i18n.js` 的 `DICT.zh` / `DICT.en`（key 必须两边都有，测试会检查），HTML 用 `data-i18n`。
+- 改完跑一次 `bash test/run.sh`。
 
-- **难度**：`START_SPEED`（初速）、`MAX_SPEED`（最高速）、`ACCEL`（加速度）。
-- **手感**：`GRAVITY`（重力）、`JUMP_V`（上浮初速，越负跳得越高）、`FAST_FALL`（下潜加速倍率）。
-- **外形**：`WHALE_A` / `WHALE_B`（摆尾两帧，各 24×18）、`WHALE_DIVE_A` / `WHALE_DIVE_B`（下潜两帧，各 24×13）、
-  `URCHIN`（海胆）、`CORAL`（珊瑚）、`JELLY_A` / `JELLY_B`（水母两帧）、`FISH_A` / `FISH_B`（小鱼两帧）
-  都是字符画像素图：`X` 主色、`o` 肚皮（浅色）、`.` 透明。
-  直接改字符即可改造型；尺寸由 `PX`（单像素边长）统一缩放，精灵宽高自动推导。
-  **`PX` 同时是整个世界缩放的总开关**：画布尺寸、重力/初速/速度、判定盒、字号都跟着 `S = PX/3` 走，
-  所以把 `PX` 从 3 改成 2 或 4 是等比放大缩小，玩法不变（测试里有 2/3/4 三档回归）。
-  摆尾动画就是 `WHALE_A` / `WHALE_B` 两帧交替（`frameTimer` 累积速度，超过 52×S 换帧）。
-- **配色**：`PAL` 里每项是 `[浅海 RGB, 深海 RGB]`，中间按 `nightMix` 插值；想换小鲸鱼颜色改 `PAL.whale`。
-  注意 `PAL.belly` 的深海值刻意贴近 `PAL.whale`：深海背景很暗，肚皮一旦偏亮就会变成一块刺眼白斑。
-- **出现概率**：`spawnObstacle()` 决定生成哪种海洋生物，改里面的阈值即可。
-- **文案**：别在 `game.js` 里写死，统一加到 `i18n.js` 的 `DICT.zh` / `DICT.en`，再用 `I18N.t('key')` 取。
-- **碰撞判定**：`BOX`（站立/下潜判定盒与障碍内缩，单位是**精灵格子**）和 `MID_BOTTOM` / `LOW_BOTTOM`
-  （中层与低浮生物离海床的高度，同样按格子算）。它们互相咬合：`下潜盒上沿 11 格 < 中层障碍盒下沿 13 格 < 站立盒上沿 16 格`，
-  所以中层的水母/小鱼能贴着头顶滑过去。改任何一个都要重跑测试。
+## 部署
+
+推送到 `main` 就自动发布：`.github/workflows/pages.yml` 用 `actions/configure-pages` +
+`upload-pages-artifact` + `deploy-pages`，把仓库根目录作为静态站点发布到
+<https://apxs114514.github.io/whale-runner/>。仓库根目录的 `index.html` 就是大厅首页。
 
 ## 说明
 
-- 非官方作品，纯属学习与娱乐；玩法致敬 Chrome 断网小恐龙，小鲸鱼造型来自 **DeepSeek 官方 logo**，
-  相关商标与图形版权归各自所有者。
-- 代码零依赖、无构建，可以随便拿去改成别的角色。
+- **非官方同人作品**，与 DeepSeek 官方无关联；玩法致敬 Chrome 断网小恐龙。
+- 小鲸鱼造型来自 **DeepSeek 官方 logo**，相关商标与图形版权归各自所有者。
+- 代码零依赖、无构建，可以随便拿去改成别的角色或加新游戏。

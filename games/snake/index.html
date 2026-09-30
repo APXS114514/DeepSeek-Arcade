@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title data-i18n="snake.title">Context 贪吃蛇 · DeepSeek Arcade</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234d6bfe'/%3E%3Cpath d='M7 18c2 4 8 6 12 3 3-2 3-5 6-7-2 0-3 1-4 0-1-4-6-6-9-4-3 1-6 5-5 8z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../shared/arcade.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <p class="back-row"><a class="arcade-back" href="../../" data-i18n="ui.back">← 返回游戏厅</a></p>
+    <header class="head">
+      <h1 data-i18n="snake.h1">🐳 Context 贪吃蛇</h1>
+      <p class="sub" data-i18n="snake.sub">方向键 / WASD 控制　·　吃 TOKEN 增长 Context　·　P 暂停</p>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" aria-label="Context Snake 游戏画面" data-i18n-aria="snake.aria"></canvas>
+    </div>
+
+    <div class="pad">
+      <button id="up" class="btn" type="button" aria-label="向上" data-i18n-aria="snake.ariaUp">↑</button>
+      <button id="left" class="btn" type="button" aria-label="向左" data-i18n-aria="snake.ariaLeft">←</button>
+      <button id="down" class="btn" type="button" aria-label="向下" data-i18n-aria="snake.ariaDown">↓</button>
+      <button id="right" class="btn" type="button" aria-label="向右" data-i18n-aria="snake.ariaRight">→</button>
+    </div>
+
+    <div class="controls">
+      <button id="lang" class="btn ghost" type="button"
+              title="切换语言 / Switch language" aria-label="切换语言 / Switch language">🌐 English</button>
+      <button id="sound" class="btn ghost" type="button" aria-pressed="true">🔊 音效</button>
+    </div>
+
+    <footer class="tips" data-i18n-html="snake.tips">
+      经典贪吃蛇玩法：吃 <b>TOKEN</b> 让 Context 变长，别撞墙也别咬到自己。
+      低概率出现的 <b>THINK</b> 会进入 4 秒 <b>DEEP THINK</b> —— 速度变慢并泛蓝光。最高分存在本地浏览器里。
+    </footer>
+  </main>
+
+  <script src="../../shared/i18n.js"></script>
+  <script src="../../shared/audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

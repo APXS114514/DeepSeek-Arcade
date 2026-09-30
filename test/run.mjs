@@ -1,9 +1,17 @@
 /* 一条命令跑完所有测试：  node test/run.mjs   （或 bash test/run.sh） */
 import * as collision from './collision.test.mjs';
+import * as snake from './snake.test.mjs';
 import * as i18n from './i18n.test.mjs';
 import * as smoke from './smoke.test.mjs';
+import * as paths from './paths.test.mjs';
 
-const suites = [['碰撞模型 / 缩放不变性', collision], ['多语言', i18n], ['冒烟 + 可玩性', smoke]];
+const suites = [
+  ['Whale Runner · 碰撞模型 / 缩放不变性', collision],
+  ['Context Snake · 玩法与规则', snake],
+  ['多语言（三个页面）', i18n],
+  ['Whale Runner · 冒烟 + 可玩性', smoke],
+  ['静态检查 · 路径与存储键', paths],
+];
 let total = 0, fail = 0;
 for (const s of suites) {
   const results = s[1].run();

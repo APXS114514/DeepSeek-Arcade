@@ -1,0 +1,78 @@
+/* Context Snake 专属样式（外壳见 ../../shared/arcade.css） */
+
+.stage {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--deep);
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  touch-action: none;                    /* 滑动操作时不要滚动页面 */
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* 触屏十字键：上行居中，下行左/下/右 */
+.pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 240px;
+  margin: 12px auto 0;
+}
+
+#up { grid-column: 2; grid-row: 1; }
+#left { grid-column: 1; grid-row: 2; }
+#down { grid-column: 2; grid-row: 2; }
+#right { grid-column: 3; grid-row: 2; }
+
+.pad .btn {
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+@media (max-width: 720px) {
+  .pad { max-width: 100%; }
+  .pad .btn { min-height: 56px; }
+}
+
+/* 手机横屏：屏幕矮，直接把画布高度按住（宽高比自动保持），
+ * 十字键也改成单行，保证「画布 + 操作盘」一屏放得下、不用滚动。 */
+@media (max-height: 560px) and (orientation: landscape) {
+  body { align-items: stretch; padding: 8px 12px; }
+  .card { padding: 8px 12px; }
+  .stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: -moz-fit-content;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  #game {
+    height: calc(100vh - 150px);
+    height: calc(100dvh - 150px);
+    width: auto;
+    max-width: 100%;
+  }
+  .pad {
+    display: flex;
+    grid-template-columns: none;
+    gap: 6px;
+    max-width: none;
+    margin: 8px auto 0;
+  }
+  .pad .btn { flex: 1 1 0; min-height: 38px; font-size: 16px; }
+  .controls { margin-top: 8px; }
+  .controls .btn { min-height: 34px; font-size: 13px; padding: 4px 12px; }
+}

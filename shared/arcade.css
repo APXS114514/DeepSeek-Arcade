@@ -1,3 +1,9 @@
+/* ============================================================
+ * DeepSeek Arcade — 全站共享样式
+ * 设计变量 + 页面外壳（body / 卡片 / 按钮 / 提示）+「返回游戏厅」入口。
+ * 各页面只写自己特有的部分（舞台、画布、操作盘…）。
+ * ============================================================ */
+
 :root {
   --page-bg: #e8f2fb;
   --card-bg: #ffffff;
@@ -5,6 +11,9 @@
   --muted: #6b8299;
   --line: #d8e4ef;
   --accent: #4d6bfe;
+  --accent-dark: #3d5be8;
+  --deep: #08152c;          /* 深海蓝：贪吃蛇场地与大厅深色块 */
+  --deep-2: #0e2148;
   --shadow: 0 12px 34px rgba(20, 55, 100, 0.13);
 }
 
@@ -18,8 +27,7 @@ html, body {
 
 body {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: center;      /* 纵向靠 .card 的 margin:auto 安全居中（内容超高时不裁顶部） */
   padding: 24px 16px 40px;
   background: radial-gradient(1200px 620px at 50% -10%, #ffffff 0%, var(--page-bg) 62%);
   color: var(--text);
@@ -30,6 +38,7 @@ body {
 .card {
   width: 100%;
   max-width: 960px;
+  margin: auto;
   background: var(--card-bg);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -42,25 +51,6 @@ body {
 h1 { margin: 0; font-size: 20px; letter-spacing: 0.03em; }
 
 .sub { margin: 0; font-size: 13px; color: var(--muted); }
-
-.stage {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: #e2f3ff;
-}
-
-#game {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* 画布被 CSS 放大时保住像素硬边（改 PX 做整体缩放时尤其明显） */
-  image-rendering: pixelated;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-}
 
 .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
 
@@ -75,6 +65,8 @@ h1 { margin: 0; font-size: 20px; letter-spacing: 0.03em; }
   border: 1px solid var(--line);
   border-radius: 10px;
   cursor: pointer;
+  text-align: center;
+  text-decoration: none;
   transition: transform .06s ease, background .15s ease, border-color .15s ease;
   user-select: none;
   -webkit-user-select: none;
@@ -84,38 +76,52 @@ h1 { margin: 0; font-size: 20px; letter-spacing: 0.03em; }
 .btn:active { transform: translateY(1px); }
 
 .btn.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
-.btn.primary:hover { background: #3d5be8; }
+.btn.primary:hover { background: var(--accent-dark); }
 
 .btn.ghost { margin-left: auto; color: var(--muted); }
 
 .tips { margin: 14px 2px 0; font-size: 12.5px; line-height: 1.75; color: var(--muted); }
 .tips b { color: #46618a; font-weight: 600; }
 
-/* ---------------- 手机适配 ---------------- */
+/* 「← 返回游戏厅」：明显但不抢戏 */
+.back-row { margin: 0 0 12px; }
 
-/* 只在触屏上出现的控件（全屏按钮 / 横屏提示），桌面保持干净 */
+.arcade-back {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+  text-decoration: none;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transition: color .15s ease, border-color .15s ease, background .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.arcade-back:hover,
+.arcade-back:focus-visible { color: var(--accent); border-color: var(--accent); background: #f4f8ff; }
+.arcade-back:active { transform: translateY(1px); }
+
+/* 只在触屏上出现的控件（全屏按钮等） */
 .touch-only { display: none; }
-.rotate-hint { display: none; margin: 10px 2px 0; font-size: 12.5px; color: var(--muted); text-align: center; }
 
 @media (hover: none), (pointer: coarse) {
   .btn.touch-only { display: inline-block; }
 }
 
-@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
-  .rotate-hint { display: block; }
-}
-
-/* 窄屏：去掉卡片留白，让画布占满宽度；按钮做成好按的大目标 */
+/* ---------------- 窄屏：去掉卡片留白，按钮变成好按的大目标 ---------------- */
 @media (max-width: 720px) {
   body {
     padding: 0;
-    align-items: stretch;
     overscroll-behavior: none;          /* 玩的时候别触发下拉刷新 */
   }
   .card {
     max-width: 100%;
+    margin: 0;
     min-height: 100vh;
-    min-height: 100dvh;                  /* 手机浏览器地址栏收缩时不留白 */
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -130,15 +136,16 @@ h1 { margin: 0; font-size: 20px; letter-spacing: 0.03em; }
   .controls { gap: 8px; margin-top: 12px; }
   .btn { min-height: 48px; font-size: 16px; padding: 10px 14px; min-width: 0; }
   .btn.ghost { margin-left: 0; }
-  #jump, #duck { flex: 1 1 40%; }        /* 两个主操作按钮占满一行 */
-  #game { touch-action: none; }          /* 点画布不滚动页面、不缩放 */
+  .back-row { margin-bottom: 10px; }
   .tips { font-size: 12px; line-height: 1.6; }
 }
 
-/* 手机横屏：纵向空间全给画布，标题和说明都收起来 */
-@media (max-height: 520px) and (orientation: landscape) {
-  .head, .tips, .rotate-hint { display: none; }
+/* ---------------- 手机横屏：把纵向空间尽量让给舞台 ---------------- */
+@media (max-height: 560px) and (orientation: landscape) {
+  .head, .tips { display: none; }
   .card { justify-content: center; padding: 8px 12px; }
   .controls { margin-top: 8px; }
   .btn { min-height: 40px; font-size: 15px; }
+  .back-row { margin-bottom: 6px; }
+  .arcade-back { padding: 4px 10px; font-size: 12px; }
 }

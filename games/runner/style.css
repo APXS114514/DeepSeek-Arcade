@@ -1,0 +1,37 @@
+/* Whale Runner 专属样式。
+ * 设计变量与页面外壳（body/卡片/按钮/提示/返回入口）都在 ../../shared/arcade.css。 */
+
+.stage {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #e2f3ff;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* 画布被 CSS 放大时保住像素硬边（改 PX 做整体缩放时尤其明显） */
+  image-rendering: pixelated;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* 触屏竖屏时提示横屏（横屏画布宽度是竖屏的 2 倍多） */
+.rotate-hint { display: none; margin: 10px 2px 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  .rotate-hint { display: block; }
+}
+
+@media (max-width: 720px) {
+  #jump, #duck { flex: 1 1 40%; }        /* 两个主操作按钮占满一行 */
+  #game { touch-action: none; }          /* 点画布不滚动页面、不缩放 */
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .rotate-hint { display: none; }
+}
