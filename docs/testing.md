@@ -3,6 +3,8 @@
 四款游戏共用一个无头测试环境：**桩 DOM + 桩 Canvas**，直接在 Node 里把真实的 `game.js` 跑起来，
 不需要浏览器、不需要任何 npm 依赖。
 
+**中文** · [English](testing.en.md)
+
 ```bash
 bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```

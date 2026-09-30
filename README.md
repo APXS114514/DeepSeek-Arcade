@@ -3,6 +3,8 @@
 **四款 DeepSeek-inspired 像素小游戏合集**（非官方同人）：Whale Runner · Context Snake · Token Fall · Attention Maze。
 纯 HTML + CSS + 原生 JavaScript（Canvas 2D）——**零依赖、零构建、零图片、零后端**。
 
+**中文** · [English](README.en.md)
+
 > **在线试玩：<https://apxs114514.github.io/DeepSeek-Arcade/>**
 > 首页是游戏大厅，选一款开始；每个游戏页左上角都有 **← 返回游戏厅**。
 
@@ -68,12 +70,16 @@ CI 里跑的就是这一条命令：测试不过，Pages 不会部署（见 `.gi
 │   ├── token-fall/                       Token Fall
 │   └── attention-maze/                   Attention Maze（levels.js 关卡数据 + game.js 引擎）
 ├── test/                                 无头测试（桩 DOM + 桩 Canvas）
-├── docs/                                 architecture.md · testing.md
+├── docs/                                 architecture.md · testing.md（各有 .en.md 英文版）
 ├── LICENSE                               MIT（代码）
+├── README.md / README.en.md              项目说明（中文 / English）
 └── .github/workflows/pages.yml           先测试、再部署 GitHub Pages
 ```
 
 ## 文档
+
+中文 · English：`README.md` / `README.en.md`，`docs/architecture.md` / `docs/architecture.en.md`，
+`docs/testing.md` / `docs/testing.en.md`（每篇顶部都有语言切换链接）。
 
 - [docs/architecture.md](docs/architecture.md) — shared 设计、加载顺序、Canvas 与 DPR、localStorage 约定、
   手机适配、调参入口，以及四款游戏各自的实现细节（小鲸鱼的来历、判定盒、Q/K/V、MULTI-HEAD、关卡数据结构）。

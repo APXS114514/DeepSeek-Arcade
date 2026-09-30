@@ -216,6 +216,27 @@ export function run() {
     ok('README 链接到 docs（文件都存在）',
       fs.existsSync(path.join(ROOT, 'docs/architecture.md')) && fs.existsSync(path.join(ROOT, 'docs/testing.md')) &&
       readme.indexOf('docs/architecture.md') !== -1 && readme.indexOf('docs/testing.md') !== -1);
+    /* 英文版（README.en.md + docs/*.en.md）：同一套事实、双向语言链接 */
+    const readmeEnPath = path.join(ROOT, 'README.en.md');
+    ok('README.en.md 存在', fs.existsSync(readmeEnPath));
+    const readmeEn = source('README.en.md');
+    ok('英文 README 与中文版一一对应（四款游戏都在）',
+      ['Whale Runner', 'Context Snake', 'Token Fall', 'Attention Maze'].every((n) => readmeEn.indexOf(n) !== -1));
+    ok('英文 README 在线地址正确', readmeEn.indexOf('https://apxs114514.github.io/DeepSeek-Arcade/') !== -1);
+    ok('英文 README 也说明 MIT 与非官方',
+      readmeEn.indexOf('MIT License') !== -1 && /unofficial fan project/i.test(readmeEn) &&
+      /NOT covered by the MIT license/i.test(readmeEn));
+    ok('英文 README 没有过时描述', !/coming soon|third game|only two games/i.test(readmeEn));
+    ok('中英 README 互相链接',
+      readme.indexOf('README.en.md') !== -1 && readmeEn.indexOf('README.md') !== -1);
+    ok('英文 README 链接到英文 docs',
+      readmeEn.indexOf('docs/architecture.en.md') !== -1 && readmeEn.indexOf('docs/testing.en.md') !== -1);
+    for (const [zhDoc, enDoc] of [['docs/architecture.md', 'docs/architecture.en.md'], ['docs/testing.md', 'docs/testing.en.md']]) {
+      ok(enDoc + ' 存在', fs.existsSync(path.join(ROOT, enDoc)));
+      ok(zhDoc + ' 顶部链接到英文版', source(zhDoc).indexOf(enDoc.split('/').pop()) !== -1);
+      ok(enDoc + ' 顶部链接回中文版', source(enDoc).indexOf(zhDoc.split('/').pop()) !== -1);
+    }
+
     ok('README 说明 MIT 与非官方关系',
       readme.indexOf('MIT License') !== -1 && readme.indexOf('非官方') !== -1 &&
       /不包含在 MIT 授权内/.test(readme));

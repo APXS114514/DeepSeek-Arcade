@@ -3,6 +3,8 @@
 这份文档放 DeepSeek Arcade 的内部实现说明。想快速上手请看 [README](../README.md)，
 想了解测试请看 [docs/testing.md](testing.md)。
 
+**中文** · [English](architecture.en.md)
+
 ## 设计原则
 
 - **零依赖、零构建、零图片**：四款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D），
@@ -243,35 +245,38 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 > 零图片：迷宫、俯视小鲸鱼（对字符画做 90° 整数旋转出上下左右四个朝向）、Q/K/V 节点、注意力连线
 > （自己画的像素线，粗细 = 权重）、遮罩、HUD 全部 `fillRect`；音效用 `shared/audio.js` 现场合成，音量很克制。
 
----
-
 ## 目录结构（完整）
 
-```
+```text
 .
-├── index.html                  游戏大厅（GitHub Pages 首页）
-├── arcade.css / arcade.js      大厅样式与脚本（最高分展示、卡片预览像素画）
-├── shared/                     真正共用的部分
-│   ├── arcade.css              设计变量 + 页面外壳（body/卡片/按钮/返回入口）
-│   ├── i18n.js                 全站唯一词典（中 / 英）+ 语言检测与切换
-│   └── audio.js                WebAudio 音效工具（Context Snake / Token Fall 用）
+├── index.html / arcade.css / arcade.js   游戏大厅（GitHub Pages 首页）
+├── shared/                               真正共用的部分
+│   ├── i18n.js                           中英词典 + 语言切换
+│   ├── audio.js                          Web Audio 音色 + 全站统一 Sound 开关
+│   ├── whale.js                          DeepSeek 小鲸鱼像素素材（唯一一份）
+│   └── arcade.css                        设计变量 + 页面外壳（body / 卡片 / 按钮 / 返回入口）
 ├── games/
-│   ├── runner/                 小鲸鱼跑酷：index.html / style.css / game.js
-│   ├── snake/                  Context Snake：index.html / style.css / game.js
-│   ├── token-fall/             Token Fall：index.html / style.css / game.js
-│   └── attention-maze/         Attention Maze：index.html / style.css / game.js
-├── test/                       无头回归测试（桩 DOM + 桩 Canvas，不需要浏览器）
-│   ├── run.mjs / run.sh        一条命令跑全部：bash test/run.sh
-│   ├── helpers.mjs             测试环境（按页面装配 DOM）
-│   ├── collision.test.mjs      Whale Runner 碰撞模型 + 缩放不变性
-│   ├── snake.test.mjs          Context Snake 玩法规则
-│   ├── tokenfall.test.mjs      Token Fall 玩法、Overflow 抢救、暂停与触屏
-│   ├── attentionmaze.test.mjs  Attention Maze 关卡可解性、Q/K/V、MULTI-HEAD、进度星级
-│   ├── i18n.test.mjs           五个页面的中英切换 + 词典完整性
-│   ├── smoke.test.mjs          Whale Runner 冒烟 + AI 长跑可玩性
-│   └── paths.test.mjs          死链 / 绝对路径 / localStorage key 冲突
-├── .github/workflows/pages.yml GitHub Pages 自动部署
-└── README.md
+│   ├── runner/                           Whale Runner：index.html / style.css / game.js
+│   ├── snake/                            Context Snake：index.html / style.css / game.js
+│   ├── token-fall/                       Token Fall：index.html / style.css / game.js
+│   └── attention-maze/                   Attention Maze：index.html / style.css / levels.js + game.js
+├── test/                                 无头回归测试（桩 DOM + 桩 Canvas，不需要浏览器）
+│   ├── run.mjs / run.sh                  一条命令跑全部：bash test/run.sh
+│   ├── helpers.mjs                       测试环境（按页面装配 DOM）
+│   ├── collision.test.mjs                Whale Runner 碰撞模型 + 缩放不变性
+│   ├── smoke.test.mjs                    Whale Runner 冒烟 + AI 长跑可玩性
+│   ├── snake.test.mjs                    Context Snake 玩法规则
+│   ├── tokenfall.test.mjs                Token Fall 玩法、Overflow 抢救、暂停与触屏
+│   ├── attentionmaze.test.mjs            12 关可解性、Q/K/V、MULTI-HEAD、进度星级
+│   ├── engineering.test.mjs              v1.0 结构：CI、统一音效、共享素材、关卡拆分
+│   ├── i18n.test.mjs                     五个页面的中英切换 + 词典完整性
+│   └── paths.test.mjs                    死链 / 绝对路径 / localStorage key 冲突
+├── docs/                                 architecture.md · testing.md（各有 .en.md 英文版）
+├── LICENSE                               MIT（代码）
+├── README.md / README.en.md              项目说明（中文 / English）
+└── .github/workflows/pages.yml           先测试、再部署 GitHub Pages
 ```
+
+> 注：`docs/` 是文档，`test/` 是无头测试，两者都不参与线上页面，但会随 Pages 一起发布（体积很小）。
 
 > 注：`docs/` 是文档，`test/` 是无头测试，两者都不参与线上页面，但会随 Pages 一起发布（体积很小）。
