@@ -67,6 +67,30 @@ const PAGES = {
       { attrs: { 'data-i18n-html': 'tokenfall.tips' } },
     ],
   },
+  attentionmaze: {
+    scripts: ['games/attention-maze/game.js'],
+    elements: [
+      { tag: 'title', attrs: { 'data-i18n': 'maze.title' } },
+      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { attrs: { 'data-i18n': 'maze.h1' } },
+      { attrs: { 'data-i18n': 'maze.sub' } },
+      { id: 'game', attrs: { 'data-i18n-aria': 'maze.aria' } },
+      { id: 'pad' },
+      { id: 'up', attrs: { 'data-i18n-aria': 'maze.ariaUp' } },
+      { id: 'down', attrs: { 'data-i18n-aria': 'maze.ariaDown' } },
+      { id: 'left', attrs: { 'data-i18n-aria': 'maze.ariaLeft' } },
+      { id: 'right', attrs: { 'data-i18n-aria': 'maze.ariaRight' } },
+      { id: 'playbar' },
+      { id: 'pause' },
+      { id: 'rescan' },
+      { id: 'restart', attrs: { 'data-i18n': 'maze.restartBtn' } },
+      { id: 'menu', attrs: { 'data-i18n': 'maze.menuBtn' } },
+      { id: 'reset' },
+      { id: 'lang' },
+      { id: 'sound' },
+      { attrs: { 'data-i18n-html': 'maze.tips' } },
+    ],
+  },
   lobby: {
     scripts: ['arcade.js'],
     elements: [
@@ -80,8 +104,11 @@ const PAGES = {
       { attrs: { 'data-i18n': 'lobby.snake.desc' } },
       { attrs: { 'data-i18n': 'lobby.tokenfall.name' } },
       { attrs: { 'data-i18n': 'lobby.tokenfall.desc' } },
-      { attrs: { 'data-i18n': 'lobby.soon2.name' } },
-      { attrs: { 'data-i18n': 'lobby.soon' } },
+      { attrs: { 'data-i18n': 'lobby.maze.name' } },
+      { attrs: { 'data-i18n': 'lobby.maze.desc' } },
+      { attrs: { 'data-i18n': 'lobby.bestLayer' } },
+      { attrs: { 'data-i18n': 'lobby.more' } },
+      { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
@@ -89,10 +116,11 @@ const PAGES = {
       { attrs: { 'data-highscore': 'runner' } },
       { attrs: { 'data-highscore': 'snake' } },
       { attrs: { 'data-highscore': 'tokenFall' } },
+      { attrs: { 'data-highscore': 'maze' } },
       { id: 'preview-runner', tag: 'canvas' },
       { id: 'preview-snake', tag: 'canvas' },
       { id: 'preview-tokenfall', tag: 'canvas' },
-      { id: 'preview-soon2', tag: 'canvas' },
+      { id: 'preview-maze', tag: 'canvas' },
     ],
   },
 };
@@ -211,7 +239,7 @@ export function harness(opts) {
   vm.runInContext(source(SHARED_I18N), sandbox, { filename: SHARED_I18N });
   for (const s of page.scripts) {
     let code = source(s);
-    if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall') code = patchGame(code);
+    if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall' || pageName === 'attentionmaze') code = patchGame(code);
     vm.runInContext(code, sandbox, { filename: s });
   }
 

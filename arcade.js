@@ -9,8 +9,22 @@
   var HIGH_KEYS = {
     runner: 'whaleRunner.high',          // Whale Runner 沿用原有 key，不动它的历史最高分
     snake: 'arcade.snake.high',          // Context Snake 独立 key
-    tokenFall: 'arcade.tokenFall.high'   // Token Fall 独立 key，三者互不覆盖
+    tokenFall: 'arcade.tokenFall.high'   // Token Fall 独立 key，四者互不覆盖
   };
+  /* Attention Maze 没有传统高分，首页显示“最高解锁到第几层” */
+  var MAZE_PROGRESS_KEY = 'arcade.attentionMaze.progress';
+  var MAZE_LAYERS = 12;
+
+  function readMazeLayer() {
+    try {
+      var raw = localStorage.getItem(MAZE_PROGRESS_KEY);
+      if (!raw) return 0;
+      var data = JSON.parse(raw);
+      var u = parseInt(data && data.unlocked, 10);
+      if (!isFinite(u) || u < 1) return 0;
+      return Math.max(1, Math.min(MAZE_LAYERS, u));
+    } catch (e) { return 0; }
+  }
 
   function readInt(key) {
     try { return parseInt(localStorage.getItem(key) || '0', 10) || 0; } catch (e) { return 0; }
@@ -20,21 +34,19 @@
     var nodes = document.querySelectorAll('[data-highscore]');
     for (var i = 0; i < nodes.length; i++) {
       var which = nodes[i].getAttribute('data-highscore');
+      if (which === 'maze') {
+        var layer = readMazeLayer();
+        nodes[i].textContent = layer > 0
+          ? (layer < 10 ? '0' : '') + layer + ' / ' + MAZE_LAYERS
+          : '—';
+        continue;
+      }
       var v = readInt(HIGH_KEYS[which] || '');
       nodes[i].textContent = v > 0 ? String(v) : '—';
     }
   }
 
   /* ---------------- 卡片预览：纯代码像素画，不引用任何图片 ---------------- */
-  var QMARK = [
-    '.XXXX.',
-    'XX..XX',
-    '....XX',
-    '..XXX.',
-    '..XX..',
-    '......',
-    '..XX..'
-  ];
   var URCHIN = [
     '..X..X..',
     'XXXXXXXX',
@@ -165,11 +177,56 @@
     ctx.fillText(ctxLabel() + ' 768/1024', 6, 4);
   }
 
-  function previewSoon(ctx, w, h) {
-    seaBackground(ctx, w, h, '#08152c', '#16305c');
-    ctx.globalAlpha = 0.5;
-    pixels(ctx, QMARK, 8, Math.round(w / 2 - 3 * 8), Math.round(h / 2 - 3.5 * 8), { X: '#6f8fc8' });
-    ctx.globalAlpha = 1;
+  /* ATTENTION MAZE：小鲸鱼 + QUERY/KEY 注意力连线（粗细亮度不同）+ 出口 */
+  function previewMaze(ctx, w, h) {
+    seaBackground(ctx, w, h, '#07102a', '#16305c');
+    var walls = [[12, 26, 30, 9], [54, 26, 26, 9], [12, 50, 26, 9], [92, 52, 34, 9], [12, 78, 44, 9], [104, 26, 30, 9]];
+    for (var i = 0; i < walls.length; i++) {
+      ctx.fillStyle = '#152542';
+      ctx.fillRect(walls[i][0], walls[i][1], walls[i][2], walls[i][3]);
+      ctx.fillStyle = '#1d3157';
+      ctx.fillRect(walls[i][0], walls[i][1], walls[i][2], 2);
+    }
+    /* QUERY -> KEY 的注意力连线：低权重细而暗，最高权重粗且带亮点 */
+    var q = [46, 68];
+    var ks = [[104, 44, 0.31], [150, 70, 0.88], [84, 98, 0.52]];
+    for (var j = 0; j < ks.length; j++) {
+      var k = ks[j];
+      var size = k[2] >= 0.8 ? 3 : (k[2] >= 0.5 ? 2 : 1);
+      ctx.fillStyle = k[2] >= 0.75 ? '#bff0ff' : '#4fa8d8';
+      ctx.globalAlpha = 0.25 + 0.6 * k[2];
+      for (var s = 0; s <= 24; s += 2) {
+        ctx.fillRect(Math.round(q[0] + (k[0] - q[0]) * s / 24), Math.round(q[1] + (k[1] - q[1]) * s / 24), size, size);
+      }
+      ctx.globalAlpha = 1;
+      if (j === 1) {
+        for (var b = 1; b <= 3; b++) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(Math.round(q[0] + (k[0] - q[0]) * b / 4) - 1, Math.round(q[1] + (k[1] - q[1]) * b / 4) - 1, 3, 3);
+        }
+      }
+      ctx.fillStyle = j === 1 ? '#9ff0d8' : '#28c8d8';
+      ctx.fillRect(k[0] - 7, k[1] - 7, 14, 14);
+      ctx.fillStyle = j === 1 ? '#053a2c' : '#04303f';
+      ctx.font = 'bold 10px "Courier New", ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('K', k[0], k[1] + 1);
+    }
+    ctx.fillStyle = '#4d6bfe';
+    ctx.fillRect(q[0] - 7, q[1] - 7, 14, 14);
+    ctx.fillStyle = '#cfe0ff';
+    ctx.font = 'bold 10px "Courier New", ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Q', q[0], q[1] + 1);
+    /* 出口 */
+    ctx.fillStyle = '#3ddc84';
+    ctx.fillRect(176, 30, 16, 16);
+    ctx.fillStyle = '#07240f';
+    ctx.fillRect(181, 34, 6, 8);
+    /* 小鲸鱼（和其他卡片同一只） */
+    pixels(ctx, WHALE_LOGO, 2, 152, h - 14 - 18 * 2, { X: '#4d6bfe', o: '#c9dcff' });
   }
 
   function setup(id, draw) {
@@ -191,7 +248,7 @@
     setup('preview-runner', previewRunner);
     setup('preview-snake', previewSnake);
     setup('preview-tokenfall', previewTokenFall);
-    setup('preview-soon2', previewSoon);
+    setup('preview-maze', previewMaze);
   }
 
   paintHighScores();

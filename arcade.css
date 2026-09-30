@@ -36,7 +36,7 @@
   transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
 
-.game:not(.soon):hover { border-color: var(--accent); box-shadow: 0 8px 22px rgba(77, 107, 254, 0.14); }
+.game:hover { border-color: var(--accent); box-shadow: 0 8px 22px rgba(77, 107, 254, 0.14); }
 
 .thumb {
   border-radius: 10px;
@@ -69,22 +69,14 @@
 
 .foot .play { margin-left: auto; min-width: 108px; }
 
-/* 敬请期待：明显不可玩，不给出 PLAY 按钮 */
-.game.soon { opacity: .6; }
-.game.soon .thumb canvas { filter: grayscale(.5); }
-.game.soon .name { color: var(--muted); }
 
-.badge {
-  display: inline-block;
-  align-self: flex-start;
-  margin-left: auto;
-  padding: 3px 9px;
-  font-size: 10.5px;
-  letter-spacing: 1.2px;
+/* 四款游戏之后的那句“以后再说”，不做成假卡片 */
+.more-note {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 1px;
   color: var(--muted);
-  background: #eef3fb;
-  border: 1px solid var(--line);
-  border-radius: 999px;
 }
 
 .lobby-foot { margin: 18px 0 0; font-size: 12px; line-height: 1.7; color: var(--muted); text-align: center; }

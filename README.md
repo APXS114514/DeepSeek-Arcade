@@ -1,7 +1,7 @@
 # DeepSeek Arcade
 
 一个 **DeepSeek 同人小游戏合集**（非官方）—— 从最初那只「仿 Chrome 断网小恐龙」的小鲸鱼跑酷，
-长成了一个带游戏大厅的小 Arcade。
+长成了一个带游戏大厅、四款小游戏（跑酷 / 贪吃蛇 / 接物 / 记忆解谜）的 Arcade。
 
 > **在线试玩：<https://apxs114514.github.io/DeepSeek-Arcade/>**
 > 首页是游戏大厅，选一款开始；每个游戏页左上角都有 **← 返回游戏厅**。
@@ -16,7 +16,7 @@ clone 下来双击 `index.html`，或用任意静态服务器打开就能玩。
 | 🐳 **Whale Runner** | 跑酷：上浮 / 下潜躲开海洋生物 | ✅ 可玩 |
 | 🐳 **Context Snake** | 贪吃蛇：吃 TOKEN 让 CONTEXT 变长 | ✅ 可玩 |
 | 🐳 **Token Fall** | 接物：接住 Token · 管理上下文 | ✅ 可玩 |
-| ATTENTION MAZE | 占位卡片 | 🔜 敬请期待 |
+| 🐳 **Attention Maze** | 解谜：记住路径 · 聚焦关键 · 找到出口 | ✅ 可玩 |
 
 ---
 
@@ -116,6 +116,45 @@ clone 下来双击 `index.html`，或用任意静态服务器打开就能玩。
 
 ---
 
+## 🐳 Attention Maze — `games/attention-maze/`
+
+以 **Transformer Attention** 为灵感的像素迷宫解谜（不懂机器学习也能玩，规则全靠关卡内视觉提示教会你）。
+每关叫一个 **LAYER**，一共 12 关，全部手工设计；核心循环是：
+
+**ATTENTION SCAN（看清整张图）→ FOCUS MODE（只剩身边一圈）→ 记住 → 走到 EXIT**
+
+- **ATTENTION SCAN**：每关开始整张迷宫亮 2~3 秒，出口、QUERY、KEY、VALUE 一览无余；扫描期间不能移动，
+  就是让你记。之后进入 **FOCUS MODE**：只有**曼哈顿距离 2~3 格**的注意力窗口是亮的（窗口边界会描出来），
+  远处被深蓝遮罩盖住（不是纯黑），走过的格子留一点很暗的残影 —— 后期关卡视野收到 2 格、扫描缩到 1.7 秒。
+- **QUERY / KEY / VALUE**：踩到 `Q` 会亮起它到每个 `K` 的**注意力连线与权重数字**（约 1.8 秒后消失）。
+  低权重线又细又暗，高权重线更粗更亮，**最高权重那条还会多几个亮点**、数字也最亮 —— 不只靠颜色区分。
+  权重是**关卡数据里写死的**，同一局、重开同一关都完全一致，绝不随机。
+  走对权重最高的 KEY → **ATTENTION MATCHED**；走错只记 1 次 **MISTAKE** 并提示 **LOW ATTENTION**（同一个错 KEY 只记一次），
+  不会 Game Over —— 这是解谜，不是惩罚。找对 KEY 才解锁 `V`，拿到 VALUE 才解锁 **EXIT**。
+- **MULTI-HEAD ATTENTION**（LAYER 09~12）：踩到 QUERY 后先亮 **HEAD 1**、再亮 **HEAD 2**，两个头关注的 KEY 不一样，
+  两轮都看完只给一句 **「综合两个注意力头」** 的提示（不给答案），**两个头加起来最高**的那个 KEY 才对。
+  两个头用不同线型区分（HEAD 1 实线、HEAD 2 点状像素线），不是只靠颜色。
+- **12 个 LAYER 的机制递进**：01 扫描找出口 → 02 更长的蛇形长廊 → 03 岔路与梳齿 → 04 第一次 QUERY/两个 KEY →
+  05 三个 KEY + 权重 → 06 完整的 QUERY→KEY→VALUE→EXIT → 07 更绕的迷宫 + 视野收到 2 格 → 08 扫描时间砍到 1.7 秒 →
+  09 第一次 MULTI-HEAD → 10 MULTI-HEAD + VALUE → 11 两个头各自最高的都不是答案 → 12 **FINAL ATTENTION**（全部机制一起上）。
+  每关都是**一定可解**的：测试里用 BFS 逐个验证 起点→QUERY→正确 KEY→VALUE→EXIT 全程连通。
+- **没有死亡**：走错 KEY、绕远、忘记路线只影响 TIME / MOVES / MISTAKES；只有你自己点 **RESTART** 才会重开本关。
+- **RESCAN**：每关可以主动重看一次整张地图（教学关 2 次，中后期 1 次，HUD 显示 `RESCAN 1`）。
+  用了不算 MISTAKE，但**本关最高只能拿 2 星** —— 卡住不用重开，想三星就得真记住。
+- **星级与进度**：到达 EXIT 就算过关，1 星不是失败。时间和步数都在 par 内且 0 MISTAKE、没用 RESCAN = **3 星**；
+  基本达标 = 2 星；其余 = 1 星。每关的最佳星级 / 时间 / 步数都存本地，完成一关解锁下一关，
+  主界面是 12 个格子的 **Layer Select**（未解锁显示锁），可以随时重玩已解锁的关卡。
+- **操作**：`方向键` / `WASD` 走格子（按住会连着走，但一帧最多一格）· 手机**十字方向键**（按住持续移动，
+  松手/滑出/被系统打断都会立刻停）· 画布滑动也能走一格（辅助）· `P` 暂停 · `R` RESCAN · `M` 静音。
+- **暂停**：扫描倒计时、注意力展示倒计时、MULTI-HEAD 展示、LAYER 计时、动画时钟全部冻结；切走标签页自动暂停，
+  回来不会自动继续。
+- **进度**：`arcade.attentionMaze.progress`（JSON：最高解锁层 + 每关最佳星级/时间/步数，存档损坏会自动回退默认值）。
+
+> 零图片：迷宫、俯视小鲸鱼（对字符画做 90° 整数旋转出上下左右四个朝向）、Q/K/V 节点、注意力连线
+> （自己画的像素线，粗细 = 权重）、遮罩、HUD 全部 `fillRect`；音效用 `shared/audio.js` 现场合成，音量很克制。
+
+---
+
 ## 目录结构
 
 ```
@@ -129,14 +168,16 @@ clone 下来双击 `index.html`，或用任意静态服务器打开就能玩。
 ├── games/
 │   ├── runner/                 小鲸鱼跑酷：index.html / style.css / game.js
 │   ├── snake/                  Context Snake：index.html / style.css / game.js
-│   └── token-fall/             Token Fall：index.html / style.css / game.js
+│   ├── token-fall/             Token Fall：index.html / style.css / game.js
+│   └── attention-maze/         Attention Maze：index.html / style.css / game.js
 ├── test/                       无头回归测试（桩 DOM + 桩 Canvas，不需要浏览器）
 │   ├── run.mjs / run.sh        一条命令跑全部：bash test/run.sh
 │   ├── helpers.mjs             测试环境（按页面装配 DOM）
 │   ├── collision.test.mjs      Whale Runner 碰撞模型 + 缩放不变性
 │   ├── snake.test.mjs          Context Snake 玩法规则
 │   ├── tokenfall.test.mjs      Token Fall 玩法、Overflow 抢救、暂停与触屏
-│   ├── i18n.test.mjs           四个页面的中英切换 + 词典完整性
+│   ├── attentionmaze.test.mjs  Attention Maze 关卡可解性、Q/K/V、MULTI-HEAD、进度星级
+│   ├── i18n.test.mjs           五个页面的中英切换 + 词典完整性
 │   ├── smoke.test.mjs          Whale Runner 冒烟 + AI 长跑可玩性
 │   └── paths.test.mjs          死链 / 绝对路径 / localStorage key 冲突
 ├── .github/workflows/pages.yml GitHub Pages 自动部署
@@ -163,16 +204,19 @@ clone 下来双击 `index.html`，或用任意静态服务器打开就能玩。
 bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```
 
-目前 **366 项**，六个套件：
+目前 **573 项**，七个套件：
 
 | 套件 | 覆盖 |
 | --- | --- |
 | Whale Runner · 碰撞 | 跳/潜 vs 四类海洋生物，且在 **PX=2/3/4** 三档缩放下都成立 |
 | Context Snake · 玩法 | 移动、禁止反向（含快速连按）、吃 TOKEN 增长、撞墙、撞自身、最高分、速度上限、THINK 触发与结束、触屏输入、离开页面停循环 |
 | Token Fall · 玩法 | 四类掉落物结算、CONTEXT 不低于 0、Overflow 2 秒抢救与取消（含「救回来不再判死」回归）、DEEP THINK 触发/到期/物理减速、Combo 增长与 x5 封顶、难度上限、高 Context 的 COMPRESS 保底、NOISE 不成墙、暂停时所有计时冻结、键盘 / 触屏 / 多指 / 拖动、切走标签页与失焦会松开输入、bfcache 返回后循环能接回来、重开清理、最高分 key、DPR 不影响判定 |
-| 多语言 | 四个页面的中英切换与持久化、旧的 `whaleRunner.lang` 兼容、**全站词典 key 一一对应且无遗漏**、Token Fall 要求的 31 个 key 中英齐全 |
+| 多语言 | 五个页面的中英切换与持久化、旧的 `whaleRunner.lang` 兼容、**全站词典 key 一一对应且无遗漏**、Token Fall 要求的 31 个 key、Attention Maze 要求的 40 个 key 中英齐全 |
 | Whale Runner · 冒烟 | 生命周期、暂停/静音/隐藏、判定盒几何自检、AI 连跑 20000 帧零死亡 |
-| 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、三款游戏的 localStorage key 互不冲突 |
+| Attention Maze · 玩法 | 12 关地图数据自检（15×11、四周封闭、节点都在可走格、不重叠、answer 就是注意力最高的 KEY）与 **BFS 可解性验证**、par 合理性、地图解析、走格子与撞墙不加 MOVES、提前到 EXIT 无效、
+QUERY 触发与展示时长、错误 KEY 只记一次 MISTAKE、正确 KEY 解锁 VALUE、VALUE 解锁 EXIT、权重不随机、MULTI-HEAD 阶段顺序与「两头之和」判定、RESCAN 次数与上限、暂停冻结全部计时、切页自动暂停、
+重开清理、进度解锁与星级（含「更差成绩不覆盖最佳」）、存档损坏容错、RESET 二次确认、触屏/多指/失焦松手、DPR 不影响判定 |
+| 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、四款游戏的 localStorage key 互不冲突 |
 
 ## 跨游戏约定
 
@@ -182,7 +226,8 @@ bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH
 | Whale Runner 最高分 | `whaleRunner.high`（沿用原 key，历史成绩保留） |
 | Context Snake 最高分 | `arcade.snake.high` |
 | Token Fall 最高分 | `arcade.tokenFall.high` |
-| 音效开关 | Whale Runner：`whaleRunner.sound`；Context Snake：`arcade.snake.sound`；Token Fall：`arcade.tokenFall.sound` |
+| Attention Maze 进度 | `arcade.attentionMaze.progress`（存最高解锁 Layer + 每关星级/最佳时间/步数，不是高分） |
+| 音效开关 | Whale Runner：`whaleRunner.sound`；Context Snake：`arcade.snake.sound`；Token Fall：`arcade.tokenFall.sound`；Attention Maze：`arcade.attentionMaze.sound` |
 | 文案 | **只在 `shared/i18n.js` 里维护一份**，页面用 `data-i18n` 属性或 `I18N.t('key')` 取值 |
 | 音效 | Whale Runner 保留自己那套 `beep()`（三段包络专门调过，不动它），新游戏用 `shared/audio.js` |
 | 导航 | 普通 HTML 页面跳转（没有 SPA 路由框架），浏览器返回键正常工作 |
@@ -193,13 +238,15 @@ bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH
   禁用下拉刷新（`overscroll-behavior: none`），画布上 `touch-action: none`，玩的时候不会误滚页面。
 - **横屏（高度 ≤560px）**：收起标题与说明，把纵向空间让给舞台。
   Whale Runner 会提示「↻ 把手机横过来」并提供 `⛶ 全屏`（顺带尝试锁定横屏）；
-  Context Snake 则按高度缩放画布、把十字键压成一行，保证「画布 + 操作盘」一屏放得下、不用滚动。
+  Context Snake 与 Attention Maze 则按高度缩放画布、把操作区压成一行，保证「画布 + 操作盘」一屏放得下、不用滚动。
 - **实测（真机尺寸模拟）**：同一台手机跑酷画布竖屏 368×82 → 横屏 784×174（宽 2.2 倍）；
   贪吃蛇横屏为 339×240 且十字键与按钮都在首屏内。
 - **触屏输入**：跑酷是跳跃 / 下潜按钮；贪吃蛇是十字键 **+** 画布滑动（阈值 22px，小拖动按点击处理，不会误触转向）；
   Token Fall 是**两个大方向键（按住持续移动）**加**画布左右拖动**，`pointerup` / `pointercancel` / `pointerleave` /
   `lostpointercapture` 与 document 上的兜底都会松手 —— 手指滑出按钮、被系统打断或切走应用都不会让鲸鱼一直跑，
   多指同时按住也会正确合并；`pointerdown` 里 `preventDefault`、按钮上 `touch-action: none`，长按不会滚动页面或触发下拉刷新。
+  Attention Maze 是**十字方向键（按住连续走格子，但一帧最多一格）**加画布滑动（滑动只走一格，不会变成一直走），
+  内部用「按下的方向栈 + 输入来源」记账，任何一个来源松开都会立刻重新计算，手指在按钮外抬起也有 document 兜底。
 - 画布都设了 `image-rendering: pixelated`，被 CSS 放大时保持像素硬边；DPR 上限 3，避免高倍屏过度绘制。
 
 ## 想改点什么
@@ -214,6 +261,11 @@ bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH
   `OVERFLOW_MS`（抢救时间）/ `SPEED_START`~`SPEED_MAX` / `SPAWN_START`~`SPAWN_MIN` / `ACTIVE_MAX`（同屏上限）/
   `NOISE_MIN`~`NOISE_MAX` / `COMPRESS_URGE_MS`、`COMPRESS_RESCUE_MS`（保底）/ `COMBO_STEP`、`COMBO_MAX`（CLEAN 倍率）。
 - **Token Fall 手感**：`PLAYER_SPEED` / `PLAYER_ACCEL`（平滑移动）、`PLAYER_HIT` 与 `HIT`（判定盒内缩量，越小越宽松）。
+- **Attention Maze 关卡**：`LAYERS` 数组就是全部内容 —— 每关 `map`（15×11 的 `#` / `.`）、`nodes`（start/exit/query/keys/value 的明确坐标）、
+  `keys[].w`（单头权重）或 `heads`（两个注意力头）、`answer`（正确 KEY 的 id）、`scanMs` / `focus` / `rescan` / `parTime` / `parMoves` / `tip`。
+  加一关只要往 `LAYERS` 里追一条数据，测试会自动替你验证「节点在可走格上、answer 就是注意力最高的 KEY、起点→QUERY→正确 KEY→VALUE→EXIT 连通、par 合理」。
+- **Attention Maze 节奏**：`ATT_MS`（单头展示）/ `HEAD_MS`（每个头）/ `COMBINE_MS`（混合提示）/ `RESCAN_MS` / `MOVE_REPEAT_DELAY`、
+  `MOVE_REPEAT_EVERY`（按住连走的间隔）/ `TWEEN_MS`（纯视觉插值，不影响判定）/ `starsFor()` 里的星级门槛。
 - **文案**：加到 `shared/i18n.js` 的 `DICT.zh` / `DICT.en`（key 必须两边都有，测试会检查），HTML 用 `data-i18n`。
 - 改完跑一次 `bash test/run.sh`。
 

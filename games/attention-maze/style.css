@@ -1,0 +1,109 @@
+/* ATTENTION MAZE 专属样式（页面外壳见 ../../shared/arcade.css）
+ * 420×354 的逻辑画布 / 15×11 的迷宫，桌面上不放大过头，手机上整屏放得下。 */
+
+/* 菜单里要藏起方向键与游玩按钮。
+ * 注意 .pad{display:grid} / .controls{display:flex} 的优先级高于 UA 的 [hidden]{display:none}，
+ * 不写这条的话 hidden 属性等于没用。 */
+[hidden] { display: none !important; }
+
+@media (min-width: 721px) {
+  .card { max-width: 560px; }
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--deep);
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;          /* 被 CSS 放大时保持像素硬边 */
+  touch-action: none;                  /* 走格子时不要滚动页面 / 触发手势 */
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+/* 十字方向键：上行居中，下行左/下/右。
+ * width:100% 不能省：竖屏下 .card 是 column flex，auto 左右外边距会让按钮缩成小方块。 */
+.pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+  margin: 12px auto 0;
+}
+
+#up { grid-column: 2; grid-row: 1; }
+#left { grid-column: 1; grid-row: 2; }
+#down { grid-column: 2; grid-row: 2; }
+#right { grid-column: 3; grid-row: 2; }
+
+.pad .btn {
+  min-width: 0;
+  min-height: 54px;
+  padding: 6px;
+  font-size: 22px;
+  line-height: 1;
+  touch-action: none;                  /* 长按不触发滚动 / 双击缩放 */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.controls { max-width: 460px; margin: 14px auto 0; }
+.playbar { gap: 8px; }
+.playbar .btn { min-width: 0; flex: 1 1 auto; }
+
+#rescan { font-size: 14px; }
+#reset { color: #a4552f; border-color: #e7cbb9; background: #fdf6f1; }
+
+@media (max-width: 720px) {
+  .pad .btn { min-height: 56px; font-size: 24px; }
+  .playbar .btn { font-size: 14px; padding: 10px 8px; }
+}
+
+/* 竖屏手机：画布高度留个上限，保证「画布 + 十字键 + 按钮」一屏放得下 */
+@media (max-width: 520px) and (orientation: portrait) {
+  .stage { display: flex; justify-content: center; }
+  #game { width: auto; max-width: 100%; max-height: calc(100vh - 400px); max-height: calc(100dvh - 400px); }
+}
+
+/* 手机横屏：高度紧张，按高度缩放画布，十字键压成一行 */
+@media (max-height: 560px) and (orientation: landscape) {
+  body { align-items: stretch; padding: 8px 12px; }
+  .card { max-width: 100%; padding: 8px 12px; }
+  .stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: -moz-fit-content;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  #game {
+    height: calc(100vh - 150px);
+    height: calc(100dvh - 150px);
+    width: auto;
+    max-width: 100%;
+    max-height: none;
+  }
+  .pad {
+    display: flex;
+    grid-template-columns: none;
+    gap: 6px;
+    max-width: none;
+    margin: 8px auto 0;
+  }
+  .pad .btn { flex: 1 1 0; min-height: 40px; font-size: 18px; }
+  .controls { margin-top: 8px; }
+  .playbar .btn, .controls .btn { min-height: 34px; font-size: 13px; padding: 4px 10px; }
+}

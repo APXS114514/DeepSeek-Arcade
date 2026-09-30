@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title data-i18n="maze.title">Attention Maze · DeepSeek Arcade</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234d6bfe'/%3E%3Cpath d='M7 18c2 4 8 6 12 3 3-2 3-5 6-7-2 0-3 1-4 0-1-4-6-6-9-4-3 1-6 5-5 8z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../shared/arcade.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <p class="back-row"><a class="arcade-back" href="../../" data-i18n="ui.back">← 返回游戏厅</a></p>
+    <header class="head">
+      <h1 data-i18n="maze.h1">🐳 ATTENTION MAZE</h1>
+      <p class="sub" data-i18n="maze.sub">方向键 / WASD 走格子　·　P 暂停　·　R 重扫</p>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" aria-label="ATTENTION MAZE 游戏画面" data-i18n-aria="maze.aria"></canvas>
+    </div>
+
+    <div class="pad" id="pad" hidden>
+      <button id="up" class="btn" type="button" aria-label="向上" data-i18n-aria="maze.ariaUp">↑</button>
+      <button id="left" class="btn" type="button" aria-label="向左" data-i18n-aria="maze.ariaLeft">←</button>
+      <button id="down" class="btn" type="button" aria-label="向下" data-i18n-aria="maze.ariaDown">↓</button>
+      <button id="right" class="btn" type="button" aria-label="向右" data-i18n-aria="maze.ariaRight">→</button>
+    </div>
+
+    <div class="controls playbar" id="playbar" hidden>
+      <button id="pause" class="btn" type="button" aria-pressed="false">⏸ 暂停</button>
+      <button id="rescan" class="btn" type="button" aria-disabled="true">↻ RESCAN 1</button>
+      <button id="restart" class="btn" type="button" data-i18n="maze.restartBtn">⟲ 重来本关</button>
+      <button id="menu" class="btn" type="button" data-i18n="maze.menuBtn">☰ 选关</button>
+    </div>
+
+    <div class="controls">
+      <button id="lang" class="btn ghost" type="button"
+              title="切换语言 / Switch language" aria-label="切换语言 / Switch language">🌐 English</button>
+      <button id="sound" class="btn ghost" type="button" aria-pressed="true">🔊 音效</button>
+      <button id="reset" class="btn" type="button" hidden>RESET PROGRESS</button>
+    </div>
+
+    <footer class="tips" data-i18n-html="maze.tips">
+      ATTENTION SCAN 时整张地图可见，之后进入 FOCUS MODE：只看得到身边一圈。
+      走到 QUERY 会亮起它到各个 KEY 的注意力权重，记住最高的那个 KEY 走过去，
+      VALUE 与 EXIT 依次解锁。走错 KEY 只记一次 MISTAKE，不会 Game Over。
+    </footer>
+  </main>
+
+  <script src="../../shared/i18n.js"></script>
+  <script src="../../shared/audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

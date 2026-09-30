@@ -4,9 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './helpers.mjs';
 
-const PAGES = ['index.html', 'games/runner/index.html', 'games/snake/index.html', 'games/token-fall/index.html'];
+const PAGES = ['index.html', 'games/runner/index.html', 'games/snake/index.html',
+  'games/token-fall/index.html', 'games/attention-maze/index.html'];
 const SCRIPTS = ['arcade.js', 'shared/i18n.js', 'shared/audio.js',
-  'games/runner/game.js', 'games/snake/game.js', 'games/token-fall/game.js'];
+  'games/runner/game.js', 'games/snake/game.js', 'games/token-fall/game.js',
+  'games/attention-maze/game.js'];
 
 export function run() {
   const out = [];
@@ -67,6 +69,19 @@ export function run() {
      runner.indexOf("'whaleRunner.high'") >= 0 && snake.indexOf("'arcade.snake.high'") >= 0 &&
      tokenFall.indexOf("'arcade.tokenFall.high'") >= 0);
   ok('Token Fall 的静音 key 独立', tokenFall.indexOf("'arcade.tokenFall.sound'") >= 0);
+
+  /* Attention Maze 存的是关卡进度（不是高分） */
+  const maze = fs.readFileSync(path.join(ROOT, 'games/attention-maze/game.js'), 'utf8');
+  const mazeKeys = new Set((maze.match(/'(arcade\.[A-Za-z.]+)'/g) || []).map((s) => s.slice(1, -1)));
+  ok('Attention Maze 用 arcade.* 命名空间', mazeKeys.size > 0 && [...mazeKeys].every((k) => k.indexOf('arcade.') === 0), [...mazeKeys].join(','));
+  ok('Attention Maze 的进度 key 独立', maze.indexOf("'arcade.attentionMaze.progress'") >= 0);
+  ok('Attention Maze 的静音 key 独立', maze.indexOf("'arcade.attentionMaze.sound'") >= 0);
+  ok('四款游戏没有任何 key 冲突',
+     [...mazeKeys].every((k) => !runnerKeys.has(k) && !snakeKeys.has(k) && !tfKeys.has(k)) &&
+     [...tfKeys].every((k) => !runnerKeys.has(k) && !snakeKeys.has(k)) &&
+     [...snakeKeys].every((k) => !runnerKeys.has(k)),
+     'runner=' + [...runnerKeys].join(',') + ' snake=' + [...snakeKeys].join(',') + ' tf=' + [...tfKeys].join(',') + ' maze=' + [...mazeKeys].join(','));
+  ok('大厅读的正是 Attention Maze 的进度 key', fs.readFileSync(path.join(ROOT, 'arcade.js'), 'utf8').indexOf("arcade.attentionMaze.progress") >= 0);
 
   /* 语言 key 全站共享同一个存储键 */
   const i18n = fs.readFileSync(path.join(ROOT, 'shared/i18n.js'), 'utf8');
