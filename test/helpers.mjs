@@ -51,6 +51,22 @@ const PAGES = {
       { attrs: { 'data-i18n-html': 'snake.tips' } },
     ],
   },
+  tokenfall: {
+    scripts: ['games/token-fall/game.js'],
+    elements: [
+      { tag: 'title', attrs: { 'data-i18n': 'tokenfall.title' } },
+      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { attrs: { 'data-i18n': 'tokenfall.h1' } },
+      { attrs: { 'data-i18n': 'tokenfall.sub' } },
+      { id: 'game', attrs: { 'data-i18n-aria': 'tokenfall.aria' } },
+      { id: 'left', attrs: { 'data-i18n-aria': 'tokenfall.ariaLeft' } },
+      { id: 'right', attrs: { 'data-i18n-aria': 'tokenfall.ariaRight' } },
+      { id: 'pause' },
+      { id: 'lang' },
+      { id: 'sound' },
+      { attrs: { 'data-i18n-html': 'tokenfall.tips' } },
+    ],
+  },
   lobby: {
     scripts: ['arcade.js'],
     elements: [
@@ -62,16 +78,21 @@ const PAGES = {
       { attrs: { 'data-i18n': 'lobby.whale.desc' } },
       { attrs: { 'data-i18n': 'lobby.snake.name' } },
       { attrs: { 'data-i18n': 'lobby.snake.desc' } },
-      { attrs: { 'data-i18n': 'lobby.soon1.name' } },
+      { attrs: { 'data-i18n': 'lobby.tokenfall.name' } },
+      { attrs: { 'data-i18n': 'lobby.tokenfall.desc' } },
       { attrs: { 'data-i18n': 'lobby.soon2.name' } },
       { attrs: { 'data-i18n': 'lobby.soon' } },
+      { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n-html': 'lobby.footer' } },
       { attrs: { 'data-highscore': 'runner' } },
       { attrs: { 'data-highscore': 'snake' } },
+      { attrs: { 'data-highscore': 'tokenFall' } },
       { id: 'preview-runner', tag: 'canvas' },
       { id: 'preview-snake', tag: 'canvas' },
+      { id: 'preview-tokenfall', tag: 'canvas' },
+      { id: 'preview-soon2', tag: 'canvas' },
     ],
   },
 };
@@ -93,7 +114,7 @@ export function harness(opts) {
     createLinearGradient: () => ({ addColorStop() {} }),
     scale() {}, save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {}, beginPath() {},
     arc() {}, fill() {}, stroke() {}, closePath() {}, moveTo() {}, lineTo() {}, setLineDash() {},
-    fillRect: (x, y, w, h) => { log.rects++; if (log.ops) log.ops.push({ t: 'r', x, y, w, h, c: String(makeCtx.last && makeCtx.last.fillStyle || '#000') }); },
+    fillRect: () => { log.rects++; },
     fillText: (s) => { log.texts.push(String(s)); },
   });
 
@@ -161,9 +182,12 @@ export function harness(opts) {
   };
 
   const nav = { language: opts.navLang || 'zh-CN' };
+  const winH = {};                          // window 上的监听器也要能触发（blur / pagehide / pageshow）
   const win = {
     devicePixelRatio: opts.dpr || 2, document: doc, localStorage: ls, navigator: nav,
-    addEventListener() {}, removeEventListener() {}, innerWidth: 1280, innerHeight: 800,
+    addEventListener: (t, f) => { (winH[t] = winH[t] || []).push(f); },
+    removeEventListener: (t, f) => { winH[t] = (winH[t] || []).filter((x) => x !== f); },
+    innerWidth: 1280, innerHeight: 800,
   };
   let clock = 0; let rafCb = null; let rafAlive = true;
   const sandbox = {
@@ -187,10 +211,12 @@ export function harness(opts) {
   vm.runInContext(source(SHARED_I18N), sandbox, { filename: SHARED_I18N });
   for (const s of page.scripts) {
     let code = source(s);
-    if (pageName === 'runner' || pageName === 'snake') code = patchGame(code);
+    if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall') code = patchGame(code);
     vm.runInContext(code, sandbox, { filename: s });
   }
 
+  /* 只推进时钟、不跑帧：下一次 tick 会得到一个很大的 dt（模拟切标签页回来） */
+  const jump = (ms) => { clock += ms; };
   const tick = (n) => {
     for (let i = 0; i < n; i++) {
       clock += 1000 / 60;
@@ -203,12 +229,13 @@ export function harness(opts) {
   const clearLog = () => { log.texts = []; };
   const byI18n = (attr, key2) => all.find((e) => e.getAttribute(attr) === key2);
   const fireDoc = (type, ev) => (docH[type] || []).forEach((f) => f(ev || {}));
+  const fireWin = (type, ev) => (winH[type] || []).forEach((f) => f(ev || {}));
   const rafIsAlive = () => rafAlive;
   const hasPendingRaf = () => !!rafCb;
 
   return {
     S: px / 3, px, page: pageName, log, errors, els, all, doc, store, sandbox, window: win,
     I18N: win.I18N, G: win.__game,
-    key, tick, clearLog, byI18n, fireDoc, rafIsAlive, hasPendingRaf,
+    key, tick, jump, clearLog, byI18n, fireDoc, fireWin, rafIsAlive, hasPendingRaf,
   };
 }

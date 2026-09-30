@@ -1,14 +1,15 @@
 /* ============================================================
  * DeepSeek Arcade — 大厅脚本
- * 只做两件事：把两个游戏的本地最高分填进卡片；用代码画卡片预览图。
+ * 只做两件事：把三个游戏的本地最高分填进卡片；用代码画卡片预览图。
  * 语言与切换由 shared/i18n.js 负责，这里不重复实现。
  * ============================================================ */
 (function () {
   'use strict';
 
   var HIGH_KEYS = {
-    runner: 'whaleRunner.high',      // Whale Runner 沿用原有 key，不动它的历史最高分
-    snake: 'arcade.snake.high'       // Context Snake 独立 key，两者互不覆盖
+    runner: 'whaleRunner.high',          // Whale Runner 沿用原有 key，不动它的历史最高分
+    snake: 'arcade.snake.high',          // Context Snake 独立 key
+    tokenFall: 'arcade.tokenFall.high'   // Token Fall 独立 key，三者互不覆盖
   };
 
   function readInt(key) {
@@ -51,6 +52,12 @@
     'XXXXXXXX',
     '..X..X..'
   ];
+
+  /* 预览图上的字也要跟着语言走（切语言时整个预览会重画一次） */
+  function ctxLabel() {
+    var I = window.I18N;
+    return (I && I.t) ? I.t('tokenfall.ctxLabel') : 'CONTEXT';
+  }
 
   function pixels(ctx, rows, px, ox, oy, colors) {
     for (var r = 0; r < rows.length; r++) {
@@ -103,6 +110,48 @@
     ctx.fillRect(w - 52, 30, 6, 6);
   }
 
+  /* TOKEN FALL：小鲸鱼 + 往下掉的 TOKEN / COMPRESS / NOISE */
+  function previewTokenFall(ctx, w, h) {
+    seaBackground(ctx, w, h, '#07132a', '#16305c');
+    var px = 4;
+    pixels(ctx, WHALE, px, 30, h - 14 - 8 * px, { X: '#4d6bfe', e: '#ffffff' });
+    var items = [
+      { x: 34, y: 22, color: '#4d6bfe', hi: '#a8c4ff', ch: 'T' },
+      { x: 100, y: 12, color: '#2ee6ff', hi: '#d4fbff', ch: 'C' },
+      { x: 166, y: 30, color: '#a24bff', hi: '#e3b9ff', ch: 'N' }
+    ];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var s = 17;
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = it.hi;
+      ctx.fillRect(it.x - 2, it.y - 2, s + 4, s + 4);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = it.color;
+      ctx.fillRect(it.x, it.y, s, s);
+      ctx.fillStyle = it.hi;
+      ctx.fillRect(it.x, it.y, s, 2);
+      ctx.fillRect(it.x, it.y, 2, s);
+      ctx.fillStyle = '#03102b';
+      ctx.font = 'bold 11px "Courier New", ui-monospace, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(it.ch, it.x + s / 2, it.y + s / 2 + 1);
+    }
+    /* CONTEXT 条：一眼看出「接物 + 管理上下文」 */
+    ctx.fillStyle = 'rgba(120,170,255,0.20)';
+    ctx.fillRect(w - 74, 16, 56, 5);
+    ctx.fillStyle = '#ffc061';
+    ctx.fillRect(w - 74, 16, 42, 5);
+    ctx.fillStyle = 'rgba(6,16,36,0.65)';
+    ctx.fillRect(0, 0, w, 8);
+    ctx.fillStyle = '#9fb6dd';
+    ctx.font = 'bold 7px "Courier New", ui-monospace, monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ctxLabel() + ' 768/1024', 6, 4);
+  }
+
   function previewSoon(ctx, w, h) {
     seaBackground(ctx, w, h, '#08152c', '#16305c');
     ctx.globalAlpha = 0.5;
@@ -125,9 +174,14 @@
     draw(ctx, w, h);
   }
 
+  function drawPreviews() {
+    setup('preview-runner', previewRunner);
+    setup('preview-snake', previewSnake);
+    setup('preview-tokenfall', previewTokenFall);
+    setup('preview-soon2', previewSoon);
+  }
+
   paintHighScores();
-  setup('preview-runner', previewRunner);
-  setup('preview-snake', previewSnake);
-  setup('preview-soon1', previewSoon);
-  setup('preview-soon2', previewSoon);
+  drawPreviews();
+  if (window.I18N && window.I18N.onChange) window.I18N.onChange(drawPreviews);
 })();

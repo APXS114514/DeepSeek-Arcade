@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROOT } from './helpers.mjs';
 
-const PAGES = ['index.html', 'games/runner/index.html', 'games/snake/index.html'];
-const SCRIPTS = ['arcade.js', 'shared/i18n.js', 'shared/audio.js', 'games/runner/game.js', 'games/snake/game.js'];
+const PAGES = ['index.html', 'games/runner/index.html', 'games/snake/index.html', 'games/token-fall/index.html'];
+const SCRIPTS = ['arcade.js', 'shared/i18n.js', 'shared/audio.js',
+  'games/runner/game.js', 'games/snake/game.js', 'games/token-fall/game.js'];
 
 export function run() {
   const out = [];
@@ -47,16 +48,25 @@ export function run() {
     }
   }
 
-  /* 两个游戏的 localStorage key 必须分开 */
+  /* 三个游戏的 localStorage key 必须分开 */
   const runner = fs.readFileSync(path.join(ROOT, 'games/runner/game.js'), 'utf8');
   const snake = fs.readFileSync(path.join(ROOT, 'games/snake/game.js'), 'utf8');
+  const tokenFall = fs.readFileSync(path.join(ROOT, 'games/token-fall/game.js'), 'utf8');
   const runnerKeys = new Set((runner.match(/'(whaleRunner\.[a-z.]+)'/g) || []).map((s) => s.slice(1, -1)));
   const snakeKeys = new Set((snake.match(/'(arcade\.[a-z.]+)'/g) || []).map((s) => s.slice(1, -1)));
+  const tfKeys = new Set((tokenFall.match(/'(arcade\.[A-Za-z.]+)'/g) || []).map((s) => s.slice(1, -1)));
   ok('Whale Runner 用自己的 localStorage key', [...runnerKeys].every((k) => k.indexOf('whaleRunner.') === 0), [...runnerKeys].join(','));
   ok('Context Snake 用 arcade.* 命名空间', [...snakeKeys].every((k) => k.indexOf('arcade.') === 0), [...snakeKeys].join(','));
-  ok('两边的 key 没有交集', [...runnerKeys].every((k) => !snakeKeys.has(k)), [...snakeKeys].join(','));
-  ok('最高分 key 明确：whaleRunner.high / arcade.snake.high',
-     runner.indexOf("'whaleRunner.high'") >= 0 && snake.indexOf("'arcade.snake.high'") >= 0);
+  ok('Token Fall 用 arcade.* 命名空间', tfKeys.size > 0 && [...tfKeys].every((k) => k.indexOf('arcade.') === 0), [...tfKeys].join(','));
+  ok('Whale Runner 与另外两款没有 key 交集',
+     [...runnerKeys].every((k) => !snakeKeys.has(k) && !tfKeys.has(k)), [...tfKeys].join(','));
+  ok('Context Snake 与 Token Fall 没有 key 交集',
+     [...snakeKeys].every((k) => !tfKeys.has(k)), 'snake=' + [...snakeKeys].join(',') + ' tokenfall=' + [...tfKeys].join(','));
+  ok('Token Fall 没有借用 Whale Runner 的 key', tokenFall.indexOf("'whaleRunner.") < 0);
+  ok('最高分 key 明确：whaleRunner.high / arcade.snake.high / arcade.tokenFall.high',
+     runner.indexOf("'whaleRunner.high'") >= 0 && snake.indexOf("'arcade.snake.high'") >= 0 &&
+     tokenFall.indexOf("'arcade.tokenFall.high'") >= 0);
+  ok('Token Fall 的静音 key 独立', tokenFall.indexOf("'arcade.tokenFall.sound'") >= 0);
 
   /* 语言 key 全站共享同一个存储键 */
   const i18n = fs.readFileSync(path.join(ROOT, 'shared/i18n.js'), 'utf8');

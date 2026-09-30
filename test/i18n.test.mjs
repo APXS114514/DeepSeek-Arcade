@@ -56,20 +56,28 @@ export function run() {
 
   /* ---------- 大厅页面 ---------- */
   {
-    const b = harness({ page: 'lobby', navLang: 'zh-CN', saved: { 'whaleRunner.high': '321', 'arcade.snake.high': '48' } });
+    const b = harness({ page: 'lobby', navLang: 'zh-CN',
+      saved: { 'whaleRunner.high': '321', 'arcade.snake.high': '48', 'arcade.tokenFall.high': '77' } });
     const title = b.byI18n('data-i18n', 'lobby.title');
     ok('大厅标题', title.textContent === 'DEEPSEEK ARCADE', title.textContent);
     ok('大厅副标题中文', b.byI18n('data-i18n', 'lobby.sub').textContent.indexOf('同人') >= 0);
     ok('大厅 document.title', b.doc.title === 'DEEPSEEK ARCADE', b.doc.title);
-    ok('大厅显示两处最高分', b.all.filter((e) => e.getAttribute('data-highscore')).every((e) => /\d/.test(e.textContent)),
+    ok('大厅显示三处最高分', b.all.filter((e) => e.getAttribute('data-highscore')).every((e) => /\d/.test(e.textContent)),
        b.all.filter((e) => e.getAttribute('data-highscore')).map((e) => e.textContent).join('|'));
     ok('大厅读到 Whale Runner 的最高分', b.byI18n('data-highscore', 'runner').textContent === '321',
        b.byI18n('data-highscore', 'runner').textContent);
     ok('大厅读到 Context Snake 的最高分', b.byI18n('data-highscore', 'snake').textContent === '48',
        b.byI18n('data-highscore', 'snake').textContent);
-    ok('大厅有 PLAY 按钮文案', b.all.filter((e) => e.getAttribute('data-i18n') === 'lobby.play').length === 2);
+    ok('大厅读到 Token Fall 的最高分', b.byI18n('data-highscore', 'tokenFall').textContent === '77',
+       b.byI18n('data-highscore', 'tokenFall').textContent);
+    ok('大厅有 3 个 PLAY 按钮文案（三款游戏都可玩）',
+       b.all.filter((e) => e.getAttribute('data-i18n') === 'lobby.play').length === 3);
+    ok('Token Fall 卡片描述（中文）', b.byI18n('data-i18n', 'lobby.tokenfall.desc').textContent === '接住 Token · 管理上下文',
+       b.byI18n('data-i18n', 'lobby.tokenfall.desc').textContent);
     b.els.lang.fire('click');
     ok('大厅切英文', b.byI18n('data-i18n', 'lobby.sub').textContent.indexOf('DeepSeek-inspired') >= 0);
+    ok('Token Fall 卡片描述（英文）', b.byI18n('data-i18n', 'lobby.tokenfall.desc').textContent === 'Catch tokens · Manage context',
+       b.byI18n('data-i18n', 'lobby.tokenfall.desc').textContent);
     ok('大厅英文 COMING SOON', b.byI18n('data-i18n', 'lobby.soon').textContent === 'COMING SOON');
   }
   {
@@ -89,6 +97,30 @@ export function run() {
     ok('snake 英文 h1', b.byI18n('data-i18n', 'snake.h1').textContent === '🐳 Context Snake');
     ok('snake 英文十字键 aria', b.els.up.getAttribute('aria-label') === 'Up', b.els.up.getAttribute('aria-label'));
     ok('snake 英文 tips', b.byI18n('data-i18n-html', 'snake.tips').innerHTML.indexOf('DEEP THINK') >= 0);
+  }
+
+  /* ---------- Token Fall 页面 ---------- */
+  {
+    const b = harness({ page: 'tokenfall', navLang: 'zh-CN' });
+    ok('tokenfall 中文标题', b.doc.title === 'TOKEN FALL · DeepSeek Arcade', b.doc.title);
+    ok('tokenfall 中文 h1', b.byI18n('data-i18n', 'tokenfall.h1').textContent === '🐳 TOKEN FALL');
+    ok('tokenfall canvas aria-label', b.els.game.getAttribute('aria-label') === 'TOKEN FALL 游戏画面');
+    ok('tokenfall 方向键中文 aria', b.els.left.getAttribute('aria-label') === '向左', b.els.left.getAttribute('aria-label'));
+    ok('tokenfall 返回按钮文案', b.els.back.textContent === '← 返回游戏厅', b.els.back.textContent);
+    ok('tokenfall 暂停按钮默认中文', b.els.pause.textContent === '⏸ 暂停', b.els.pause.textContent);
+    b.els.lang.fire('click');
+    ok('tokenfall 英文 h1', b.byI18n('data-i18n', 'tokenfall.h1').textContent === '🐳 TOKEN FALL');
+    ok('tokenfall 英文 canvas aria-label', b.els.game.getAttribute('aria-label') === 'Token Fall game canvas');
+    ok('tokenfall 英文方向键 aria', b.els.right.getAttribute('aria-label') === 'Right', b.els.right.getAttribute('aria-label'));
+    ok('tokenfall 英文暂停按钮', b.els.pause.textContent === '⏸ Pause', b.els.pause.textContent);
+    ok('tokenfall 英文返回按钮', b.els.back.textContent === '← Back to Arcade', b.els.back.textContent);
+    ok('tokenfall 英文 tips 含玩法关键词',
+       (function () {
+         const html = b.byI18n('data-i18n-html', 'tokenfall.tips').innerHTML;
+         return html.indexOf('COMPRESS') >= 0 && html.indexOf('NOISE') >= 0 && html.indexOf('DEEP THINK') >= 0;
+       })(), b.byI18n('data-i18n-html', 'tokenfall.tips').innerHTML.slice(0, 60));
+    b.tick(2);
+    ok('tokenfall 英文画布文案', b.log.texts.some((s) => s.indexOf('Catch tokens') >= 0), b.log.texts.join('|').slice(0, 80));
   }
 
   /* ---------- 存储与检测 ---------- */
@@ -128,10 +160,24 @@ export function run() {
       const addFrom = (text, re) => { let mm; while ((mm = re.exec(text))) used.add(mm[1]); };
       addFrom(source('games/runner/game.js'), /T\('([^']+)'\)/g);
       addFrom(source('games/snake/game.js'), /T\('([^']+)'\)/g);
+      addFrom(source('games/token-fall/game.js'), /T\('([^']+)'\)/g);
       const reA = /data-i18n(?:-html|-aria)?="([^"]+)"/g;
-      for (const f of ['index.html', 'games/runner/index.html', 'games/snake/index.html']) addFrom(source(f), reA);
+      for (const f of ['index.html', 'games/runner/index.html', 'games/snake/index.html', 'games/token-fall/index.html']) {
+        addFrom(source(f), reA);
+      }
       const miss = [...used].filter((k) => !zh.has(k));
-      ok('三个页面用到的 ' + used.size + ' 个 key 都有翻译', miss.length === 0, '缺=' + miss.join(','));
+      ok('四个页面用到的 ' + used.size + ' 个 key 都有翻译', miss.length === 0, '缺=' + miss.join(','));
+
+      /* TOKEN FALL 要求覆盖的文案一个都不能少（中英都要有） */
+      const need = ['tokenfall.title', 'tokenfall.h1', 'tokenfall.sub', 'tokenfall.aria', 'tokenfall.ariaLeft',
+        'tokenfall.ariaRight', 'tokenfall.score', 'tokenfall.ctxLabel', 'tokenfall.clean', 'tokenfall.think',
+        'tokenfall.thinkName', 'tokenfall.overflow', 'tokenfall.over', 'tokenfall.gameover', 'tokenfall.paused',
+        'tokenfall.pausedHint', 'tokenfall.pauseBtn', 'tokenfall.resumeBtn', 'tokenfall.ready', 'tokenfall.hint',
+        'tokenfall.legend', 'tokenfall.start', 'tokenfall.restart', 'tokenfall.tips', 'tokenfall.short.token',
+        'tokenfall.short.compress', 'tokenfall.short.noise', 'lobby.tokenfall.name', 'lobby.tokenfall.desc',
+        'ui.back', 'hud.hi'];
+      const miss2 = need.filter((k) => !zh.has(k) || !en.has(k));
+      ok('TOKEN FALL 要求的 ' + need.length + ' 个 i18n key 中英齐全', miss2.length === 0, '缺=' + miss2.join(','));
     }
   }
 

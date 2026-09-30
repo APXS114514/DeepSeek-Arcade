@@ -1,6 +1,7 @@
 /* 一条命令跑完所有测试：  node test/run.mjs   （或 bash test/run.sh） */
 import * as collision from './collision.test.mjs';
 import * as snake from './snake.test.mjs';
+import * as tokenfall from './tokenfall.test.mjs';
 import * as i18n from './i18n.test.mjs';
 import * as smoke from './smoke.test.mjs';
 import * as paths from './paths.test.mjs';
@@ -8,7 +9,8 @@ import * as paths from './paths.test.mjs';
 const suites = [
   ['Whale Runner · 碰撞模型 / 缩放不变性', collision],
   ['Context Snake · 玩法与规则', snake],
-  ['多语言（三个页面）', i18n],
+  ['Token Fall · 玩法与规则', tokenfall],
+  ['多语言（四个页面）', i18n],
   ['Whale Runner · 冒烟 + 可玩性', smoke],
   ['静态检查 · 路径与存储键', paths],
 ];
