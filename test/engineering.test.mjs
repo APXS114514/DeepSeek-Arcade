@@ -213,8 +213,6 @@ export function run() {
     ok('README 在线试玩地址正确', readme.indexOf('https://apxs114514.github.io/DeepSeek-Arcade/') !== -1);
     ok('README 没有过时描述（coming soon / 三款 / 第三款 …）',
       !/coming soon|third game|only two games|三款游戏|第三款|敬请期待|暂未上线/i.test(readme));
-    ok('README 记录了 GitHub About 推荐值（Homepage / Description / Topics）',
-      readme.indexOf('Homepage') !== -1 && readme.indexOf('Description') !== -1 && readme.indexOf('Topics') !== -1);
     ok('README 链接到 docs（文件都存在）',
       fs.existsSync(path.join(ROOT, 'docs/architecture.md')) && fs.existsSync(path.join(ROOT, 'docs/testing.md')) &&
       readme.indexOf('docs/architecture.md') !== -1 && readme.indexOf('docs/testing.md') !== -1);

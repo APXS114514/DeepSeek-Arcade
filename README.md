@@ -79,14 +79,6 @@ CI 里跑的就是这一条命令：测试不过，Pages 不会部署（见 `.gi
   手机适配、调参入口，以及四款游戏各自的实现细节（小鲸鱼的来历、判定盒、Q/K/V、MULTI-HEAD、关卡数据结构）。
 - [docs/testing.md](docs/testing.md) — 测试怎么跑、每个 suite 覆盖什么、BFS 关卡验证、怎么加测试。
 
-## 仓库元信息（GitHub About 建议）
-
-这些是 GitHub 仓库设置，需要在网页端 **Settings → About** 手动填写（README 只是把推荐值记在这里）：
-
-- **Homepage**：`https://apxs114514.github.io/DeepSeek-Arcade/`
-- **Description**：`A collection of four DeepSeek-inspired pixel mini-games: Whale Runner, Context Snake, Token Fall and Attention Maze.`
-- **Topics**：`deepseek` `javascript` `canvas` `pixel-art` `web-game` `mini-games` `arcade` `github-pages` `vanilla-javascript`
-
 ## 声明与 License
 
 - **代码**以 **MIT License** 发布，见 [LICENSE](LICENSE)。
