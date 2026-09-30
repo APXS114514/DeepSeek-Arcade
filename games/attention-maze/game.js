@@ -40,8 +40,8 @@
   function T(key) { return (I18N && I18N.t) ? I18N.t(key) : key; }
 
   var ArcadeAudio = window.ArcadeAudio || null;
-  var soundOn = true;
-  try { soundOn = localStorage.getItem('arcade.attentionMaze.sound') !== 'off'; } catch (e) { soundOn = true; }
+  /* 全站统一 Sound：arcade.sound 优先，其次才是本游戏的老 key（读到就迁移） */
+  var soundOn = ArcadeAudio ? ArcadeAudio.isEnabled('arcade.attentionMaze.sound') : true;
   function tone(o) { if (soundOn && ArcadeAudio && ArcadeAudio.tone) ArcadeAudio.tone(o); }
 
   /* 每种事件一句音效，全部现场合成，音量都很克制 */
@@ -92,8 +92,7 @@
     if (rst) rst.hidden = !inMenu;
   }
   function toggleSound() {
-    soundOn = !soundOn;
-    try { localStorage.setItem('arcade.attentionMaze.sound', soundOn ? 'on' : 'off'); } catch (e) { /* 隐私模式忽略 */ }
+    soundOn = ArcadeAudio ? ArcadeAudio.toggle() : !soundOn;
     updateButtons();
     if (soundOn) tone({ type: 'triangle', from: 880, to: 1180, ms: 90, gain: 0.04 });
   }
@@ -110,7 +109,6 @@
   var RESCAN_MS = 1500;          // RESCAN 的扫描时长
   var SWIPE_MIN = 22;            // 画布滑动阈值（逻辑像素）
   var PROGRESS_KEY = 'arcade.attentionMaze.progress';
-  var MAX_LAYERS = 12;
 
   /* ================= 像素精灵 ================= */
   /* 俯视小鲸鱼，朝右：身体 + 两侧胸鳍 + 尾鳍 + 眼睛 + 背部高光。
@@ -160,284 +158,14 @@
   }
   var WHALE_DIRS = [rotateRows(WHALE_R, 0), rotateRows(WHALE_R, 1), rotateRows(WHALE_R, 2), rotateRows(WHALE_R, 3)];
 
-  /* ================= 关卡数据（12 个手工 Layer） =================
-   * map 只管墙和地面：'#' 墙 / '.' 地面。
-   * 所有节点用明确坐标 + 明确 ID 定义，不依赖字符顺序隐式配对。
-   *   nodes.start / nodes.exit          必经点
-   *   nodes.query                       可选：一个 QUERY
-   *   nodes.keys[]                      id + 坐标 + 单头权重 w
-   *   nodes.value                       可选：一个 VALUE
-   *   heads                             MULTI-HEAD：两个头对各 KEY 的权重（顺序与 keys 一致）
-   *   answer                            正确 KEY 的 id（测试会校验它确实是最高分）
-   *   parTime / parMoves                三星评分基准（由最短通路推导）
-   *   scanMs / focus / rescan           扫描时长 / 视野半径 / 可用 RESCAN 次数
-   *   tip                               进入本关时的一句机制提示（i18n key） */
-  function K(id, x, y, w) { return { id: id, x: x, y: y, w: w }; }
-
-  var LAYERS = [
-    {
-      /* L1：整张地图亮一遍，记住出口在哪，走过去 */
-      scanMs: 2600, focus: 3, rescan: 2, parTime: 24, parMoves: 23, tip: 'maze.tip.scan',
-      map: [
-        '###############',
-        '#.............#',
-        '#..###...###..#',
-        '#..###...###..#',
-        '#.............#',
-        '#.............#',
-        '#.............#',
-        '#..###...###..#',
-        '#..###...###..#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: { start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: null, keys: [], value: null }
-    },
-    {
-      /* L2：更长路径（蛇形走廊），考验能不能记住整条路 */
-      scanMs: 2800, focus: 3, rescan: 2, parTime: 63, parMoves: 79, tip: 'maze.tip.longPath',
-      map: [
-        '###############',
-        '#.............#',
-        '#############.#',
-        '#.............#',
-        '#.#############',
-        '#.............#',
-        '#############.#',
-        '#.............#',
-        '#.#############',
-        '#.............#',
-        '###############'
-      ],
-      nodes: { start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: null, keys: [], value: null }
-    },
-    {
-      /* L3：梳齿迷宫，很多岔路，得记住哪几列能上下走 */
-      scanMs: 2600, focus: 3, rescan: 2, parTime: 24, parMoves: 23, tip: 'maze.tip.branches',
-      map: [
-        '###############',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: { start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: null, keys: [], value: null }
-    },
-    {
-      /* L4：第一次出现 QUERY / KEY（两个 KEY） */
-      scanMs: 2800, focus: 3, rescan: 2, parTime: 28, parMoves: 28, tip: 'maze.tip.qkv',
-      map: [
-        '###############',
-        '#.............#',
-        '#.###.###.###.#',
-        '#.............#',
-        '#.###.###.###.#',
-        '#.............#',
-        '#.###.###.###.#',
-        '#.............#',
-        '#.###.###.###.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 7, y: 5 }, value: null,
-        keys: [K('K1', 1, 7, 0.22), K('K2', 13, 3, 0.85)]
-      },
-      answer: 'K2'
-    },
-    {
-      /* L5：三个 KEY + Attention Weight，权重更接近，要看清数字 */
-      scanMs: 2800, focus: 3, rescan: 2, parTime: 24, parMoves: 23, tip: 'maze.tip.weights',
-      map: [
-        '###############',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 7, y: 5 }, value: null,
-        keys: [K('K1', 3, 3, 0.44), K('K2', 13, 7, 0.91), K('K3', 1, 9, 0.63)]
-      },
-      answer: 'K2'
-    },
-    {
-      /* L6：QUERY -> KEY -> VALUE -> EXIT 完整流程 */
-      scanMs: 3000, focus: 3, rescan: 1, parTime: 34, parMoves: 37, tip: 'maze.tip.value',
-      map: [
-        '###############',
-        '#.............#',
-        '#.###.#.#.###.#',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '#.###.###.#.#.#',
-        '#.............#',
-        '#.#.#.###.#.#.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 5, y: 3 },
-        value: { x: 7, y: 9 },
-        keys: [K('K1', 9, 3, 0.72), K('K2', 1, 5, 0.38), K('K3', 13, 7, 0.94)]
-      },
-      answer: 'K3'
-    },
-    {
-      /* L7：迷宫更绕 + 四个 KEY + VALUE，视野收到 2 格 */
-      scanMs: 2800, focus: 2, rescan: 1, parTime: 40, parMoves: 46, tip: 'maze.tip.focus',
-      map: [
-        '###############',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.###.#.#.###.#',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 9, y: 1 },
-        value: { x: 3, y: 9 },
-        keys: [K('K1', 1, 3, 0.51), K('K2', 13, 5, 0.86), K('K3', 5, 7, 0.29), K('K4', 9, 9, 0.67)]
-      },
-      answer: 'K2'
-    },
-    {
-      /* L8：SCAN 时间明显变短（1.7 秒），起点在右下、出口在右上 */
-      scanMs: 1700, focus: 2, rescan: 1, parTime: 37, parMoves: 42, tip: 'maze.tip.scanShort',
-      map: [
-        '###############',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.###.#.#.###.#',
-        '#.............#',
-        '#.#.###.###.#.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 9 }, exit: { x: 13, y: 1 }, query: { x: 7, y: 5 },
-        value: { x: 7, y: 9 },
-        keys: [K('K1', 3, 3, 0.58), K('K2', 11, 7, 0.79), K('K3', 13, 3, 0.41)]
-      },
-      answer: 'K2'
-    },
-    {
-      /* L9：第一次 MULTI-HEAD：两个头说的不是同一个 KEY，要综合 */
-      scanMs: 2800, focus: 3, rescan: 1, parTime: 34, parMoves: 37, tip: 'maze.tip.multihead',
-      map: [
-        '###############',
-        '#.............#',
-        '#.###.#.#.###.#',
-        '#.............#',
-        '#.#.#.###.#.#.#',
-        '#.............#',
-        '#.#.###.#.#.#.#',
-        '#.............#',
-        '#.###.#.#.###.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 7, y: 1 }, value: null,
-        keys: [K('K1', 1, 5, 0), K('K2', 13, 3, 0), K('K3', 3, 9, 0), K('K4', 11, 7, 0)]
-      },
-      heads: [[0.82, 0.20, 0.77, 0.18], [0.28, 0.15, 0.91, 0.31]],
-      answer: 'K3'
-    },
-    {
-      /* L10：MULTI-HEAD + VALUE */
-      scanMs: 2600, focus: 3, rescan: 1, parTime: 34, parMoves: 37, tip: 'maze.tip.multihead',
-      map: [
-        '###############',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.###.###.###.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.###.#.#.###.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 9 }, exit: { x: 1, y: 1 }, query: { x: 1, y: 5 },
-        value: { x: 7, y: 9 },
-        keys: [K('K1', 13, 1, 0), K('K2', 5, 3, 0), K('K3', 9, 7, 0), K('K4', 13, 9, 0)]
-      },
-      heads: [[0.31, 0.88, 0.24, 0.66], [0.72, 0.35, 0.18, 0.29]],
-      answer: 'K2'
-    },
-    {
-      /* L11：两个头各自最高的都不是答案，必须真的综合 */
-      scanMs: 2400, focus: 2, rescan: 1, parTime: 44, parMoves: 51, tip: 'maze.tip.combineHint',
-      map: [
-        '###############',
-        '#.............#',
-        '#.#.###.#.###.#',
-        '#.............#',
-        '#.###.#.#.#.#.#',
-        '#.............#',
-        '#.#.#.#.#.#.#.#',
-        '#.............#',
-        '#.###.#.#.###.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 1 }, exit: { x: 13, y: 5 }, query: { x: 9, y: 5 },
-        value: { x: 7, y: 9 },
-        keys: [K('K1', 5, 1, 0), K('K2', 13, 1, 0), K('K3', 1, 9, 0), K('K4', 13, 9, 0)]
-      },
-      heads: [[0.86, 0.74, 0.31, 0.45], [0.49, 0.71, 0.26, 0.88]],
-      answer: 'K2'
-    },
-    {
-      /* L12：FINAL ATTENTION —— 复杂迷宫 + 短 SCAN + 窄视野 + 单 QUERY + 四 KEY + VALUE + 双头 */
-      scanMs: 2200, focus: 2, rescan: 1, parTime: 44, parMoves: 51, tip: 'maze.tip.final', final: true,
-      map: [
-        '###############',
-        '#.............#',
-        '#.#.#.###.#.#.#',
-        '#.............#',
-        '#.#.###.#.###.#',
-        '#.............#',
-        '#.###.#.#.#.#.#',
-        '#.............#',
-        '#.#.#.#.###.#.#',
-        '#.............#',
-        '###############'
-      ],
-      nodes: {
-        start: { x: 1, y: 9 }, exit: { x: 1, y: 5 }, query: { x: 7, y: 1 },
-        value: { x: 7, y: 9 },
-        keys: [K('K1', 1, 1, 0), K('K2', 13, 1, 0), K('K3', 3, 5, 0), K('K4', 13, 9, 0)]
-      },
-      heads: [[0.44, 0.91, 0.63, 0.25], [0.96, 0.33, 0.29, 0.71]],
-      answer: 'K1'
-    }
-  ];
+  /* ================= 关卡数据（见 levels.js） ===================
+   * 纯数据已经拆到 games/attention-maze/levels.js，页面在 game.js 之前加载。
+   * 这里只取过来用，引擎不再内嵌关卡内容。 */
+  var LAYERS = (window.ATTENTION_MAZE_LAYERS || []).slice();
+  var MAX_LAYERS = LAYERS.length || 12;
+  if (!LAYERS.length && window.console && window.console.warn) {
+    window.console.warn('[attention-maze] 缺少 levels.js：没有关卡数据，请检查页面脚本顺序');
+  }
 
   /* ================= 关卡解析 / 权重 ================= */
   function parseMap(map) {
@@ -1626,7 +1354,7 @@
 
     /* 4 x 3 的 Layer Select */
     var tw = 86, th = 54, gap = 10;
-    var cols = 4, rows = 3;
+    var cols = 4, rows = Math.max(1, Math.ceil(MAX_LAYERS / cols));
     var totalW = cols * tw + (cols - 1) * gap;
     var ox = Math.round((W - totalW) / 2);
     var oy = 76;

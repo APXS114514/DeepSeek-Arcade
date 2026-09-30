@@ -46,6 +46,27 @@
     }
   }
 
+  /* ---------------- 全站 Sound 开关（shared/audio.js 负责存取） ---------------- */
+  var ArcadeAudio = window.ArcadeAudio || null;
+
+  function updateSoundButton() {
+    var btn = document.getElementById('sound');
+    if (!btn) return;
+    var on = ArcadeAudio ? ArcadeAudio.isEnabled() : true;
+    var I = window.I18N;
+    btn.textContent = (I && I.t) ? (on ? I.t('btn.sound') : I.t('btn.muted')) : (on ? '🔊' : '🔇');
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+  function toggleSound() {
+    if (ArcadeAudio) ArcadeAudio.toggle();
+    updateSoundButton();
+    if (ArcadeAudio && ArcadeAudio.isEnabled()) {
+      ArcadeAudio.tone({ type: 'triangle', from: 880, to: 1180, ms: 90, gain: 0.04 });
+    }
+  }
+  var soundBtn = document.getElementById('sound');
+  if (soundBtn) soundBtn.addEventListener('click', toggleSound);
+
   /* ---------------- 卡片预览：纯代码像素画，不引用任何图片 ---------------- */
   var URCHIN = [
     '..X..X..',
@@ -55,28 +76,8 @@
     '..X..X..'
   ];
 
-  /* Token Fall 预览用的鲸鱼：和 Whale Runner / Token Fall 游戏里同一只
-   * （DeepSeek logo 光栅化出的 24×18 字符画，这里只取第一帧）。 */
-  var WHALE_LOGO = [
-    '.......X....X...........',
-    '......XX....XXXXXXXX....',
-    'XXX..XXX....XXXXXXXXX...',
-    'XXXXXXXX...XXXXXXXXXXX..',
-    '.XXXXXX...XXXXXXXXXXXXX.',
-    '..XXXX...XXXXXXXXXXXXXXX',
-    '....XX.XXXXXXXXXXXXXXXXX',
-    '....XXXXXXoXXXXXXoooooXX',
-    '....XXXXXoXXXXXXooooooXX',
-    '....XXXXooXXXXXoooooooXX',
-    '.....XXXXXXXXXooooooooXX',
-    '.....XXXXXXXXooooooooXXX',
-    '......XXXXXXXooooooooXX.',
-    '......XXXXXXoooXooooXXX.',
-    '.......XXXXooXXXoooXXX..',
-    '.....XXXXXooXXXXXXXXX...',
-    '......XX..XXXXXXXXXX....',
-    '...........XXXXXXX......'
-  ];
+  /* 卡片预览用的小鲸鱼：和游戏里同一份素材（shared/whale.js），不再单独存一份 */
+  var WHALE_LOGO = (window.ArcadeWhale && window.ArcadeWhale.NORMAL_A) || [];
 
   /* 预览图上的字也要跟着语言走（切语言时整个预览会重画一次） */
   function ctxLabel() {
@@ -253,5 +254,8 @@
 
   paintHighScores();
   drawPreviews();
-  if (window.I18N && window.I18N.onChange) window.I18N.onChange(drawPreviews);
+  updateSoundButton();
+  if (window.I18N && window.I18N.onChange) {
+    window.I18N.onChange(function () { drawPreviews(); updateSoundButton(); });
+  }
 })();

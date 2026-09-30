@@ -1,5 +1,7 @@
-name: Deploy to GitHub Pages
+name: Test & Deploy to GitHub Pages
 
+# 流程：checkout -> setup Node -> 跑全部测试 -> 通过后才配置/上传/部署 Pages。
+# 测试不过，deploy job 不会开始（needs: test），线上就保持上一版。
 on:
   push:
     branches: [main]
@@ -15,13 +17,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run tests
+        run: node test/run.mjs
+
   deploy:
+    name: Deploy Pages
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: 首次运行自动启用 Pages
         uses: actions/configure-pages@v5
         with:

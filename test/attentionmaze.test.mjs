@@ -800,10 +800,11 @@ export function run() {
   {
     const b = fresh();
     b.els.sound.fire('click');
-    ok('静音写入自己的 key', b.store.get('arcade.attentionMaze.sound') === 'off', String(b.store.get('arcade.attentionMaze.sound')));
+    ok('静音写入全站统一的 arcade.sound', b.store.get('arcade.sound') === 'off', String(b.store.get('arcade.sound')));
+    ok('不再单独写自己的旧 key', !b.store.has('arcade.attentionMaze.sound'));
     ok('没有碰其他游戏的静音 key', !b.store.has('whaleRunner.sound') && !b.store.has('arcade.snake.sound') && !b.store.has('arcade.tokenFall.sound'));
     b.els.sound.fire('click');
-    ok('可以再打开音效', b.store.get('arcade.attentionMaze.sound') === 'on');
+    ok('可以再打开音效', b.store.get('arcade.sound') === 'on', String(b.store.get('arcade.sound')));
     ok('无声环境里也不报错', b.errors.length === 0, b.errors[0]);
   }
 

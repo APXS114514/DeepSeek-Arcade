@@ -14,6 +14,8 @@ export function source(name) {
 }
 
 export const SHARED_I18N = 'shared/i18n.js';
+/* 每个页面都会先加载的共享脚本（顺序与真实 HTML 一致） */
+export const SHARED_PRELUDE = ['shared/i18n.js', 'shared/audio.js', 'shared/whale.js'];
 
 /* 每个页面真正存在的元素（与各自的 index.html 对应） */
 const PAGES = {
@@ -68,7 +70,7 @@ const PAGES = {
     ],
   },
   attentionmaze: {
-    scripts: ['games/attention-maze/game.js'],
+    scripts: ['games/attention-maze/levels.js', 'games/attention-maze/game.js'],
     elements: [
       { tag: 'title', attrs: { 'data-i18n': 'maze.title' } },
       { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
@@ -98,6 +100,7 @@ const PAGES = {
       { attrs: { 'data-i18n': 'lobby.title' } },
       { attrs: { 'data-i18n': 'lobby.sub' } },
       { id: 'lang' },
+      { id: 'sound' },
       { attrs: { 'data-i18n': 'lobby.whale.name' } },
       { attrs: { 'data-i18n': 'lobby.whale.desc' } },
       { attrs: { 'data-i18n': 'lobby.snake.name' } },
@@ -236,7 +239,7 @@ export function harness(opts) {
     return code;
   };
 
-  vm.runInContext(source(SHARED_I18N), sandbox, { filename: SHARED_I18N });
+  for (const s of SHARED_PRELUDE) vm.runInContext(source(s), sandbox, { filename: s });
   for (const s of page.scripts) {
     let code = source(s);
     if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall' || pageName === 'attentionmaze') code = patchGame(code);

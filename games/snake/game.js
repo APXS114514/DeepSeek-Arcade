@@ -34,8 +34,8 @@
   var I18N = window.I18N || null;
   function T(key) { return (I18N && I18N.t) ? I18N.t(key) : key; }
   var ArcadeAudio = window.ArcadeAudio || null;
-  var soundOn = true;
-  try { soundOn = localStorage.getItem('arcade.snake.sound') !== 'off'; } catch (e) { soundOn = true; }
+  /* 全站统一 Sound：arcade.sound 优先，其次才是本游戏的老 key（读到就迁移） */
+  var soundOn = ArcadeAudio ? ArcadeAudio.isEnabled('arcade.snake.sound') : true;
 
   function tone(o) { if (soundOn && ArcadeAudio && ArcadeAudio.tone) ArcadeAudio.tone(o); }
 
@@ -46,8 +46,7 @@
     btn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
   }
   function toggleSound() {
-    soundOn = !soundOn;
-    try { localStorage.setItem('arcade.snake.sound', soundOn ? 'on' : 'off'); } catch (e) { /* ignore */ }
+    soundOn = ArcadeAudio ? ArcadeAudio.toggle() : !soundOn;
     updateSoundButton();
     if (soundOn) tone({ type: 'triangle', from: 880, to: 1180, ms: 90, gain: 0.04 });
   }

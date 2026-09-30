@@ -47,77 +47,16 @@
 
   /* ---------------- 像素精灵 ----------------
    * X = 主色, o = 肚皮, f = 胸鳍, e = 眼白, p = 瞳孔, . = 透明
-   * 想改造型直接改字符画即可，尺寸会自动按上面的 PX 缩放。 */
-  var WHALE_A = [
-    '.......X....X...........',
-    '......XX....XXXXXXXX....',
-    'XXX..XXX....XXXXXXXXX...',
-    'XXXXXXXX...XXXXXXXXXXX..',
-    '.XXXXXX...XXXXXXXXXXXXX.',
-    '..XXXX...XXXXXXXXXXXXXXX',
-    '....XX.XXXXXXXXXXXXXXXXX',
-    '....XXXXXXoXXXXXXoooooXX',
-    '....XXXXXoXXXXXXooooooXX',
-    '....XXXXooXXXXXoooooooXX',
-    '.....XXXXXXXXXooooooooXX',
-    '.....XXXXXXXXooooooooXXX',
-    '......XXXXXXXooooooooXX.',
-    '......XXXXXXoooXooooXXX.',
-    '.......XXXXooXXXoooXXX..',
-    '.....XXXXXooXXXXXXXXX...',
-    '......XX..XXXXXXXXXX....',
-    '...........XXXXXXX......'
-  ];
-  var WHALE_B = [
-    '............X...........',
-    '.......X....XXXXXXXX....',
-    '......XX....XXXXXXXXX...',
-    'X....XXX...XXXXXXXXXXX..',
-    'XXXXXXXX..XXXXXXXXXXXXX.',
-    'XXXXXXX..XXXXXXXXXXXXXXX',
-    '.XXXXX..XXXXXXXXXXXXXXXX',
-    '...XXXXXXXoXXXXXXoooooXX',
-    '....XXXXXoXXXXXXooooooXX',
-    '....XXXXooXXXXXoooooooXX',
-    '....XXXXoXXXXXooooooooXX',
-    '.....XXXXXXXXooooooooXXX',
-    '.....XXXXXXXXooooooooXX.',
-    '......XXXXXXoooXooooXXX.',
-    '.......XXXXooXXXoooXXX..',
-    '......XXXXooXXXXXXXXX...',
-    '.....XXXXXXXXXXXXXXX....',
-    '...........XXXXXXX......'
-  ];
-  var WHALE_DIVE_A = [
-    '.......X....XX..........',
-    'X....XXX....XXXXXXXXX...',
-    'XXXXXXXX...XXXXXXXXXXX..',
-    '.XXXXXX..XXXXXXXXXXXXXX.',
-    '...XXX..XXXXXXXXXXXXXXXX',
-    '....XXXXXXoXXXXXXoooooXX',
-    '....XXXXXoXXXXXoooooooXX',
-    '.....XXXXXXXXXooooooooXX',
-    '.....XXXXXXXXooooooooXX.',
-    '......XXXXXXooooooooXXX.',
-    '.......XXXXooXXXoooXXX..',
-    '.....XXXXXXXXXXXXXXX....',
-    '...........XXXXXXX......'
-  ];
-  var WHALE_DIVE_B = [
-    '............XX..........',
-    '.......X....XXXXXXXXX...',
-    '.....XXX...XXXXXXXXXXX..',
-    'XXXXXXXX.XXXXXXXXXXXXXX.',
-    'XXXXXXXoXXXXXXXXXXXXXXXX',
-    '..XXXXXXXXoXXXXXXoooooXX',
-    '....XXXXXoXXXXXoooooooXX',
-    '....XXXXooXXXXooooooooXX',
-    '.....XXXXXXXXooooooooXX.',
-    '.....XXXXXXXooooooooXXX.',
-    '.......XXXXooXXXoooXXX..',
-    '......XXXXXXXXXXXXXX....',
-    '.....XX....XXXXXXX......'
-  ];
+   * 小鲸鱼（含下潜两帧）现在统一放在 shared/whale.js —— Whale Runner / Token Fall /
+   * 大厅预览共用同一份素材，改造型只改那一个文件。其余海洋生物仍只属于本游戏。 */
+  var ArcadeWhale = window.ArcadeWhale || {};
+  var WHALE_A = ArcadeWhale.NORMAL_A;
+  var WHALE_B = ArcadeWhale.NORMAL_B;
+  var WHALE_DIVE_A = ArcadeWhale.DIVE_A;
+  var WHALE_DIVE_B = ArcadeWhale.DIVE_B;
+  if ((!WHALE_A || !WHALE_DIVE_A) && window.console && window.console.warn) {
+    window.console.warn('[whale] 缺少 shared/whale.js：小鲸鱼素材没加载，请检查页面脚本顺序');
+  }
   var URCHIN = [
     '..X........X..',
     '...X..XX..X...',
@@ -268,8 +207,10 @@
 
   /* ---------------- 音效（WebAudio 合成，无资源文件） ---------------- */
   var audioCtx = null;
-  var soundOn = true;
-  try { soundOn = localStorage.getItem('whaleRunner.sound') !== 'off'; } catch (e) { soundOn = true; }
+  /* 全站统一 Sound（shared/audio.js）。本游戏的三段包络 beep() 音色完全不动，
+   * 只是开关状态改为读 / 写统一的 arcade.sound，必要时从 whaleRunner.sound 迁移。 */
+  var ArcadeAudio = window.ArcadeAudio || null;
+  var soundOn = ArcadeAudio ? ArcadeAudio.isEnabled('whaleRunner.sound') : true;
 
   function beep(kind) {
     if (!soundOn) return;
@@ -485,8 +426,7 @@
   }
 
   function toggleSound() {
-    soundOn = !soundOn;
-    try { localStorage.setItem('whaleRunner.sound', soundOn ? 'on' : 'off'); } catch (e) { /* ignore */ }
+    soundOn = ArcadeAudio ? ArcadeAudio.toggle() : !soundOn;
     updateSoundButton();
     if (soundOn) beep('point');
   }

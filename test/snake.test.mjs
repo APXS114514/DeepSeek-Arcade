@@ -251,7 +251,8 @@ export function run() {
     ok('P 继续', b.G.state === 'running');
     b.key('keydown', 'm', 'KeyM');
     ok('静音按钮文案变化', b.els.sound.textContent === '🔇 静音', b.els.sound.textContent);
-    ok('静音写入自己的 key', b.store.get('arcade.snake.sound') === 'off', String(b.store.get('arcade.snake.sound')));
+    ok('静音写入全站统一的 arcade.sound', b.store.get('arcade.sound') === 'off', String(b.store.get('arcade.sound')));
+    ok('不再单独写自己的旧 key', !b.store.has('arcade.snake.sound'));
     b.doc.hidden = true; b.fireDoc('visibilitychange'); b.tick(2);
     ok('切走标签页会自动暂停', b.G.state === 'paused', b.G.state);
     b.doc.hidden = false; b.fireDoc('visibilitychange');

@@ -22,7 +22,7 @@
 
 .hero .sub { margin-top: 12px; }
 
-.hero-lang { position: absolute; top: 0; right: 0; }
+.hero-lang { position: absolute; top: 0; right: 0; display: flex; gap: 8px; }
 
 .games { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: 1fr; }
 
@@ -90,6 +90,6 @@
   .brand-underline { width: 56px; margin-top: 8px; }
   .hero { margin-bottom: 14px; }
   .hero-lang { position: static; margin-top: 12px; }
-  .hero-lang .btn { width: 100%; }
+  .hero-lang .btn { flex: 1 1 0; width: auto; }
   .foot .play { min-width: 96px; }
 }

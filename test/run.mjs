@@ -3,6 +3,7 @@ import * as collision from './collision.test.mjs';
 import * as snake from './snake.test.mjs';
 import * as tokenfall from './tokenfall.test.mjs';
 import * as attentionmaze from './attentionmaze.test.mjs';
+import * as engineering from './engineering.test.mjs';
 import * as i18n from './i18n.test.mjs';
 import * as smoke from './smoke.test.mjs';
 import * as paths from './paths.test.mjs';
@@ -15,6 +16,7 @@ const suites = [
   ['多语言（五个页面）', i18n],
   ['Whale Runner · 冒烟 + 可玩性', smoke],
   ['静态检查 · 路径与存储键', paths],
+  ['v1.0 工程化 · CI / 统一音效 / 共享素材 / 关卡拆分', engineering],
 ];
 let total = 0, fail = 0;
 for (const s of suites) {

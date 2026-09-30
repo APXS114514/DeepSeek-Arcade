@@ -33,8 +33,8 @@
   function T(key) { return (I18N && I18N.t) ? I18N.t(key) : key; }
 
   var ArcadeAudio = window.ArcadeAudio || null;
-  var soundOn = true;
-  try { soundOn = localStorage.getItem('arcade.tokenFall.sound') !== 'off'; } catch (e) { soundOn = true; }
+  /* 全站统一 Sound：arcade.sound 优先，其次才是本游戏的老 key（读到就迁移） */
+  var soundOn = ArcadeAudio ? ArcadeAudio.isEnabled('arcade.tokenFall.sound') : true;
   function tone(o) { if (soundOn && ArcadeAudio && ArcadeAudio.tone) ArcadeAudio.tone(o); }
 
   function updateButtons() {
@@ -51,8 +51,7 @@
     }
   }
   function toggleSound() {
-    soundOn = !soundOn;
-    try { localStorage.setItem('arcade.tokenFall.sound', soundOn ? 'on' : 'off'); } catch (e) { /* 隐私模式忽略 */ }
+    soundOn = ArcadeAudio ? ArcadeAudio.toggle() : !soundOn;
     updateButtons();
     if (soundOn) tone({ type: 'triangle', from: 880, to: 1180, ms: 90, gain: 0.04 });
   }
@@ -102,51 +101,15 @@
     think: { body: '#ffd76a', hi: '#fff4cd', core: '#5c3b00', glow: '#ffe9a3', text: '#3f2f08' }
   };
 
-  /* ---------------- 小鲸鱼（和 Whale Runner 是同一只） ----------------
-   * DeepSeek 官方 logo 的那条 cubic 路径光栅化成 24×18 像素网格（镜像成朝右），
-   * 字符画与 Whale Runner 里的 WHALE_A / WHALE_B 完全一致：两帧只差尾鳍摆动，
-   * 身体逐格对齐，所以换帧不影响判定。
-   * X = 主色, o = 肚皮, . = 透明；想改造型直接改字符即可，尺寸会自动跟着走。 */
-  var WHALE_A = [
-    '.......X....X...........',
-    '......XX....XXXXXXXX....',
-    'XXX..XXX....XXXXXXXXX...',
-    'XXXXXXXX...XXXXXXXXXXX..',
-    '.XXXXXX...XXXXXXXXXXXXX.',
-    '..XXXX...XXXXXXXXXXXXXXX',
-    '....XX.XXXXXXXXXXXXXXXXX',
-    '....XXXXXXoXXXXXXoooooXX',
-    '....XXXXXoXXXXXXooooooXX',
-    '....XXXXooXXXXXoooooooXX',
-    '.....XXXXXXXXXooooooooXX',
-    '.....XXXXXXXXooooooooXXX',
-    '......XXXXXXXooooooooXX.',
-    '......XXXXXXoooXooooXXX.',
-    '.......XXXXooXXXoooXXX..',
-    '.....XXXXXooXXXXXXXXX...',
-    '......XX..XXXXXXXXXX....',
-    '...........XXXXXXX......'
-  ];
-  var WHALE_B = [
-    '............X...........',
-    '.......X....XXXXXXXX....',
-    '......XX....XXXXXXXXX...',
-    'X....XXX...XXXXXXXXXXX..',
-    'XXXXXXXX..XXXXXXXXXXXXX.',
-    'XXXXXXX..XXXXXXXXXXXXXXX',
-    '.XXXXX..XXXXXXXXXXXXXXXX',
-    '...XXXXXXXoXXXXXXoooooXX',
-    '....XXXXXoXXXXXXooooooXX',
-    '....XXXXooXXXXXoooooooXX',
-    '....XXXXoXXXXXooooooooXX',
-    '.....XXXXXXXXooooooooXXX',
-    '.....XXXXXXXXooooooooXX.',
-    '......XXXXXXoooXooooXXX.',
-    '.......XXXXooXXXoooXXX..',
-    '......XXXXooXXXXXXXXX...',
-    '.....XXXXXXXXXXXXXXX....',
-    '...........XXXXXXX......'
-  ];
+  /* ---------------- 小鲸鱼（和 Whale Runner / 大厅预览同一只） ----------------
+   * 素材统一来自 shared/whale.js（DeepSeek logo 光栅化出的 24×18 两帧），
+   * 这里只负责尺寸推导与判定盒，不再自己存一份像素数据。 */
+  var ArcadeWhale = window.ArcadeWhale || {};
+  var WHALE_A = ArcadeWhale.NORMAL_A || [[]];
+  var WHALE_B = ArcadeWhale.NORMAL_B || WHALE_A;
+  if (!ArcadeWhale.NORMAL_A && window.console && window.console.warn) {
+    window.console.warn('[token-fall] 缺少 shared/whale.js：小鲸鱼素材没加载，请检查页面脚本顺序');
+  }
 
   /* 尺寸直接由字符画推导（改鲸鱼造型不用改这里） */
   var SHEET_PX = 3;                              // 每个精灵格子在画布上的像素大小
