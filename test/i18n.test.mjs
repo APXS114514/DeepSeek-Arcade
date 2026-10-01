@@ -131,7 +131,7 @@ export function run() {
          return html.indexOf('COMPRESS') >= 0 && html.indexOf('NOISE') >= 0 && html.indexOf('DEEP THINK') >= 0;
        })(), b.byI18n('data-i18n-html', 'tokenfall.tips').innerHTML.slice(0, 60));
     b.tick(2);
-    ok('tokenfall 英文画布文案', b.log.texts.some((s) => s.indexOf('Catch tokens') >= 0), b.log.texts.join('|').slice(0, 80));
+    ok('tokenfall 英文画布文案', b.log.texts.some((s) => s.indexOf('Catch TOKENs') >= 0), b.log.texts.join('|').slice(0, 80));
   }
 
   /* ---------- Attention Maze 页面 ---------- */
@@ -219,8 +219,10 @@ export function run() {
         'tokenfall.thinkName', 'tokenfall.overflow', 'tokenfall.over', 'tokenfall.gameover', 'tokenfall.paused',
         'tokenfall.pausedHint', 'tokenfall.pauseBtn', 'tokenfall.resumeBtn', 'tokenfall.ready', 'tokenfall.hint',
         'tokenfall.legend', 'tokenfall.start', 'tokenfall.restart', 'tokenfall.tips', 'tokenfall.short.token',
-        'tokenfall.short.compress', 'tokenfall.short.noise', 'lobby.tokenfall.name', 'lobby.tokenfall.desc',
-        'ui.back', 'hud.hi'];
+        'tokenfall.short.compress', 'tokenfall.short.noise', 'tokenfall.short.heavy', 'tokenfall.name.token',
+        'tokenfall.name.heavy', 'tokenfall.name.compress', 'tokenfall.name.noise', 'tokenfall.name.think',
+        'tokenfall.loadLabel', 'tokenfall.pressure',
+        'lobby.tokenfall.name', 'lobby.tokenfall.desc', 'ui.back', 'hud.hi'];
       const miss2 = need.filter((k) => !zh.has(k) || !en.has(k));
       ok('TOKEN FALL 要求的 ' + need.length + ' 个 i18n key 中英齐全', miss2.length === 0, '缺=' + miss2.join(','));
 

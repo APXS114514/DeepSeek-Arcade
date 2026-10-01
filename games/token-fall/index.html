@@ -13,7 +13,7 @@
     <p class="back-row"><a class="arcade-back" href="../../" data-i18n="ui.back">← 返回游戏厅</a></p>
     <header class="head">
       <h1 data-i18n="tokenfall.h1">🐳 TOKEN FALL</h1>
-      <p class="sub" data-i18n="tokenfall.sub">← → / A D 移动　·　接 TOKEN 与 COMPRESS，躲开 NOISE　·　P 暂停</p>
+      <p class="sub" data-i18n="tokenfall.sub">← → / A D 移动　·　接 TOKEN / HEAVY，躲 NOISE，抢 COMPRESS　·　P 暂停</p>
     </header>
 
     <div class="stage">
@@ -33,10 +33,14 @@
     </div>
 
     <footer class="tips" data-i18n-html="tokenfall.tips">
-      屏幕顶部落下 <b>TOKEN</b>（蓝）/ <b>COMPRESS</b>（青）/ <b>NOISE</b>（紫）/ <b>THINK</b>（金）。
-      接 TOKEN 得分但 <b>CONTEXT +32</b>；接 COMPRESS 压缩 <b>CONTEXT −256</b>；
-      NOISE 会让 <b>CONTEXT +128</b> 且不加分，必须躲开。CONTEXT 满 1024 后还有 <b>2 秒抢救时间</b>，
-      吃到 COMPRESS 就能取消溢出。最高分存在本地浏览器里。
+      屏幕顶部落下 <b>TOKEN</b>（蓝）/ <b>COMPRESS</b>（青）/ <b>HEAVY TOKEN</b>（绿，方块里写着 <b>H</b>）/ <b>NOISE</b>（紫）/ <b>THINK</b>（金）。
+      接 <b>TOKEN</b> 得分但 <b>CONTEXT +32</b>；<b>COMPRESS</b> 压缩 Context，但效果随 <b>LOAD</b> 提升而减弱（<b>−256 → −128</b>），
+      短时间内连吃还会边际递减（100% → 75% → 50%），Context 越低收益也越小 —— 所以不是见到就接。
+      <b>HEAVY TOKEN</b> 一次 <b>+35 分</b>，代价是 <b>CONTEXT +96</b>，是中后期典型的「高分 vs 风险」选择；它算有效 Token，<b>CLEAN 连击继续涨</b>。
+      <b>NOISE</b> 不加分，<b>CONTEXT +128 ~ +224</b>，LOAD 越高越致命，必须躲开。
+      游戏分 <b>LOAD 1~5</b> 五个阶段（约 0 / 30 / 60 / 100 / 150 秒）：LOAD 越高，C 越稀有、NOISE 越狠、Overflow 抢救时间越短（<b>2.0s → 1.2s</b>），
+      所有数值 150 秒后封顶 —— 后期很难，但不会「玩得够久必定数值爆炸」。CONTEXT 满 1024 后进入抢救期，吃到 COMPRESS 把 Context 压回 1024 以下即可取消溢出。
+      最高分存在本地浏览器里。
     </footer>
   </main>
 

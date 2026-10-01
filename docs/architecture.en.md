@@ -105,9 +105,13 @@ repository root to <https://apxs114514.github.io/DeepSeek-Arcade/>. The reposito
   deliberately sits close to `PAL.whale` (too bright and it becomes a white blob in the dark sea).
 - **Context Snake feel**: `BASE_STEP_MS` (start speed) / `STEP_DEC` (speed-up per TOKEN) / `MIN_STEP_MS` (speed cap) /
   `THINK_MS` / `THINK_SLOW` / `THINK_CHANCE` / `THINK_COOLDOWN` / `CTX_PER_TOKEN`.
-- **Token Fall balance**: `MAX_CONTEXT` (1024) / `CTX_TOKEN` / `CTX_COMPRESS` / `CTX_NOISE` / `CTX_THINK` /
-  `OVERFLOW_MS` (rescue window) / `SPEED_START`~`SPEED_MAX` / `SPAWN_START`~`SPAWN_MIN` / `ACTIVE_MAX` (on-screen cap) /
-  `NOISE_MIN`~`NOISE_MAX` / `COMPRESS_URGE_MS`, `COMPRESS_RESCUE_MS` (guarantees) / `COMBO_STEP`, `COMBO_MAX` (CLEAN multiplier).
+- **Token Fall balance**: difficulty *is* one `LOADS` table — per LOAD the `tokenCtx` / `heavyCtx` / `compressCtx` /
+  `noiseCtx` / `overflowMs` (rescue window) / `urgeRatio`+`urgeMs` and `rescueRatio`+`rescueMs` (the two guarantees) /
+  `thinkChance` / `w` (natural drop weights) / `pace` (speed, spawn interval, on-screen cap); `LOAD_STARTS` holds the
+  stage boundaries (0/30/60/100/150 seconds). Tuning means editing that one table: `getDropWeights()` /
+  `compressAmount()` / `paceAt()` are pure readers of it and are exposed to the tests via `window.TokenFallRules`.
+  Also `FATIGUE_WINDOW_MS`, `FATIGUE_MUL` (chain decay), `COMPRESS_MIN_AMOUNT`, `COMPRESS_STEP`, `EFF_*`
+  (Context Efficiency), `COMBO_STEP`, `COMBO_MAX` (CLEAN multiplier).
 - **Token Fall feel**: `PLAYER_SPEED` / `PLAYER_ACCEL` (smooth movement), `PLAYER_HIT` and `HIT` (hitbox insets — smaller
   means more forgiving).
 - **Attention Maze levels**: the `LAYERS` array in `games/attention-maze/levels.js` is the whole game — per layer a `map`
@@ -194,28 +198,67 @@ A vertical catching game. Different Token kinds fall from the top and you steer 
 
 | Drop | Colour | When caught | Catch it? |
 | --- | --- | --- | --- |
-| **TOKEN** | DeepSeek blue | `SCORE +10`, `CONTEXT +32` | Yes (most common) |
-| **COMPRESS** | bright cyan | `SCORE +20`, `CONTEXT −256` (floor 0) | Your lifeline when context is high |
-| **NOISE** | purple-red | `SCORE +0`, `CONTEXT +128` | Must be dodged |
+| **TOKEN** | DeepSeek blue | `SCORE +10`, `CONTEXT +32~40` | Your main score source (most common) |
+| **HEAVY TOKEN** | mint green (shows `H`) | `SCORE +35`, `CONTEXT +96` | From LOAD 2: big score, big Context gamble |
+| **COMPRESS** | bright cyan | `SCORE +20`, shrinks context (see below) | Ever rarer late — don't chain them blindly |
+| **NOISE** | purple-red | `SCORE +0`, `CONTEXT +128~224` | Must be dodged |
 | **THINK** | gold (`<think>`) | `SCORE +30`, `CONTEXT +16`, 4s DEEP THINK | Rare — grab it |
 
-- **HUD**: `CONTEXT 384 / 1024` is always visible, with `SCORE` / `CLEAN xN` / `HI` above it; the cap is fixed at **1024**.
-- **DEEP THINK**: every drop falls at ×0.6, with a restrained blue pixel glow and a remaining-time bar along the top
-  edge. It is rare (5% per spawn, at least 9 seconds apart, not in the first 5 seconds) so the game never stays in slow motion.
-- **CONTEXT OVERFLOW**: reaching 1024 does **not** kill you instantly — you get a **2-second rescue window** with a
-  flashing `OVERFLOW` label and an amber countdown bar. Catching a **COMPRESS** inside those 2 seconds pushes context
-  back under 1024 and cancels the overflow; only if the timer runs out while still over does the run end, and the reason
-  reads **`CONTEXT OVERFLOW`** rather than a generic GAME OVER.
-- **CLEAN combo**: catching TOKEN / COMPRESS / THINK in a row builds a combo, +1 multiplier every 3 catches, **capped at
-  x5**; catching NOISE resets it. Missing a TOKEN or COMPRESS neither ends the run nor breaks the combo — the point is
-  **choosing**, not catching everything.
-- **Difficulty**: fall speed (95 → **230 px/s cap**), spawn interval (1150 → **520ms cap**), concurrent drops
-  (1 → **4 cap**) and NOISE chance (0.13 → **0.30 cap**) all grow over time; the first 10 seconds are gentle and pressure
-  builds after a few dozen seconds without ever becoming unplayable.
-- **Spawn guarantees** (to avoid unwinnable states): if context is above 85% and no COMPRESS has spawned for 3.2s, the next
-  spawn is a COMPRESS; if context is above 95% and there is no COMPRESS on screen, one is guaranteed within 1.4s. A
-  guaranteed COMPRESS is **never dropped directly on top of the player** — you still have to go and catch it — and NOISE
-  **never spawns three times in a row**, so it cannot form an unavoidable wall.
+> The numbers are not constants: **the same drop is worth different amounts in different LOADs** (table below).
+
+#### Difficulty stages LOAD 1 ~ 5
+
+`LOAD_STARTS = [0, 30000, 60000, 100000, 150000]` — roughly **0 / 30 / 60 / 100 / 150 seconds**.
+After 150 seconds the run stays in LOAD 5 and **every value is capped** (speed 230px/s, spawn 520ms, 4 concurrent drops,
+NOISE weight 0.32), so late game is brutal but never a guaranteed numeric blow-up.
+
+| | LOAD 1 | LOAD 2 | LOAD 3 | LOAD 4 | LOAD 5 |
+| --- | --- | --- | --- | --- | --- |
+| Time | 0~30s | 30~60s | 60~100s | 100~150s | 150s+ |
+| TOKEN context | +32 | +32 | +36 | +40 | +40 |
+| COMPRESS base | 256 | 224 | 192 | 160 | 128 |
+| NOISE penalty | +128 | +144 | +160 | +192 | +224 |
+| COMPRESS natural chance | 0.18 | 0.14 | 0.10 | 0.07 | 0.05 |
+| HEAVY TOKEN chance | 0 | 0.08 | 0.15 | 0.20 | 0.22 |
+| NOISE chance | 0.06 | 0.13 | 0.20 | 0.27 | 0.32 |
+| Overflow grace | 2.0s | 1.8s | 1.6s | 1.4s | 1.2s |
+| urge guarantee (ratio / wait) | 85% / 3.2s | 88% / 3.8s | 90% / 4.5s | 92% / 5.2s | 97% / 6.5s |
+| rescue guarantee (ratio / wait) | 95% / 1.4s | 96% / 1.8s | 97% / 2.2s | 98% / 2.6s | 99% / 3.0s |
+
+- **Pace (`pace`)**: speed 95 → 230 px/s, spawn interval 1150 → 520ms, concurrent drops 1 → 4. These interpolate
+  **linearly between adjacent LOADs** (`paceAt()`) so there is no teleport-style acceleration, and the concurrent count is
+  floored (LOAD 1 is 1 the whole way, LOAD 5 is 4). Difficulty comes from the rules below, not from raw speed.
+- **COMPRESS is a three-factor composite** (`compressAmount()`):
+  `final = LOAD base × Compression Fatigue × Context Efficiency`, then rounded to a multiple of **16**, floored at **64**,
+  and always limited to the current Context (context can never go negative).
+  - **Compression Fatigue**: chaining COMPRESS within 7 seconds decays — the 1st / 2nd / 3rd+ give **100% / 75% / 50%**.
+    Go `FATIGUE_WINDOW_MS = 7000` without another catch and it resets to 100%; it never accumulates permanently
+    (and the recovery timer is frozen while paused).
+  - **Context Efficiency**: context above 75% gives 100%, 40–75% gives 80%, below 40% gives 50% — so a COMPRESS caught at
+    low context is largely wasted, which makes "save it for an emergency" a real decision.
+  - The floating number drawn on Canvas is the **effective** value (e.g. `COMPRESS -160`), never the base value.
+- **HUD**: `CONTEXT 384 / 1024` plus the current stage **`LOAD n`** (CONTEXT left, LOAD right, DEEP THINK in the middle).
+  On a stage change the centre of the screen shows `LOAD n` + `PRESSURE INCREASED` for about **1 second** with a short
+  Web Audio cue — never a long obstruction. The cap stays fixed at **1024**.
+- **DEEP THINK**: every drop falls at ×0.6, with a restrained blue pixel glow and a remaining-time bar along the top edge.
+  It is rare (5% per spawn, dropping to 1.8% by LOAD 5; at least 9 seconds apart, not in the first 5 seconds) — rarer later
+  but **never removed**: it stays the "always happy to see it" special item.
+- **CONTEXT OVERFLOW**: reaching 1024 does **not** kill you instantly — you get a rescue window that shrinks with the LOAD
+  (2.0s → 1.2s, floored by `OVERFLOW_FLOOR_MS = 1200` because mobile players still need reaction time) with a flashing
+  `OVERFLOW` label and an amber countdown bar. Catching a **COMPRESS** inside that window pushes context back under 1024
+  and **cancels the overflow immediately** (the state is re-checked every frame, so a rescued run can never be killed by a
+  stale timer); only if the timer runs out while still over does the run end, and the reason reads
+  **`CONTEXT OVERFLOW`** rather than a generic GAME OVER. The timer is fully frozen while paused.
+- **CLEAN combo**: catching **TOKEN / HEAVY TOKEN / COMPRESS / THINK** in a row builds a combo, +1 multiplier every 3
+  catches, **capped at x5**; catching NOISE resets it. Missing a TOKEN or COMPRESS neither ends the run nor breaks the combo
+  — the point is **choosing**, not catching everything. HEAVY TOKEN counts as a real token, so it does **not** break the
+  combo (that is what makes the high-score-vs-Context gamble work).
+- **Spawn guarantees** (to avoid unwinnable states) — both get stricter with the LOAD (table above):
+  - **urge**: context ≥ this LOAD's ratio and no COMPRESS has spawned for `urgeMs` → the next spawn is a COMPRESS;
+  - **rescue**: context ≥ this LOAD's ratio and there is no COMPRESS on screen → one is guaranteed within `rescueMs`.
+  - A guaranteed COMPRESS is **never dropped directly on top of the player** (`COMPRESS_MIN_OFFSET`) and never
+    auto-compresses — you still have to go and catch it. NOISE **never spawns three times in a row**
+    (`NOISE_STREAK_MAX = 2`; after that its weight is handed to TOKEN), so it cannot form an unavoidable wall.
 - **Pressure feedback**: from 60% the context bar brightens, from 85% it pulses gently, and from 95% a restrained amber
   border appears at the screen edges (no harsh red flashing, no impact on playability); a very light "Context Buffer"
   strip sits on the whale's back.

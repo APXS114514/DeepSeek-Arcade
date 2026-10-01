@@ -15,10 +15,27 @@ Pure HTML + CSS + vanilla JavaScript (Canvas 2D) — **no dependencies, no build
 | --- | --- | --- |
 | 🐳 **Whale Runner** | Endless runner | Jump / dive past sea creatures — the further you swim, the faster it gets |
 | 🐳 **Context Snake** | Snake | Eat TOKENs to grow your CONTEXT; don't hit the walls or yourself |
-| 🐳 **Token Fall** | Catcher + resource management | Catch Token · Manage context: grab COMPRESS to shrink your context, dodge NOISE |
+| 🐳 **Token Fall** | Catcher + resource management | Catch Token · Manage context: the higher the LOAD, the rarer COMPRESS gets and the deadlier NOISE becomes — plus the high-score, high-risk HEAVY TOKEN |
 | 🐳 **Attention Maze** | Memory puzzle | Remember · Attend · Escape (12 hand-made layers) |
 
 All four share the same DeepSeek whale, the same zh/en bilingual UI, the same sound switch and the same pixel style.
+
+### Token Fall's difficulty curve
+
+Token Fall expresses difficulty through five **LOAD 1 ~ 5** stages (roughly 0 / 30 / 60 / 100 / 150 seconds):
+
+- **LOAD 1**: sparse drops, one object on screen, COMPRESS is common and **HEAVY TOKEN does not exist yet** — a clear beginner phase;
+- **LOAD 2 ~ 3**: HEAVY TOKEN appears, NOISE gets more frequent, COMPRESS starts to feel precious;
+- **LOAD 4 ~ 5**: several targets on screen at once, so you must actively choose what to catch;
+- **after 150 seconds** you enter an endless high-pressure stage, but **every value is capped**: brutally hard, yet never mathematically unwinnable.
+
+Difficulty does not come from fall speed alone — it comes from **resource pressure, COMPRESS scarcity and the cost of mistakes**:
+
+- **COMPRESS gets weaker every LOAD**: base compression −256 → −128; chaining them in quick succession decays (100% → 75% → 50%) and low Context pays even less — so late game you do *not* grab every COMPRESS you see;
+- **NOISE hits harder every LOAD**: CONTEXT +128 → +224, so one bad catch late in a run can push you to the brink of overflow;
+- **the overflow rescue window shrinks**: 2.0s → 1.2s (never shorter — mobile players still need time to react);
+- **HEAVY TOKEN** (from LOAD 2): +35 points but CONTEXT +96 — the classic high-score-vs-risk choice. It counts as a real token, so your CLEAN combo continues;
+- **COMPRESS guarantees stay** so pure RNG can never make a run unwinnable, but the higher the LOAD the more extreme the threshold and the longer the wait — and you always have to move over and catch it yourself.
 
 ## Technical highlights
 
@@ -49,7 +66,7 @@ Either:
 bash test/run.sh          # same as node test/run.mjs
 ```
 
-All four games share one headless test harness (stub DOM + stub Canvas, no browser needed). 700+ assertions cover
+All four games share one headless test harness (stub DOM + stub Canvas, no browser needed). 800+ assertions cover
 gameplay rules, a **BFS solvability check for all 12 Attention Maze layers**, i18n dictionary parity, relative paths
 and localStorage key collisions, plus the v1.0 structural contracts (global sound, shared assets, level data split,
 CI config, LICENSE). Details in [docs/testing.en.md](docs/testing.en.md).

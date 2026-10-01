@@ -17,14 +17,15 @@ CI 里同样是这一条命令（`.github/workflows/pages.yml` 的 `Run tests` �
 bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```
 
-目前 **573 项**，七个套件：
+目前 **818 项**，八个套件：
 
 | 套件 | 覆盖 |
 | --- | --- |
 | Whale Runner · 碰撞 | 跳/潜 vs 四类海洋生物，且在 **PX=2/3/4** 三档缩放下都成立 |
 | Context Snake · 玩法 | 移动、禁止反向（含快速连按）、吃 TOKEN 增长、撞墙、撞自身、最高分、速度上限、THINK 触发与结束、触屏输入、离开页面停循环 |
-| Token Fall · 玩法 | 四类掉落物结算、CONTEXT 不低于 0、Overflow 2 秒抢救与取消（含「救回来不再判死」回归）、DEEP THINK 触发/到期/物理减速、Combo 增长与 x5 封顶、难度上限、高 Context 的 COMPRESS 保底、NOISE 不成墙、暂停时所有计时冻结、键盘 / 触屏 / 多指 / 拖动、切走标签页与失焦会松开输入、bfcache 返回后循环能接回来、重开清理、最高分 key、DPR 不影响判定 |
-| 多语言 | 五个页面的中英切换与持久化、旧的 `whaleRunner.lang` 兼容、**全站词典 key 一一对应且无遗漏**、Token Fall 要求的 31 个 key、Attention Maze 要求的 40 个 key 中英齐全 |
+| Token Fall · 玩法 | 五类掉落物结算、CONTEXT 不低于 0、Overflow 抢救随 LOAD 收紧与取消（含「救回来不再判死」回归）、DEEP THINK 触发/到期/物理减速、Combo 增长与 x5 封顶、难度上限、高 Context 的 COMPRESS 保底、NOISE 不成墙、暂停时所有计时冻结、键盘 / 触屏 / 多指 / 拖动、切走标签页与失焦会松开输入、bfcache 返回后循环能接回来、重开清理、最高分 key、DPR 不影响判定 |
+| Token Fall · LOAD 难度曲线 | 阶段按 0/30/60/100/150 秒正确切换且永不出现 LOAD 6、每个 LOAD 的 COMPRESS 基础值与 NOISE 惩罚、自然概率随 LOAD 下降、HEAVY TOKEN 不在 LOAD 1 出现且权重始终少于 TOKEN、COMPRESSION FATIGUE（递减 / 7 秒重置 / 封顶）、Context Efficiency、压缩量按 16 取整 + 下限 64 + 永不为负、保底阈值逐级严格而 LOAD 5 仍保留极端保底、Overflow 抢救时间逐级收紧且不低于 1.2 秒、HEAVY TOKEN 继续 CLEAN、暂停 / 切页 / 重开对 LOAD、Fatigue、Overflow 的影响。**只验证 `window.TokenFallRules` 暴露的纯函数与真实行为，不做随机采样** |
+| 多语言 | 五个页面的中英切换与持久化、旧的 `whaleRunner.lang` 兼容、**全站词典 key 一一对应且无遗漏**、Token Fall 要求的 39 个 key（含 LOAD / HEAVY TOKEN / 压力提示）、Attention Maze 要求的 40 个 key 中英齐全 |
 | Whale Runner · 冒烟 | 生命周期、暂停/静音/隐藏、判定盒几何自检、AI 连跑 20000 帧零死亡 |
 | Attention Maze · 玩法 | 12 关地图数据自检（15×11、四周封闭、节点都在可走格、不重叠、answer 就是注意力最高的 KEY）与 **BFS 可解性验证**、par 合理性、地图解析、走格子与撞墙不加 MOVES、提前到 EXIT 无效、
 QUERY 触发与展示时长、错误 KEY 只记一次 MISTAKE、正确 KEY 解锁 VALUE、VALUE 解锁 EXIT、权重不随机、MULTI-HEAD 阶段顺序与「两头之和」判定、RESCAN 次数与上限、暂停冻结全部计时、切页自动暂停、

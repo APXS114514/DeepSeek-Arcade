@@ -98,9 +98,13 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 - **Whale Runner 配色**：`PAL` 每项是 `[浅海 RGB, 深海 RGB]`；注意 `PAL.belly` 的深海值刻意贴近 `PAL.whale`（太亮会在暗海里变成白斑）。
 - **Context Snake 手感**：`BASE_STEP_MS`（起始速度）/ `STEP_DEC`（每个 TOKEN 提速）/ `MIN_STEP_MS`（速度上限）/
   `THINK_MS` / `THINK_SLOW` / `THINK_CHANCE` / `THINK_COOLDOWN` / `CTX_PER_TOKEN`。
-- **Token Fall 平衡**：`MAX_CONTEXT`（1024）/ `CTX_TOKEN` / `CTX_COMPRESS` / `CTX_NOISE` / `CTX_THINK` /
-  `OVERFLOW_MS`（抢救时间）/ `SPEED_START`~`SPEED_MAX` / `SPAWN_START`~`SPAWN_MIN` / `ACTIVE_MAX`（同屏上限）/
-  `NOISE_MIN`~`NOISE_MAX` / `COMPRESS_URGE_MS`、`COMPRESS_RESCUE_MS`（保底）/ `COMBO_STEP`、`COMBO_MAX`（CLEAN 倍率）。
+- **Token Fall 平衡**：难度就是一张 `LOADS` 表 —— 每个 LOAD 各自的 `tokenCtx` / `heavyCtx` / `compressCtx` /
+  `noiseCtx` / `overflowMs`（抢救时间）/ `urgeRatio`+`urgeMs`、`rescueRatio`+`rescueMs`（两道保底）/
+  `thinkChance` / `w`（掉落物自然权重）/ `pace`（速度 / 生成间隔 / 同屏上限）；`LOAD_STARTS` 是阶段边界
+  （0/30/60/100/150 秒）。改数值只改这张表：`getDropWeights()` / `compressAmount()` / `paceAt()`
+  都是读表的纯函数，并且通过 `window.TokenFallRules` 暴露给测试。
+  另外还有 `FATIGUE_WINDOW_MS`、`FATIGUE_MUL`（连吃递减）、`COMPRESS_MIN_AMOUNT`、`COMPRESS_STEP`、
+  `EFF_*`（Context Efficiency）、`COMBO_STEP`、`COMBO_MAX`（CLEAN 倍率）。
 - **Token Fall 手感**：`PLAYER_SPEED` / `PLAYER_ACCEL`（平滑移动）、`PLAYER_HIT` 与 `HIT`（判定盒内缩量，越小越宽松）。
 - **Attention Maze 关卡**：`LAYERS` 数组就是全部内容 —— 每关 `map`（15×11 的 `#` / `.`）、`nodes`（start/exit/query/keys/value 的明确坐标）、
   `keys[].w`（单头权重）或 `heads`（两个注意力头）、`answer`（正确 KEY 的 id）、`scanMs` / `focus` / `rescan` / `parTime` / `parMoves` / `tip`。
@@ -175,24 +179,63 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 
 | 掉落物 | 颜色 | 接到以后 | 该不该接 |
 | --- | --- | --- | --- |
-| **TOKEN** | DeepSeek 蓝 | `SCORE +10`、`CONTEXT +32` | 该接（最常见） |
-| **COMPRESS** | 亮青色 | `SCORE +20`、`CONTEXT −256`（最低 0） | Context 高时的救命稻草 |
-| **NOISE** | 紫红 | `SCORE +0`、`CONTEXT +128` | 必须躲开 |
-| **THINK** | 金色（`<think>`） | `SCORE +30`、`CONTEXT +16`、4 秒 DEEP THINK | 低概率，看到就接 |
+| **TOKEN** | DeepSeek 蓝 | `SCORE +10`、`CONTEXT +32~40` | 主要得分来源（最常见） |
+| **HEAVY TOKEN** | 薄荷绿（方块内写 `H`） | `SCORE +35`、`CONTEXT +96` | LOAD 2 起出现：高分，但要赌 Context |
+| **COMPRESS** | 亮青色 | `SCORE +20`、压缩 Context（见下） | 后期越来越稀有，别见一个接一个 |
+| **NOISE** | 紫红 | `SCORE +0`、`CONTEXT +128~224` | 必须躲开 |
+| **THINK** | 金色（`<think>`） | `SCORE +30`、`CONTEXT +16`、4 秒 DEEP THINK | 稀有，看到就接 |
 
-- **HUD**：`CONTEXT 384 / 1024` 常驻显示，上面还有 `SCORE` / `CLEAN xN` / `HI`；上限第一版固定 **1024**。
+> 数值不是固定常数：**同一类掉落物在不同 LOAD 下的数值不同**，见下面的 LOAD 表。
+
+#### 难度阶段 LOAD 1 ~ 5
+
+`LOAD_STARTS = [0, 30000, 60000, 100000, 150000]`，也就是大约 **0 / 30 / 60 / 100 / 150 秒**。
+150 秒之后一直停在 LOAD 5，**所有数值封顶**（速度 230px/s、生成间隔 520ms、同屏 4 个、NOISE 权重 0.32），
+所以后期非常难，但不是「玩得够久必定数值爆炸」。
+
+| | LOAD 1 | LOAD 2 | LOAD 3 | LOAD 4 | LOAD 5 |
+| --- | --- | --- | --- | --- | --- |
+| 时间 | 0~30s | 30~60s | 60~100s | 100~150s | 150s+ |
+| TOKEN Context | +32 | +32 | +36 | +40 | +40 |
+| COMPRESS 基础压缩 | 256 | 224 | 192 | 160 | 128 |
+| NOISE 惩罚 | +128 | +144 | +160 | +192 | +224 |
+| COMPRESS 自然概率 | 0.18 | 0.14 | 0.10 | 0.07 | 0.05 |
+| HEAVY TOKEN 概率 | 0 | 0.08 | 0.15 | 0.20 | 0.22 |
+| NOISE 概率 | 0.06 | 0.13 | 0.20 | 0.27 | 0.32 |
+| Overflow 抢救 | 2.0s | 1.8s | 1.6s | 1.4s | 1.2s |
+| 保底 urge（阈值 / 等待） | 85% / 3.2s | 88% / 3.8s | 90% / 4.5s | 92% / 5.2s | 97% / 6.5s |
+| 保底 rescue（阈值 / 等待） | 95% / 1.4s | 96% / 1.8s | 97% / 2.2s | 98% / 2.6s | 99% / 3.0s |
+
+- **节奏（`pace`）**：速度 95 → 230 px/s、生成间隔 1150 → 520ms、同屏 1 → 4 个。
+  这些数值在**相邻 LOAD 之间线性过渡**（`paceAt()`），不会出现瞬移式加速；
+  同屏数量取整，所以 LOAD 1 全程只有 1 个、LOAD 5 是 4 个 —— 难度主要来自下面的规则，而不是单纯拉速度。
+- **COMPRESS 三重复合**（`compressAmount()`）：
+  `最终压缩量 = LOAD 基础值 × Compression Fatigue × Context Efficiency`，
+  再按 **16 取整**、下限 **64**，并且**绝不超过当前 Context**（Context 不会被压成负数）。
+  - **Compression Fatigue**：7 秒内连续接 C 会边际递减 —— 第 1 / 2 / 3+ 个分别是 **100% / 75% / 50%**；
+    超过 `FATIGUE_WINDOW_MS = 7000` 没再接就重置回 100%，不会永久累积（暂停时恢复计时也冻结）。
+  - **Context Efficiency**：Context > 75% 时 100%、40%~75% 时 80%、< 40% 时 50% ——
+    低 Context 时 C 的收益明显变小，所以「把 C 留到危险的时候」是一个真实的决策。
+  - 接到 C 时 Canvas 浮动出来的数字是**实际生效值**（例如 `COMPRESS -160`），不是基础值。
+- **HUD**：`CONTEXT 384 / 1024` 与当前阶段 **`LOAD n`** 常驻显示（CONTEXT 在左、LOAD 在右、DEEP THINK 在中间）；
+  阶段切换时画面中央**约 1 秒**显示 `LOAD n` + `压力上升` / `PRESSURE INCREASED`，并有一声 Web Audio 提示音，
+  不做长时间遮挡。上限固定 **1024**。
 - **DEEP THINK**：所有掉落物下落速度 ×0.6，全屏克制的蓝色像素泛光 + 顶边剩余时间条。
-  出现概率很低（单次 5%、两次之间至少隔 9 秒、开局 5 秒内不刷），不会让玩家一直慢动作。
-- **CONTEXT OVERFLOW**：Context 到达 1024 时**不会瞬间死亡**，而是进入 **2 秒抢救时间**：
-  HUD 闪 `OVERFLOW`、场地顶部有琥珀色倒计时条。这 2 秒内接到 **COMPRESS** 把 Context 压回 1024 以下就取消溢出；
-  时间走完仍然溢出才 Game Over，结束原因显示 **`CONTEXT OVERFLOW`（上下文溢出）**，而不是普通 GAME OVER。
-- **CLEAN 连击**：连续接到 TOKEN / COMPRESS / THINK 累计 Combo，每 3 连 +1 倍、**封顶 x5**；
+  出现概率很低（单次 5%，随 LOAD 降到 1.8%；两次之间至少隔 9 秒、开局 5 秒内不刷），
+  后期更稀有但**永不取消** —— 仍然属于「看到就很开心」的特殊物品。
+- **CONTEXT OVERFLOW**：Context 到达 1024 时**不会瞬间死亡**，而是进入抢救时间
+  （2.0s → 1.2s，随 LOAD 收紧；下限 `OVERFLOW_FLOOR_MS = 1200`，手机玩家也要有反应时间）：
+  HUD 闪 `OVERFLOW`、场地顶部有琥珀色倒计时条。这段时间内接到 **COMPRESS** 把 Context 压回 1024 以下就**立即取消溢出**
+  （每帧都重新判断，绝不会出现「已经救回来了还被旧计时器判死」）；时间走完仍然溢出才 Game Over，
+  结束原因显示 **`CONTEXT OVERFLOW`（上下文溢出）**，而不是普通 GAME OVER。暂停时溢出计时完全冻结。
+- **CLEAN 连击**：连续接到 **TOKEN / HEAVY TOKEN / COMPRESS / THINK** 累计 Combo，每 3 连 +1 倍、**封顶 x5**；
   接到 NOISE 立刻清零。漏掉 TOKEN / COMPRESS 不结束游戏、也不清 Combo —— 核心是**选择**而不是全接。
-- **难度**：随时间提高下落速度（95 → **230 px/s 封顶**）、生成间隔（1150 → **520ms 封顶**）、
-  同屏数量（1 → **4 个封顶**）与 NOISE 概率（0.13 → **0.30 封顶**）；前 10 秒很轻松，几十秒后开始有压力，但不会失控。
-- **生成保底**（避免无解局面）：Context > 85% 且 3.2 秒没给过 COMPRESS → 下一次必定生成 COMPRESS；
-  Context > 95% 且场上没有 COMPRESS → 1.4 秒内保底生成一个。保底 COMPRESS 也**不会直接放在玩家头顶**，
-  仍然要玩家自己过去接；NOISE 也**不会连出 3 个**形成几乎必接的墙。
+  HEAVY TOKEN 属于有效 Token，所以吃它**不会**断 Combo（这正是「高分 vs Context 风险」能成立的前提）。
+- **生成保底**（避免无解局面）：两道保底都随 LOAD 变严格（见上表）：
+  - **urge**：Context ≥ 本 LOAD 阈值且 `urgeMs` 没给过 COMPRESS → 下一次必定生成 COMPRESS；
+  - **rescue**：Context ≥ 本 LOAD 阈值且场上没有 COMPRESS → `rescueMs` 内保底生成一个。
+  - 保底 COMPRESS **不会直接放在玩家头顶**（`COMPRESS_MIN_OFFSET`），也不会自动压缩 —— 仍然要玩家自己过去接；
+    NOISE 也**不会连出 3 个**（`NOISE_STREAK_MAX = 2`，连出后它的权重让给 TOKEN）形成几乎必接的墙。
 - **压力反馈**：60% 起 Context 条变亮，85% 起轻微脉冲，95% 起屏幕边缘出现克制的琥珀色边框
   （不用刺眼红闪，也不影响可玩性）；鲸鱼背上还有一条很轻的 Context Buffer 小槽。
 - **操作**：`←` `→` / `A` `D` 按住平滑移动（有加速度，不是瞬移一格）· 手机屏幕下方两个大方向键

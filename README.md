@@ -14,10 +14,29 @@
 | --- | --- | --- |
 | 🐳 **Whale Runner** | 跑酷 | 上浮 / 下潜躲开海洋生物，游得越远越快 |
 | 🐳 **Context Snake** | 贪吃蛇 | 吃 TOKEN 让 CONTEXT 变长，别撞墙也别咬到自己 |
-| 🐳 **Token Fall** | 接物 + 资源管理 | 接住 Token · 管理上下文：接 COMPRESS 压缩 Context，躲开 NOISE |
+| 🐳 **Token Fall** | 接物 + 资源管理 | 接住 Token · 管理上下文：LOAD 越高 C 越稀缺、NOISE 越危险，还有高分高风险的 HEAVY TOKEN |
 | 🐳 **Attention Maze** | 记忆解谜 | 记住路径 · 聚焦关键 · 找到出口（12 个手工 Layer） |
 
 四款是**同一只 DeepSeek 小鲸鱼**、同一套中英双语、同一个 Sound 开关、同一套像素风格。
+
+### Token Fall 的难度曲线
+
+Token Fall 用 **LOAD 1 ~ 5** 五个阶段表达难度（约 0 / 30 / 60 / 100 / 150 秒）：
+
+- **LOAD 1**：掉落稀疏、同屏 1 个，COMPRESS 常见、**没有 HEAVY TOKEN** —— 明显的新手阶段；
+- **LOAD 2 ~ 3**：HEAVY TOKEN 登场，NOISE 变多，COMPRESS 开始变珍贵；
+- **LOAD 4 ~ 5**：同屏多个目标，必须主动决定「接 Token / 抢 C / 躲 Noise / 要不要冒险吃 Heavy」；
+- **150 秒之后**进入无限高压阶段，但**所有数值都会封顶**：很难，但理论上一直能继续玩。
+
+难度并不只来自下落速度，更主要的是**资源管理压力、COMPRESS 稀缺度与错误成本**：
+
+- **COMPRESS 越后期越弱**：基础压缩量 −256 → −128；短时间内连吃还会边际递减（100% → 75% → 50%），
+  Context 越低收益越小 —— 所以后期不是「见到 C 就无脑接」；
+- **NOISE 越后期越狠**：CONTEXT +128 → +224，后期一次误接就可能逼近溢出；
+- **Overflow 抢救时间越后期越短**：2.0 秒 → 1.2 秒（不再更低，手机玩家也要有反应时间）；
+- **HEAVY TOKEN**（LOAD 2 起出现）：+35 分但 CONTEXT +96，是典型的「高分 vs 风险」选择，算有效 Token、CLEAN 连击继续；
+- 高 Context 时仍然保留 **COMPRESS 保底**（避免纯随机的必死局），但 LOAD 越高阈值越极端、等待越久，
+  而且永远要玩家自己移动过去接 —— 保底只防止无解，不会变成系统自动救命。
 
 ## 技术特点
 
@@ -48,7 +67,7 @@
 bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```
 
-四款游戏共用一个无头测试环境（桩 DOM + 桩 Canvas，不需要浏览器），目前 **600+ 项**，覆盖玩法规则、
+四款游戏共用一个无头测试环境（桩 DOM + 桩 Canvas，不需要浏览器），目前 **800+ 项**，覆盖玩法规则、
 Attention Maze 12 关的 **BFS 可解性验证**、多语言词表一致性、相对路径与 localStorage key 冲突、
 以及 v1.0 的结构约定（统一 Sound / 共享素材 / 关卡拆分 / CI 配置 / LICENSE）。
 细节见 [docs/testing.md](docs/testing.md)。

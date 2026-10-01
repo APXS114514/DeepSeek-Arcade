@@ -87,7 +87,7 @@
       /* ---------- Token Fall ---------- */
       'tokenfall.title': 'TOKEN FALL · DeepSeek Arcade',
       'tokenfall.h1': '🐳 TOKEN FALL',
-      'tokenfall.sub': '← → / A D 移动　·　接 TOKEN 与 COMPRESS，躲开 NOISE　·　P 暂停　·　M 静音',
+      'tokenfall.sub': '← → / A D 移动　·　接 TOKEN / HEAVY，躲 NOISE，抢 COMPRESS　·　P 暂停　·　M 静音',
       'tokenfall.aria': 'TOKEN FALL 游戏画面',
       'tokenfall.ariaLeft': '向左',
       'tokenfall.ariaRight': '向右',
@@ -103,15 +103,28 @@
       'tokenfall.pausedHint': '按 P 继续',
       'tokenfall.pauseBtn': '⏸ 暂停',
       'tokenfall.resumeBtn': '▶ 继续',
-      'tokenfall.ready': '接住 TOKEN，避开 NOISE，别让 CONTEXT 溢出',
+      'tokenfall.ready': '接住 TOKEN，避开 NOISE，别让 CONTEXT 溢出。HEAVY TOKEN 分数高但很吃 Context，LOAD 越高越难。',
       'tokenfall.hint': '← → 或 A D 左右移动　·　手机按住下方方向键　·　也可以直接拖动鲸鱼',
-      'tokenfall.legend': 'TOKEN +32 · COMPRESS −256 · NOISE +128 · <think> 慢动作',
+      'tokenfall.legend': 'T 得分 · C 压缩(LOAD 越高越弱) · H 高分高占用 · N 必躲 · <think> 慢动作',
       'tokenfall.start': '按 空格 / 点击画面 开始',
       'tokenfall.restart': '按 空格 / 点击画面 重新开始',
       'tokenfall.short.token': 'T',
       'tokenfall.short.compress': 'C',
       'tokenfall.short.noise': 'N',
-      'tokenfall.tips': '屏幕顶部落下 <b>TOKEN</b>（蓝）/ <b>COMPRESS</b>（青）/ <b>NOISE</b>（紫）/ <b>THINK</b>（金）。接 <b>TOKEN</b> 得分但 <b>CONTEXT +32</b>；接 <b>COMPRESS</b> 压缩 <b>CONTEXT −256</b>；<b>NOISE</b> 会让 <b>CONTEXT +128</b> 且不加分，必须躲开。<b>THINK</b> 是低概率道具，吃到进入 4 秒 <b>DEEP THINK</b>（下落变慢 + 泛蓝光）。CONTEXT 满 1024 后还有 <b>2 秒抢救时间</b>，吃到 COMPRESS 就能取消溢出；连续干净接取可以叠到 <b>CLEAN x5</b>。最高分存在本地浏览器里。',
+      'tokenfall.short.heavy': 'H',
+      'tokenfall.name.token': 'TOKEN',
+      'tokenfall.name.heavy': 'HEAVY TOKEN',
+      'tokenfall.name.compress': 'COMPRESS',
+      'tokenfall.name.noise': 'NOISE',
+      'tokenfall.name.think': 'THINK',
+      'tokenfall.loadLabel': 'LOAD',
+      'tokenfall.pressure': '压力上升',
+      'tokenfall.tips': '屏幕顶部落下 <b>TOKEN</b>（蓝）/ <b>COMPRESS</b>（青）/ <b>HEAVY TOKEN</b>（绿，方块里写着 <b>H</b>）/ <b>NOISE</b>（紫）/ <b>THINK</b>（金）。' +
+        '接 <b>TOKEN</b> 得分但 <b>CONTEXT +32</b>；<b>COMPRESS</b> 压缩 Context，但效果随 <b>LOAD</b> 提升而减弱（<b>−256 → −128</b>），短时间内连吃还会边际递减（100% → 75% → 50%），Context 越低收益也越小 —— 所以不是见到就接。' +
+        ' <b>HEAVY TOKEN</b> 一次 <b>+35 分</b>，代价是 <b>CONTEXT +96</b>，是中后期典型的「高分 vs 风险」选择；它算有效 Token，<b>CLEAN 连击继续涨</b>。' +
+        ' <b>NOISE</b> 不加分，<b>CONTEXT +128 ~ +224</b>，LOAD 越高越致命，必须躲开；漏掉 TOKEN 或 COMPRESS 不会被罚。' +
+        ' 游戏分 <b>LOAD 1~5</b> 五个阶段（约 0 / 30 / 60 / 100 / 150 秒）：LOAD 越高，C 越稀有、NOISE 越狠、Overflow 抢救时间越短（<b>2.0s → 1.2s</b>）；所有数值 150 秒后封顶 —— 后期很难，但不会「玩得够久必定数值爆炸」。' +
+        ' 低概率的 <b>THINK</b> 吃到进入 4 秒 <b>DEEP THINK</b>（下落变慢 + 泛蓝光）。CONTEXT 满 1024 后进入抢救期，吃到 COMPRESS 把 Context 压回 1024 以下即可取消溢出；连续干净接取可以叠到 <b>CLEAN x5</b>。最高分存在本地浏览器里。',
 
       /* ---------- Attention Maze ---------- */
       'maze.title': 'Attention Maze · DeepSeek Arcade',
@@ -248,7 +261,7 @@
 
       'tokenfall.title': 'TOKEN FALL · DeepSeek Arcade',
       'tokenfall.h1': '🐳 TOKEN FALL',
-      'tokenfall.sub': '← → / A D to move　·　catch TOKEN & COMPRESS, dodge NOISE　·　P pause　·　M mute',
+      'tokenfall.sub': '← → / A D to move　·　catch TOKEN / HEAVY, dodge NOISE, grab COMPRESS　·　P pause　·　M mute',
       'tokenfall.aria': 'Token Fall game canvas',
       'tokenfall.ariaLeft': 'Left',
       'tokenfall.ariaRight': 'Right',
@@ -264,9 +277,9 @@
       'tokenfall.pausedHint': 'Press P to resume',
       'tokenfall.pauseBtn': '⏸ Pause',
       'tokenfall.resumeBtn': '▶ Resume',
-      'tokenfall.ready': 'Catch tokens, avoid noise, don\'t overflow your context',
+      'tokenfall.ready': 'Catch TOKENs, dodge NOISE, keep CONTEXT from overflowing. HEAVY TOKENs score big but eat Context — higher LOADs hit harder.',
       'tokenfall.hint': 'Move with ← → or A D　·　on mobile hold the arrows below　·　or drag the whale',
-      'tokenfall.legend': 'TOKEN +32 · COMPRESS −256 · NOISE +128 · <think> slow-mo',
+      'tokenfall.legend': 'T scores · C compresses (weaker at high LOAD) · H big score, big cost · N dodge · <think> slow-mo',
       'tokenfall.start': 'Press Space / tap to start',
       'tokenfall.restart': 'Press Space / tap to restart',
 
@@ -344,7 +357,20 @@
       'tokenfall.short.token': 'T',
       'tokenfall.short.compress': 'C',
       'tokenfall.short.noise': 'N',
-      'tokenfall.tips': 'Tokens fall from the top: <b>TOKEN</b> (blue) / <b>COMPRESS</b> (cyan) / <b>NOISE</b> (purple) / <b>THINK</b> (gold). A <b>TOKEN</b> scores but costs <b>CONTEXT +32</b>; a <b>COMPRESS</b> gives back <b>CONTEXT −256</b>; <b>NOISE</b> adds <b>CONTEXT +128</b> and no points, so dodge it. <b>THINK</b> is rare — grab it for 4 seconds of <b>DEEP THINK</b> (slower fall + blue glow). Hit 1024 and you get a <b>2-second rescue window</b>: catch a COMPRESS to cancel the overflow. Clean streaks stack up to <b>CLEAN x5</b>. Your best score is saved in this browser.'
+      'tokenfall.short.heavy': 'H',
+      'tokenfall.name.token': 'TOKEN',
+      'tokenfall.name.heavy': 'HEAVY TOKEN',
+      'tokenfall.name.compress': 'COMPRESS',
+      'tokenfall.name.noise': 'NOISE',
+      'tokenfall.name.think': 'THINK',
+      'tokenfall.loadLabel': 'LOAD',
+      'tokenfall.pressure': 'PRESSURE INCREASED',
+      'tokenfall.tips': 'Tokens fall from the top: <b>TOKEN</b> (blue) / <b>COMPRESS</b> (cyan) / <b>HEAVY TOKEN</b> (green, marked <b>H</b>) / <b>NOISE</b> (purple) / <b>THINK</b> (gold).' +
+        ' A <b>TOKEN</b> scores but costs <b>CONTEXT +32</b>. A <b>COMPRESS</b> shrinks your Context, but its effect weakens as the <b>LOAD</b> rises (<b>−256 → −128</b>), decays when you chain them (100% → 75% → 50%), and pays less at low Context — so don\'t grab every one you see.' +
+        ' A <b>HEAVY TOKEN</b> is worth <b>+35 points</b> but costs <b>CONTEXT +96</b>: the mid/late-game high-score-vs-risk choice. It still counts as a real token, so your <b>CLEAN combo keeps going</b>.' +
+        ' <b>NOISE</b> gives no points and adds <b>CONTEXT +128 to +224</b> — the higher the LOAD, the more lethal, so dodge it. Missing a TOKEN or COMPRESS never punishes you.' +
+        ' The run moves through five <b>LOAD 1~5</b> stages (roughly 0 / 30 / 60 / 100 / 150 seconds): the higher the LOAD, the rarer COMPRESS gets, the harder NOISE hits and the shorter the overflow window (<b>2.0s → 1.2s</b>). Every value caps out after 150 seconds — late game is brutal, but never mathematically unwinnable.' +
+        ' The rare <b>THINK</b> grants 4 seconds of <b>DEEP THINK</b> (slower fall + blue glow). Hit 1024 CONTEXT and you enter a rescue window: catch a COMPRESS to push back under 1024 and cancel the overflow. Clean streaks stack up to <b>CLEAN x5</b>. Your best score is saved in this browser.'
     }
   };
 

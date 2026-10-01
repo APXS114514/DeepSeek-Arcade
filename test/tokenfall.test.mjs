@@ -71,6 +71,7 @@ export function run() {
     ok('HUD 显示 CONTEXT / 1024', txt.indexOf('CONTEXT 0 / 1024') >= 0, txt.slice(0, 120));
     ok('HUD 显示 SCORE', txt.indexOf('SCORE') >= 0);
     ok('HUD 显示 HI', txt.indexOf('HI') >= 0);
+    ok('HUD 显示当前难度阶段（LOAD 1）', txt.indexOf('LOAD 1') >= 0, txt.slice(0, 160));
     ok('开场说明出现', txt.indexOf('接住 TOKEN') >= 0 || txt.indexOf('Catch tokens') >= 0, txt.slice(0, 120));
   }
   {
@@ -92,12 +93,21 @@ export function run() {
     ok('TOKEN：接到后从场上移除', G.tokens.length === 0, String(G.tokens.length));
   }
   {
+    /* LOAD 1 + Context > 75%：C 是满效果 −256 */
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.context = 1000;
+    feed(b, 'compress');
+    ok('COMPRESS（LOAD 1 / 高 Context）：CONTEXT −256', G.context === 744, String(G.context));
+    ok('COMPRESS：+20 分', G.score === 20, String(G.score));
+  }
+  {
+    /* Context 只有 50%：收益 ×0.8，256 × 0.8 = 204.8 -> 按 16 取整 = 208 */
     const b = startIdle(fresh());
     const G = b.G;
     G.context = 512;
     feed(b, 'compress');
-    ok('COMPRESS：CONTEXT −256', G.context === 256, String(G.context));
-    ok('COMPRESS：+20 分', G.score === 20, String(G.score));
+    ok('COMPRESS：中段 Context 收益下降（−208）', G.context === 304, String(G.context));
   }
   {
     const b = startIdle(fresh());
@@ -111,7 +121,7 @@ export function run() {
     const G = b.G;
     G.score = 500; G.combo = 4; G.multiplier = 2;
     feed(b, 'noise');
-    ok('NOISE：CONTEXT +128', G.context === 128, String(G.context));
+    ok('NOISE（LOAD 1）：CONTEXT +128', G.context === 128, String(G.context));
     ok('NOISE：不给分', G.score === 500, String(G.score));
     ok('NOISE：Combo 清零', G.combo === 0 && G.multiplier === 1, G.combo + '/' + G.multiplier);
   }
@@ -222,48 +232,64 @@ export function run() {
        s0.toFixed(1) + '->' + G.speed.toFixed(1) + ' / ' + i0 + '->' + G.spawnInterval);
     ok('同屏数量随时间上升', G.maxActive > a0, String(G.maxActive));
     G.elapsedMs = 1e7; advance(b, 10);
+    ok('已经进入最后一个难度阶段 LOAD 5', G.load === 5, String(G.load));
     ok('下落速度有上限（230px/s）', G.speed === 230, String(G.speed));
     ok('生成间隔有下限（520ms）', G.spawnInterval === 520, String(G.spawnInterval));
     ok('同屏数量有上限（4 个）', G.maxActive === 4, String(G.maxActive));
-    ok('NOISE 概率有上限（0.30）', Math.abs(G.noiseChance - 0.30) < 1e-9, String(G.noiseChance));
+    ok('NOISE 概率有上限（≤0.32）', G.noiseChance <= 0.32 + 1e-9 && G.noiseChance > 0.3, String(G.noiseChance));
   }
 
   /* ================= F. 生成保底（不让玩家遇到无解局面） ================= */
   {
     const b = startIdle(fresh());
     const G = b.G;
-    G.context = 880;                                    // 86%：该给 COMPRESS 了
+    G.context = 880;                                    // 86%：LOAD 1 的保底区间
     G.sinceCompressMs = 99999;
     G.tokens.length = 0;
     G.spawnTimer = 0;
     advance(b, 10);
-    ok('高 CONTEXT 且久未给 COMPRESS -> 下一次必定是 COMPRESS',
+    ok('LOAD 1：高 CONTEXT 且久未给 COMPRESS -> 下一次必定是 COMPRESS',
        G.tokens.some((t) => t.type === 'compress'), G.tokens.map((t) => t.type).join(','));
   }
   {
     const b = startIdle(fresh());
     const G = b.G;
-    G.context = 1000;                                   // 97.6%：抢救区间
+    G.context = 1000;                                   // 97.6%：LOAD 1 抢救区间
     G.tokens.length = 0;
     G.spawnTimer = 1e9;                                 // 关掉普通生成，只看保底
     G.rescueMs = 600;
     advance(b, 60);
     const comps = G.tokens.filter((t) => t.type === 'compress');
-    ok('95% 以上且场上没有 COMPRESS -> 限时保底生成', comps.length >= 1,
+    ok('LOAD 1：95% 以上且场上没有 COMPRESS -> 限时保底生成', comps.length >= 1,
        G.tokens.map((t) => t.type).join(','));
     ok('保底 COMPRESS 不会出现在玩家头顶',
        comps.length > 0 && Math.abs(comps[0].x + 17 - (G.player.x + G.playerW / 2)) >= 60,
        comps.length ? 'x=' + Math.round(comps[0].x) : 'none');
   }
   {
-    /* 长时间运行：NOISE 不会连成"墙" */
+    /* LOAD 5：只保留极端保底 —— 98% 已经算「极限」，久未给 C 仍然会触发 */
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 1e7;
+    advance(b, 3);
+    ok('长时间存活后停在 LOAD 5', G.load === 5, String(G.load));
+    G.context = 1024 * 0.98;                            // 98%：LOAD 5 的 urge 区间
+    G.sinceCompressMs = 99999;
+    G.tokens.length = 0;
+    G.spawnTimer = 0;
+    advance(b, 4);
+    ok('LOAD 5：极端保底依然存在（避免纯 RNG 无解局）',
+       G.tokens.some((t) => t.type === 'compress'), G.tokens.map((t) => t.type).join(','));
+  }
+  {
+    /* 长时间运行：NOISE 不会连成"墙"（在最高难度 LOAD 5 上验证） */
     const b = startIdle(fresh());
     const G = b.G;
     G.elapsedMs = 1e7;                                  // 最高难度：NOISE 概率最大
     const seen = new Set(); const order = [];
     for (let i = 0; i < 1200; i++) {
       b.tick(1);
-      G.context = 880;                                  // 钉在 86%：COMPRESS 保底必定触发，观察确定性生成序列
+      G.context = 300;                                  // 钉在低 Context：排除 C 保底的干扰
       for (let j = 0; j < G.tokens.length; j++) {
         const t = G.tokens[j];
         if (!seen.has(t)) { seen.add(t); order.push(t.type); }
@@ -274,10 +300,10 @@ export function run() {
       run = order[k] === 'noise' ? run + 1 : 0;
       if (run > maxRun) maxRun = run;
     }
-    ok('长时间运行生成了足够的掉落物（' + order.length + ' 个）', order.length >= 12, String(order.length));
+    ok('LOAD 5 长时间运行生成了足够的掉落物（' + order.length + ' 个）', order.length >= 12, String(order.length));
     ok('NOISE 最长连号 <= 2（不会形成几乎必接的墙）', maxRun <= 2, order.join(','));
-    ok('86% 区间里 COMPRESS 保底生效（生成序列里一定有 C）',
-       order.indexOf('compress') >= 0, Array.from(new Set(order)).join(','));
+    ok('LOAD 5 的生成序列里 HEAVY TOKEN 确实会出现', order.indexOf('heavy') >= 0,
+       Array.from(new Set(order)).join(','));
   }
 
   /* ================= G. 暂停 ================= */
@@ -288,16 +314,21 @@ export function run() {
     G.thinkMs = 3000;
     G.context = 1100;                                   // 直接进入 Overflow
     G.score = 42;
+    G.compressStreak = 2;                               // 顺便验证 Fatigue 恢复计时也会冻结
+    G.compressSinceMs = 250;
     const t = place(b, 'token', 20, 100, 0.0001);
     advance(b, 12);
     b.key('keydown', 'p', 'KeyP');
     b.tick(1);
     ok('P 可以暂停', G.state === 'paused', G.state);
     const snap = { think: G.thinkMs, ovf: G.overflowMs, ctx: G.context, score: G.score,
-                   elapsed: G.elapsedMs, ty: t.y, px: G.player.x };
+                   elapsed: G.elapsedMs, ty: t.y, px: G.player.x,
+                   streak: G.compressStreak, since: G.compressSinceMs };
     b.tick(120);                                        // 暂停中空跑 2 秒
     ok('暂停：DEEP THINK 计时停止', G.thinkMs === snap.think, snap.think + ' -> ' + G.thinkMs);
     ok('暂停：Overflow 计时停止', G.overflowMs === snap.ovf, snap.ovf + ' -> ' + G.overflowMs);
+    ok('暂停：Compression Fatigue 恢复计时停止', G.compressSinceMs === snap.since,
+       snap.since + ' -> ' + G.compressSinceMs);
     ok('暂停：掉落物停止运动', t.y === snap.ty, snap.ty + ' -> ' + t.y);
     ok('暂停：分数停止', G.score === snap.score, String(G.score));
     ok('暂停：难度计时停止', G.elapsedMs === snap.elapsed, String(G.elapsedMs));
@@ -540,6 +571,11 @@ export function run() {
   {
     const b = startIdle(fresh());
     const G = b.G;
+    G.elapsedMs = 200000;                               // 先跑到 LOAD 5
+    b.tick(1);
+    G.compressStreak = 2;                               // 制造 Fatigue / HEAVY / Overlay 残留
+    G.compressSinceMs = 200;
+    G.heavyCaught = 3;
     G.context = 1000;
     feed(b, 'token');
     advanceMs(b, 2600);                                 // 溢出死亡
@@ -561,6 +597,15 @@ export function run() {
        G.overflowActive + '/' + G.overflowMs);
     ok('重开后 DEEP THINK 状态清空', G.thinkMs === 0 && G.speedScale === 1, G.thinkMs + '/' + G.speedScale);
     ok('重开后旧掉落物被清掉（清场前 ' + stale + ' 个）', stale >= 3 && G.tokens.length === 0, String(G.tokens.length));
+    ok('重开后 LOAD 回到 1', G.load === 1 && G.loadIndex === 0, G.load + '/' + G.loadIndex);
+    ok('重开后 Compression Fatigue 清零', G.compressStreak === 0 && G.compressSinceMs === 0,
+       G.compressStreak + '/' + G.compressSinceMs);
+    ok('重开后 HEAVY TOKEN 状态清零', G.heavyCaught === 0, String(G.heavyCaught));
+    ok('重开后浮动数值清空', G.floats.length === 0, String(G.floats.length));
+    ok('重开后阶段横幅清空', G.loadBannerMs === 0, String(G.loadBannerMs));
+    ok('重开后游戏速度恢复初始值',
+       G.speed < 120 && G.spawnInterval > 1000 && G.maxActive === 1,
+       G.speed + '/' + G.spawnInterval + '/' + G.maxActive);
     ok('重开没有异常', b.errors.length === 0, b.errors[0]);
   }
 
@@ -580,7 +625,7 @@ export function run() {
     });
     ok('DPR 不影响移动与判定（1/2/3 三档一致）',
        Math.abs(results[0].x - results[1].x) < 1e-9 && Math.abs(results[0].x - results[2].x) < 1e-9 &&
-       results[0].ctx === 256 && results[1].ctx === 256 && results[2].ctx === 256,
+       results[0].ctx === 304 && results[1].ctx === 304 && results[2].ctx === 304,
        JSON.stringify(results));
   }
   {
@@ -598,11 +643,345 @@ export function run() {
     b.els.lang.fire('click');
     b.clearLog(); advance(b, 4);
     const txt = b.log.texts.join('|');
-    ok('切英文后画布文案立刻变化', txt.indexOf('Catch tokens') >= 0, txt.slice(0, 120));
+    ok('切英文后画布文案立刻变化', txt.indexOf('Catch TOKENs') >= 0, txt.slice(0, 120));
     ok('英文 HUD 仍是 CONTEXT', txt.indexOf('CONTEXT') >= 0);
     b.els.lang.fire('click');
     b.clearLog(); advance(b, 4);
     ok('切回中文立刻生效', b.log.texts.join('|').indexOf('接住 TOKEN') >= 0);
+  }
+
+
+  /* ================= Q. LOAD 难度阶段（纯规则 + 实际行为） =================
+   * 规则全部走 game.js 暴露的 TokenFallRules 纯函数：
+   * 验证数值和权重，而不是「随机一万次看比例对不对」那种脆弱写法。 */
+  const R = fresh().window.TokenFallRules;
+  ok('暴露了纯规则 API（可以脱离随机采样测试数值）',
+     !!R && typeof R.getDropWeights === 'function' && typeof R.compressAmount === 'function');
+
+  /* ---- Q1. 阶段划分 ---- */
+  {
+    const marks = [0, 1, 29999, 30000, 59999, 60000, 99999, 100000, 149999, 150000, 600000, 1e9];
+    const want = [1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5];
+    ok('LOAD 按存活时间正确切换（0 / 30 / 60 / 100 / 150 秒）',
+       marks.every((m, i) => R.loadForElapsed(m) === want[i]),
+       marks.map((m) => m + '->' + R.loadForElapsed(m)).join(','));
+    ok('LOAD 5 之后不会继续提升到 LOAD 6',
+       R.loadForElapsed(1e9) === 5 && R.loadForElapsed(3600 * 1000 * 5) === 5 && R.LOADS.length === 5);
+    ok('阶段边界与设计一致（30s / 60s / 100s / 150s）',
+       R.LOAD_STARTS.join(',') === '0,30000,60000,100000,150000', R.LOAD_STARTS.join(','));
+  }
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    const seen = [];
+    const at = (ms) => { G.elapsedMs = ms; advance(b, 3); seen.push(G.load); };
+    at(0); at(29000); at(31000); at(61000); at(101000); at(151000); at(1e7);
+    ok('游戏内 LOAD 随存活时间推进到 5', seen.join(',') === '1,1,2,3,4,5,5', seen.join(','));
+    b.clearLog(); b.tick(2);
+    ok('HUD 显示当前阶段 LOAD 5', b.log.texts.some((s) => s === 'LOAD 5'), b.log.texts.join('|').slice(0, 200));
+  }
+  {
+    /* 阶段切换横幅：短暂提示 + 约 1 秒后自动结束 */
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 30000;
+    advance(b, 3);
+    ok('切换阶段时置起横幅计时', G.loadBannerMs > 0 && G.loadBannerLoad === 2,
+       G.loadBannerMs + ' / ' + G.loadBannerLoad);
+    b.clearLog(); advance(b, 3);
+    ok('横幅显示 LOAD 2 + 压力提示',
+       b.log.texts.some((s) => s === 'LOAD 2') && b.log.texts.some((s) => s === '压力上升'),
+       b.log.texts.join('|').slice(0, 200));
+    var bannerFrames = 0;
+    while (G.loadBannerMs > 0 && bannerFrames++ < 400) b.tick(1);
+    ok('横幅约 1 秒后自动结束（不做长时间遮挡）', G.loadBannerMs === 0 && bannerFrames < 100,
+       G.loadBannerMs + ' / frames=' + bannerFrames);
+  }
+
+  /* ---- Q2. COMPRESS 随 LOAD 变弱 ---- */
+  {
+    const base = [1, 2, 3, 4, 5].map((l) => R.LOADS[l - 1].compressCtx);
+    ok('COMPRESS 基础值随 LOAD 递减（256/224/192/160/128）',
+       base.join(',') === '256,224,192,160,128', base.join(','));
+    ok('每个 LOAD 的 COMPRESS 基础值都严格低于上一个',
+       base.every((v, i) => i === 0 || v < base[i - 1]), base.join(','));
+    const full = [1, 2, 3, 4, 5].map((l) => R.compressAmount(l, 1024, 0));
+    ok('满 Context / 无 Fatigue 时实际压缩量 = 基础值', full.join(',') === base.join(','), full.join(','));
+    const c1 = R.compressAmount(5, 1024, 0);
+    const c2 = R.compressAmount(5, 1024 - c1, 1);
+    ok('LOAD 5 一个 C 清不掉四分之一 Context', c1 < 1024 / 4, String(c1));
+    ok('LOAD 5 连续两个 C 也回不到「非常安全」（共 ' + (c1 + c2) + ' < 512）',
+       c1 + c2 < 1024 * 0.5, String(c1 + c2));
+  }
+  {
+    /* 实际接住时用当前 LOAD 的数值，并且浮动文字显示的是真实生效值 */
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 150000; advance(b, 3);                 // LOAD 5
+    G.context = 900;
+    feed(b, 'compress');
+    ok('LOAD 5 + 高 Context：实际压缩 −128', G.context === 772, String(G.context));
+    b.clearLog(); b.tick(1);
+    ok('Canvas 浮动文字显示真实压缩值（COMPRESS -128）',
+       b.log.texts.some((s) => s === 'COMPRESS -128'), b.log.texts.join('|').slice(0, 200));
+  }
+
+  /* ---- Q3. NOISE 随 LOAD 变危险 ---- */
+  {
+    const noise = [1, 2, 3, 4, 5].map((l) => R.LOADS[l - 1].noiseCtx);
+    ok('NOISE 惩罚随 LOAD 加重（128/144/160/192/224）',
+       noise.join(',') === '128,144,160,192,224', noise.join(','));
+  }
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 150000; advance(b, 3);                 // LOAD 5
+    feed(b, 'noise');
+    ok('LOAD 5 接到 NOISE：CONTEXT +224', G.context === 224, String(G.context));
+    b.clearLog(); b.tick(1);
+    ok('Canvas 浮动文字显示真实 NOISE 数值（NOISE +224）',
+       b.log.texts.some((s) => s === 'NOISE +224'), b.log.texts.join('|').slice(0, 200));
+  }
+
+  /* ---- Q4. HEAVY TOKEN ---- */
+  {
+    ok('LOAD 1 不出现 HEAVY TOKEN', R.getDropWeights(1, 0).heavy === 0, String(R.getDropWeights(1, 0).heavy));
+    ok('LOAD 2 开始出现 HEAVY TOKEN', R.getDropWeights(2, 0).heavy > 0, String(R.getDropWeights(2, 0).heavy));
+    ok('HEAVY 概率随 LOAD 提高（0 / 0.08 / 0.15 / 0.20 / 0.22）',
+       [1, 2, 3, 4, 5].map((l) => R.getDropWeights(l, 0).heavy).join(',') === '0,0.08,0.15,0.2,0.22',
+       [1, 2, 3, 4, 5].map((l) => R.getDropWeights(l, 0).heavy).join(','));
+    ok('HEAVY 权重始终少于普通 TOKEN（TOKEN 仍是主要得分来源）',
+       [1, 2, 3, 4, 5].every((l) => {
+         const w = R.getDropWeights(l, 0.5);
+         return w.heavy < w.token;
+       }));
+  }
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 60000; advance(b, 3);                  // LOAD 3
+    feed(b, 'heavy');
+    ok('HEAVY TOKEN：CONTEXT +96（明显更危险）', G.context === 96, String(G.context));
+    ok('HEAVY TOKEN：+35 分（高于普通 TOKEN 的 10）', G.score === 35, String(G.score));
+    ok('HEAVY TOKEN：算作有效 Token，CLEAN 连击继续',
+       G.combo === 1 && G.multiplier === 1, G.combo + '/' + G.multiplier);
+    ok('HEAVY TOKEN：本局计数 +1', G.heavyCaught === 1, String(G.heavyCaught));
+    b.clearLog(); b.tick(1);
+    ok('Canvas 浮动文字显示 HEAVY TOKEN +96',
+       b.log.texts.some((s) => s === 'HEAVY TOKEN +96'), b.log.texts.join('|').slice(0, 200));
+  }
+  {
+    /* 连吃 HEAVY 不会清 Combo：形成「高分 vs Context 风险」的选择 */
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 100000; advance(b, 3);                 // LOAD 4
+    feed(b, 'token'); feed(b, 'heavy'); feed(b, 'token');
+    ok('TOKEN -> HEAVY -> TOKEN 连击不中断', G.combo === 3 && G.multiplier === 2,
+       G.combo + '/' + G.multiplier);
+    ok('LOAD 4 三个有效 Token 共 +40+96+40 = 176 Context', G.context === 176, String(G.context));
+  }
+
+  /* ---- Q5. COMPRESSION FATIGUE ---- */
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.context = 1000;                                    // > 75%：Context Efficiency = 100%
+    feed(b, 'compress');
+    ok('第 1 个 C：满效果 −256', G.context === 744, String(G.context));
+    feed(b, 'compress');
+    ok('短期第 2 个 C：Fatigue ×0.75 叠加中段 Context ×0.8 = −160', G.context === 584, String(G.context));
+    feed(b, 'compress');
+    ok('短期第 3 个 C：Fatigue ×0.5 继续递减（−96）', G.context === 488, String(G.context));
+    ok('Fatigue 计数封顶（不会永久累积）', G.compressStreak === 2, String(G.compressStreak));
+    ok('三个 C 的总压缩量明显少于 3 × 基础值',
+       1000 - G.context < 3 * R.LOADS[0].compressCtx, String(1000 - G.context));
+
+    G.context = 500;                                     // 压到保底线以下，等待期间不会刷出 C
+    G.compressSinceMs = 0;
+    advanceMs(b, 7200);
+    ok('超过 7 秒没再接 COMPRESS -> Fatigue 重置', G.compressStreak === 0, String(G.compressStreak));
+    G.context = 1000;
+    feed(b, 'compress');
+    ok('重置后再接 C 恢复满效果（−256）', G.context === 744, String(G.context));
+  }
+  {
+    const ok1 = R.fatigueMultiplier(0), ok2 = R.fatigueMultiplier(1), ok3 = R.fatigueMultiplier(2);
+    ok('Fatigue 倍率依次为 100% / 75% / 50%', ok1 === 1 && ok2 === 0.75 && ok3 === 0.5,
+       ok1 + '/' + ok2 + '/' + ok3);
+    ok('Fatigue 倍率不会继续变小（第 4 个仍是 50%）', R.fatigueMultiplier(9) === 0.5, String(R.fatigueMultiplier(9)));
+    ok('恢复窗口设计为 7 秒', R.FATIGUE_WINDOW_MS === 7000, String(R.FATIGUE_WINDOW_MS));
+    ok('固定 100% Context Efficiency 时 Fatigue 依次为 256 / 192 / 128',
+       [0, 1, 2].map((f) => R.compressAmount(1, 1024, f)).join(',') === '256,192,128',
+       [0, 1, 2].map((f) => R.compressAmount(1, 1024, f)).join(','));
+  }
+
+  /* ---- Q6. Context Efficiency ---- */
+  {
+    ok('Context > 75%：C 使用 100% 效果', R.contextEfficiency(0.9) === 1, String(R.contextEfficiency(0.9)));
+    ok('Context 40%~75%：C 使用 80% 效果', R.contextEfficiency(0.5) === 0.8, String(R.contextEfficiency(0.5)));
+    ok('Context < 40%：C 使用 50% 效果', R.contextEfficiency(0.2) === 0.5, String(R.contextEfficiency(0.2)));
+    const hi = R.compressAmount(3, 1000, 0);
+    const mid = R.compressAmount(3, 600, 0);
+    const lo = R.compressAmount(3, 300, 0);
+    ok('同 LOAD 同 Fatigue 下：Context 越低压缩越少（' + hi + ' / ' + mid + ' / ' + lo + '）',
+       hi > mid && mid > lo, hi + ' / ' + mid + ' / ' + lo);
+  }
+  {
+    /* 最终压缩量取整 / 下限 / 不越界 */
+    ok('压缩量按 16 取整（不会出现 -61.382）',
+       [1, 2, 3, 4, 5].every((l) => [0, 1, 2].every((f) => {
+         const v = R.compressAmount(l, 900, f);
+         return v % 16 === 0;
+       })));
+    ok('压缩量有下限 64（低 Context 时 C 仍然有意义）',
+       R.compressAmount(5, 500, 2) === 64, String(R.compressAmount(5, 500, 2)));
+    ok('Context 少于下限时按实际 Context 压缩（不出现负数）',
+       R.compressAmount(1, 10, 0) === 10 && R.compressAmount(1, 0, 0) === 0,
+       R.compressAmount(1, 10, 0) + '/' + R.compressAmount(1, 0, 0));
+  }
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.context = 5;
+    feed(b, 'compress');
+    ok('极低 Context：接到 COMPRESS 也不会把 CONTEXT 压成负数', G.context === 0, String(G.context));
+  }
+
+  /* ---- Q7. 自然概率随 LOAD 变化（权重是纯函数，不做随机采样） ---- */
+  {
+    const w = [1, 2, 3, 4, 5].map((l) => R.getDropWeights(l, 0.5));
+    ok('自然 COMPRESS 概率随 LOAD 下降（0.18 -> 0.05）',
+       w.map((x) => x.compress).join(',') === '0.18,0.14,0.1,0.07,0.05',
+       w.map((x) => x.compress).join(','));
+    ok('LOAD 1 的 COMPRESS 比较容易看到（>= 15%）', w[0].compress >= 0.15, String(w[0].compress));
+    ok('LOAD 3 起 COMPRESS 明显珍贵（<= 10%）', w[2].compress <= 0.10, String(w[2].compress));
+    ok('LOAD 5 不能指望「等下肯定又来一个 C」（<= 5%）', w[4].compress <= 0.05, String(w[4].compress));
+    ok('NOISE 概率随 LOAD 上升', [0, 1, 2, 3].every((i) => w[i + 1].noise > w[i].noise),
+       w.map((x) => x.noise).join(','));
+    ok('四项权重之和恒为 1',
+       w.every((x) => Math.abs(x.token + x.heavy + x.compress + x.noise - 1) < 1e-12));
+    ok('任何 LOAD / 任何 Context 下权重都不为负',
+       [1, 2, 3, 4, 5].every((l) => [0, 0.5, 0.9, 1].every((r) => {
+         const x = R.getDropWeights(l, r);
+         return x.token >= 0 && x.heavy >= 0 && x.compress >= 0 && x.noise >= 0;
+       })));
+    ok('THINK 出现率随 LOAD 略降，但永不取消',
+       R.LOADS.every((p, i) => p.thinkChance > 0 && (i === 0 || p.thinkChance <= R.LOADS[i - 1].thinkChance)),
+       R.LOADS.map((p) => p.thinkChance).join(','));
+  }
+
+  /* ---- Q8. COMPRESS 保底随 LOAD 收紧 ---- */
+  {
+    const urge = R.LOADS.map((p) => p.urgeRatio);
+    const rescue = R.LOADS.map((p) => p.rescueRatio);
+    ok('保底触发阈值随 LOAD 逐渐严格（urge）', urge.every((v, i) => i === 0 || v > urge[i - 1]), urge.join(','));
+    ok('抢救触发阈值随 LOAD 逐渐严格（rescue）', rescue.every((v, i) => i === 0 || v > rescue[i - 1]), rescue.join(','));
+    ok('保底等待时间随 LOAD 变长',
+       R.LOADS.map((p) => p.urgeMs).every((v, i, a) => i === 0 || v > a[i - 1]),
+       R.LOADS.map((p) => p.urgeMs).join(','));
+    ok('抢救等待时间随 LOAD 变长',
+       R.LOADS.map((p) => p.rescueMs).every((v, i, a) => i === 0 || v > a[i - 1]),
+       R.LOADS.map((p) => p.rescueMs).join(','));
+    ok('LOAD 5 只保留极端保底（urge >= 97% / rescue >= 99%）',
+       R.LOADS[4].urgeRatio >= 0.97 && R.LOADS[4].rescueRatio >= 0.99,
+       R.LOADS[4].urgeRatio + '/' + R.LOADS[4].rescueRatio);
+    ok('LOAD 5 不会在 95% 这种「还没到极限」时救玩家', R.LOADS[4].rescueRatio > 0.95);
+    ok('LOAD 1 仍然保留比较积极的保底（新手不会被纯随机打死）',
+       R.LOADS[0].urgeRatio <= 0.86 && R.LOADS[0].rescueRatio <= 0.95,
+       R.LOADS[0].urgeRatio + '/' + R.LOADS[0].rescueRatio);
+  }
+
+  /* ---- Q9. Overflow Grace Period 随 LOAD 收紧 ---- */
+  {
+    const g = R.LOADS.map((p) => p.overflowMs);
+    ok('抢救时间随 LOAD 收紧（2000/1800/1600/1400/1200）',
+       g.join(',') === '2000,1800,1600,1400,1200', g.join(','));
+    ok('抢救时间不低于设计下限 1.2 秒', R.OVERFLOW_FLOOR_MS === 1200 && g.every((v) => v >= 1200),
+       R.OVERFLOW_FLOOR_MS + '/' + g.join(','));
+  }
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 150000; advance(b, 3);
+    G.context = 1024; advance(b, 3);
+    ok('LOAD 5：进入 Overflow 时抢救时间约 1.2 秒',
+       G.overflowActive === true && G.overflowMs > 1100 && G.overflowMs <= 1200,
+       String(Math.round(G.overflowMs)));
+    G.context = 900;                                    // 压回上限以下
+    advance(b, 3);
+    ok('抢救回来（Context 被压回上限以下）立刻取消 Overflow',
+       G.overflowActive === false && G.overflowMs === 0, G.overflowActive + '/' + G.overflowMs);
+  }
+
+  /* ---- Q10. Pause 冻结 LOAD / Overflow / Fatigue ---- */
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 20000;
+    G.compressStreak = 2;
+    G.compressSinceMs = 3000;
+    advance(b, 3);
+    ok('暂停前还在 LOAD 1', G.load === 1, String(G.load));
+    G.context = 1100;                                   // 让它在暂停前进入 Overflow
+    advance(b, 3);
+    ok('暂停前已经进入 Overflow', G.overflowActive === true, String(G.overflowActive));
+    b.key('keydown', 'p', 'KeyP');
+    b.tick(1);
+    const snap = { elapsed: G.elapsedMs, load: G.load, ovf: G.overflowMs,
+                   since: G.compressSinceMs, streak: G.compressStreak };
+    b.tick(300);                                        // 暂停中空跑 5 秒
+    ok('暂停：LOAD 计时完全停止', G.elapsedMs === snap.elapsed && G.load === snap.load,
+       snap.elapsed + ' -> ' + G.elapsedMs);
+    ok('暂停：Overflow 计时冻结', G.overflowMs === snap.ovf, snap.ovf + ' -> ' + G.overflowMs);
+    ok('暂停：Compression Fatigue 恢复计时冻结', G.compressSinceMs === snap.since,
+       snap.since + ' -> ' + G.compressSinceMs);
+    ok('暂停中不会因为时间流逝被判死', G.state === 'paused', G.state);
+    b.key('keydown', 'p', 'KeyP');
+    b.tick(2);
+    ok('继续后 LOAD 计时恢复推进', G.elapsedMs > snap.elapsed, String(G.elapsedMs));
+    ok('继续后 Overflow 计时恢复推进', G.overflowMs < snap.ovf, String(G.overflowMs));
+  }
+
+  /* ---- Q11. 切标签页回来不会瞬间跳多个 LOAD ---- */
+  {
+    const b = startIdle(fresh());
+    const G = b.G;
+    G.elapsedMs = 20000;
+    advance(b, 3);
+    ok('切走前是 LOAD 1', G.load === 1, String(G.load));
+    b.doc.hidden = true; b.fireDoc('visibilitychange');
+    ok('切走标签页自动暂停', G.state === 'paused', G.state);
+    b.jump(120000);                                     // 假装离开了两分钟
+    b.tick(1);
+    ok('切回来仍然停在 LOAD 1（大 dt 被钳住，不会瞬间跳阶段）', G.load === 1, String(G.load));
+    b.doc.hidden = false; b.fireDoc('visibilitychange');
+    b.key('keydown', 'p', 'KeyP');                      // 手动继续
+    b.tick(3);
+    ok('继续后不会瞬间跳到高 LOAD', G.load === 1, String(G.load));
+    ok('继续后 LOAD 计时从暂停处接着走', G.elapsedMs < 25000, String(G.elapsedMs));
+  }
+
+  /* ---- Q12. LOAD 5 是「很难」而不是「数学上必死」 ---- */
+  {
+    const p5 = R.paceAt(150000), p6 = R.paceAt(3600 * 1000);
+    ok('150 秒之后节奏封顶、不再继续上涨',
+       p5.speed === p6.speed && p5.spawn === p6.spawn && p5.active === p6.active,
+       JSON.stringify(p5) + ' / ' + JSON.stringify(p6));
+    ok('速度 / 生成间隔 / 同屏数量都有硬上限',
+       p6.speed === 230 && p6.spawn === 520 && p6.active === 4, JSON.stringify(p6));
+    ok('开局节奏明显更宽松（前 30 秒是新手阶段）',
+       R.paceAt(0).speed === 95 && R.paceAt(0).active === 1 && R.paceAt(0).spawn === 1150,
+       JSON.stringify(R.paceAt(0)));
+    ok('节奏在阶段内连续变化（不会出现瞬移式加速）',
+       (function () {
+         let prev = R.paceAt(0).speed;
+         for (let t = 500; t <= 160000; t += 500) {
+           const s = R.paceAt(t).speed;
+           if (s < prev - 1e-9 || s - prev > 2) return false;
+           prev = s;
+         }
+         return true;
+       })());
   }
 
   return out;
