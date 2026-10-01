@@ -15,7 +15,7 @@ export function source(name) {
 
 export const SHARED_I18N = 'shared/i18n.js';
 /* 每个页面都会先加载的共享脚本（顺序与真实 HTML 一致） */
-export const SHARED_PRELUDE = ['shared/i18n.js', 'shared/audio.js', 'shared/whale.js'];
+export const SHARED_PRELUDE = ['shared/i18n.js', 'shared/audio.js', 'shared/whale.js', 'shared/character.js'];
 
 /* 每个页面真正存在的元素（与各自的 index.html 对应） */
 const PAGES = {
@@ -101,6 +101,7 @@ const PAGES = {
       { attrs: { 'data-i18n': 'lobby.sub' } },
       { id: 'lang' },
       { id: 'sound' },
+      { id: 'skin' },
       { attrs: { 'data-i18n': 'lobby.whale.name' } },
       { attrs: { 'data-i18n': 'lobby.whale.desc' } },
       { attrs: { 'data-i18n': 'lobby.snake.name' } },
@@ -135,7 +136,7 @@ export function harness(opts) {
   if (!page) throw new Error('未知页面: ' + pageName);
 
   const px = opts.px === undefined ? 3 : opts.px;
-  const log = { texts: [], rects: 0, warns: [] };
+  const log = { texts: [], rects: 0, warns: [], draws: [] };
   const errors = [];
 
   const makeCtx = () => ({
@@ -147,6 +148,28 @@ export function harness(opts) {
     arc() {}, fill() {}, stroke() {}, closePath() {}, moveTo() {}, lineTo() {}, setLineDash() {},
     fillRect: () => { log.rects++; },
     fillText: (s) => { log.texts.push(String(s)); },
+    drawImage: (img, dx, dy, dw, dh) => { log.draws.push({ img, x: dx, y: dy, w: dw, h: dh }); },
+  });
+
+  /* 桩 Image：默认「加载成功」，opts.images = "fail" 时模拟 404 / 解码失败。
+   * 同步触发 onload / onerror，测试才好断言（真实浏览器是异步的）。 */
+  const imageMode = opts.images || 'ok';
+  const imageList = [];
+  function StubImage() {
+    this.onload = null; this.onerror = null;
+    this.naturalWidth = 0; this.naturalHeight = 0; this.width = 0; this.height = 0;
+    this._src = '';
+    imageList.push(this);
+  }
+  Object.defineProperty(StubImage.prototype, 'src', {
+    get() { return this._src; },
+    set(v) {
+      this._src = String(v);
+      if (imageMode === 'pending') return;
+      if (imageMode === 'fail') { this.naturalWidth = 0; if (this.onerror) this.onerror(); return; }
+      this.naturalWidth = 300; this.naturalHeight = 340; this.width = 300; this.height = 340;
+      if (this.onload) this.onload();
+    },
   });
 
   const els = {}; const all = []; const docH = {};
@@ -216,6 +239,7 @@ export function harness(opts) {
   const winH = {};                          // window 上的监听器也要能触发（blur / pagehide / pageshow）
   const win = {
     devicePixelRatio: opts.dpr || 2, document: doc, localStorage: ls, navigator: nav,
+    setTimeout, clearTimeout, Image: StubImage,
     addEventListener: (t, f) => { (winH[t] = winH[t] || []).push(f); },
     removeEventListener: (t, f) => { winH[t] = (winH[t] || []).filter((x) => x !== f); },
     innerWidth: 1280, innerHeight: 800,
@@ -227,6 +251,7 @@ export function harness(opts) {
     requestAnimationFrame: (cb) => { rafCb = cb; return 1; },
     cancelAnimationFrame: () => { rafAlive = false; },
     setTimeout, clearTimeout,
+    Image: StubImage,
     console: { log() {}, warn: (m) => log.warns.push(String(m)), error: (m) => errors.push(String(m)) },
   };
   vm.createContext(sandbox);
@@ -265,7 +290,7 @@ export function harness(opts) {
   const hasPendingRaf = () => !!rafCb;
 
   return {
-    S: px / 3, px, page: pageName, log, errors, els, all, doc, store, sandbox, window: win,
+    S: px / 3, px, page: pageName, log, errors, els, all, doc, store, sandbox, window: win, images: imageList,
     I18N: win.I18N, G: win.__game,
     key, tick, jump, clearLog, byI18n, fireDoc, fireWin, rafIsAlive, hasPendingRaf,
   };

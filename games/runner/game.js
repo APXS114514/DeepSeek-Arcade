@@ -57,6 +57,31 @@
   if ((!WHALE_A || !WHALE_DIVE_A) && window.console && window.console.warn) {
     window.console.warn('[whale] 缺少 shared/whale.js：小鲸鱼素材没加载，请检查页面脚本顺序');
   }
+  /* ---------------- 角色皮肤（Whale Runner / Whale-chan） ----------------
+   * Whale-chan 是纯视觉层：物理、速度、障碍、判定盒（下面 BOX / MID_BOTTOM…）
+   * 一个都不动。她的「脚底」永远贴在海床上，和经典小鲸鱼的底部对齐，
+   * 所以跳跃高度和下潜躲中层生物的手感完全一致。 */
+  var ArcadeCharacter = window.ArcadeCharacter || null;
+  var CHAN_STAND_H = 78 * S;      // 站立视觉高度（逻辑像素，跟 PX 一起缩放）
+  var CHAN_DIVE_H = 42 * S;       // 下潜：压到中层障碍的下沿以下，眼睛看着就不会「撞」
+  var CHAN_W_RATIO = 300 / 340;   // 素材画布比例（统一 300×340）
+
+  function chanFrame(p) {
+    if (game.state === 'over') return 'blocked';
+    if (p.crouch) return 'dive';
+    if (!p.onGround) return 'jump';
+    return p.frame ? 'move' : 'idle';
+  }
+  /* 画得出来返回 true；没启用皮肤 / 素材没好 -> false，调用方继续画像素小鲸鱼 */
+  function drawWhaleChan(p) {
+    if (!ArcadeCharacter || !ArcadeCharacter.isWhaleChan()) return false;
+    var h = p.crouch ? CHAN_DIVE_H : CHAN_STAND_H;
+    var w = h * CHAN_W_RATIO;
+    var cx = p.x + (BOX.stand.dx + BOX.stand.w / 2) * PX;    // 对准判定盒中心，不是精灵中心
+    var bottom = p.y + (p.crouch ? DIVE_H : WHALE_H);
+    return ArcadeCharacter.draw(ctx, chanFrame(p), cx - w / 2, bottom - h, w, h);
+  }
+
   var URCHIN = [
     '..X........X..',
     '...X..XX..X...',
@@ -676,6 +701,7 @@
 
   function drawPlayer(t) {
     var p = game.player;
+    if (drawWhaleChan(p)) return;              // Whale-chan 皮肤：只换外观，判定盒不变
     var ink = { X: t.whale, o: t.belly };
     if (p.crouch) {
       drawSprite(p.frame ? WHALE_DIVE_B : WHALE_DIVE_A, PX, p.x, p.y, ink);   // 下潜也有专门的两帧

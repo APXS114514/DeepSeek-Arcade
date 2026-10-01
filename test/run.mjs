@@ -2,6 +2,7 @@
 import * as collision from './collision.test.mjs';
 import * as snake from './snake.test.mjs';
 import * as tokenfall from './tokenfall.test.mjs';
+import * as character from './character.test.mjs';
 import * as attentionmaze from './attentionmaze.test.mjs';
 import * as engineering from './engineering.test.mjs';
 import * as i18n from './i18n.test.mjs';
@@ -12,6 +13,7 @@ const suites = [
   ['Whale Runner · 碰撞模型 / 缩放不变性', collision],
   ['Context Snake · 玩法与规则', snake],
   ['Token Fall · 玩法与规则', tokenfall],
+  ['角色皮肤 · Classic Whale / Whale-chan', character],
   ['Attention Maze · 玩法与规则', attentionmaze],
   ['多语言（五个页面）', i18n],
   ['Whale Runner · 冒烟 + 可玩性', smoke],

@@ -2,7 +2,8 @@
  * Context Snake — DeepSeek Arcade
  * 经典贪吃蛇，蓝色像素海域：吃 TOKEN 让 CONTEXT 变长，
  * 低概率出现的 THINK 会进入 4 秒 DEEP THINK（减速 + 泛蓝光）。
- * 原生 Canvas 2D，零依赖、零图片：鲸鱼头/TOKEN/网格/粒子全部代码绘制。
+ * 原生 Canvas 2D，零依赖：经典形态下鲸鱼头/TOKEN/网格/粒子全部代码绘制；
+ * 可选的 Whale-chan 皮肤只把「蛇头」那一格换成仓库自带的第三方 WebP（CC BY 4.0）。
  * 与 Whale Runner 共用 shared/i18n.js（文案）与 shared/audio.js（音效）。
  * ============================================================ */
 (function () {
@@ -81,6 +82,11 @@
     while (s.length < len) s = '0' + s;
     return s;
   }
+
+  /* ---------------- 角色皮肤（Classic Whale / Whale-chan） ----------------
+   * 只换「蛇头」这一格：身体仍然是 Context 像素块，游戏的识别度不变。
+   * 网格、CELL、移动与判定完全不动 —— 素材只是画在那一格上的贴图。 */
+  var ArcadeCharacter = window.ArcadeCharacter || null;
 
   /* ---------------- 精灵：小鲸鱼头（朝右，旋转贴到四个方向） ---------------- */
   var HEAD = [
@@ -493,6 +499,16 @@
       ctx.fillStyle = '#7fd0ff';
       ctx.fillRect(GX + h.x * CELL - 4, GY + h.y * CELL - 4, CELL + 8, CELL + 8);
       ctx.globalAlpha = 1;
+    }
+
+    /* Whale-chan 皮肤：一张正面脸不整体旋转（转 90° 很难看），
+     * 改成「朝左时水平镜像」，上下方向沿用同一张脸。 */
+    if (ArcadeCharacter && ArcadeCharacter.isWhaleChan()) {
+      var size = CELL * 1.25;                 // 略大于格子，缩到 30px 才看得清
+      if (ArcadeCharacter.draw(ctx, think ? 'headThink' : 'head',
+            cx - size / 2, cy - size / 2, size, size, { flip: game.dir.x < 0 })) {
+        return;
+      }
     }
 
     ctx.save();

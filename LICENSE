@@ -34,3 +34,13 @@ with, endorsed by, or sponsored by DeepSeek.
 本项目的 MIT 授权仅覆盖代码本身。"DeepSeek" 名称、Logo 及相关图形、品牌
 资产不包含在 MIT 授权内，其权利归各自权利人所有。本项目为非官方同人作品，
 与 DeepSeek 官方无关联。
+
+The optional "Whale-chan" character skin is third-party artwork under
+CC BY 4.0 (author: Er1c0v0, source: github.com/Er1c0v0/dsh-whale-pet).
+It is NOT part of this MIT license — see THIRD_PARTY_NOTICES.md and
+LICENSES/CC-BY-4.0.txt. The classic DeepSeek whale sprites in shared/whale.js
+are part of this project's code and remain under the MIT license above.
+
+可选的 "鲸鱼娘" 角色皮肤属于第三方美术素材，使用 CC BY 4.0 授权
+（作者：Er1c0v0，来源：github.com/Er1c0v0/dsh-whale-pet），**不属于**上述
+MIT 授权范围 —— 详见 THIRD_PARTY_NOTICES.md 与 LICENSES/CC-BY-4.0.txt。

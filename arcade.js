@@ -1,7 +1,9 @@
 /* ============================================================
  * DeepSeek Arcade — 大厅脚本
- * 只做两件事：把三个游戏的本地最高分填进卡片；用代码画卡片预览图。
- * 语言与切换由 shared/i18n.js 负责，这里不重复实现。
+ * 只做三件事：把各游戏的本地最高分填进卡片；画卡片预览图；
+ * 提供全站角色外观（Classic Whale / Whale-chan）的切换按钮。
+ * 语言与切换由 shared/i18n.js 负责，角色状态由 shared/character.js 负责，
+ * 这里都不重复实现。
  * ============================================================ */
 (function () {
   'use strict';
@@ -67,7 +69,48 @@
   var soundBtn = document.getElementById('sound');
   if (soundBtn) soundBtn.addEventListener('click', toggleSound);
 
-  /* ---------------- 卡片预览：纯代码像素画，不引用任何图片 ---------------- */
+  /* ---------------- 全站角色外观：按钮 + 让预览跟着皮肤走 ---------------- */
+  var ArcadeCharacter = window.ArcadeCharacter || null;
+
+  function chanBody(ctx, cx, bottom, h) {
+    if (!ArcadeCharacter || !ArcadeCharacter.isWhaleChan()) return false;
+    var w = h * (300 / 340);                    // 身体素材统一 300×340 画布
+    return ArcadeCharacter.draw(ctx, 'idle', cx - w / 2, bottom - h, w, h);
+  }
+  function chanHead(ctx, cx, cy, size) {
+    if (!ArcadeCharacter || !ArcadeCharacter.isWhaleChan()) return false;
+    return ArcadeCharacter.draw(ctx, 'head', cx - size / 2, cy - size / 2, size, size);
+  }
+
+  function updateSkinButton() {
+    var btn = document.getElementById('skin');
+    if (!btn) return;
+    var I = window.I18N;
+    var chan = !!(ArcadeCharacter && ArcadeCharacter.isWhaleChan());
+    var text = chan ? 'skin.whalechan' : 'skin.classic';
+    btn.textContent = (I && I.t) ? I.t(text) : (chan ? '🐳 Whale-chan' : '🐳 Classic');
+    btn.setAttribute('aria-pressed', chan ? 'true' : 'false');
+    var aria = (I && I.t) ? I.t('skin.aria') : 'Switch character skin';
+    btn.setAttribute('title', aria);
+    btn.setAttribute('aria-label', aria);
+  }
+  function toggleSkin() {
+    if (!ArcadeCharacter) return;
+    ArcadeCharacter.toggleSkin();               // 立刻写入 arcade.characterSkin
+    updateSkinButton();
+    drawPreviews();                             // 四张卡片预览同步换人，不需要刷新页面
+    if (ArcadeAudio && ArcadeAudio.isEnabled()) {
+      ArcadeAudio.tone({ type: 'triangle', from: 620, to: 980, ms: 110, gain: 0.04 });
+    }
+  }
+  var skinBtn = document.getElementById('skin');
+  if (skinBtn) skinBtn.addEventListener('click', toggleSkin);
+  if (ArcadeCharacter) {
+    /* 换皮肤、以及 Whale-chan 素材加载完成后都重画一次 */
+    ArcadeCharacter.onChange(function () { updateSkinButton(); drawPreviews(); });
+  }
+
+  /* ---------------- 卡片预览：经典形态是纯代码像素画 ---------------- */
   var URCHIN = [
     '..X..X..',
     'XXXXXXXX',
@@ -112,7 +155,10 @@
   function previewRunner(ctx, w, h) {
     seaBackground(ctx, w, h, '#08152c', '#2a4a86');
     var px = 2;
-    pixels(ctx, WHALE_LOGO, px, 24, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
+    /* 素材没加载好 / 还是经典皮肤时 chanBody 返回 false，这里继续画像素小鲸鱼 */
+    if (!chanBody(ctx, 48, h - 14, 52)) {
+      pixels(ctx, WHALE_LOGO, px, 24, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
+    }
     pixels(ctx, URCHIN, 5, w - 78, h - 14 - 5 * 5, { X: '#8d6ce0' });
     pixels(ctx, URCHIN, 4, w - 44, h - 14 - 5 * 4, { X: '#e07a8e' });
   }
@@ -128,8 +174,10 @@
     }
     ctx.fillStyle = '#dbe7ff';
     ctx.fillRect(24 + 7 * cell + 2, 18 + 7 * 7 + 2, 5, 5);
-    ctx.fillStyle = '#4d6bfe';
-    ctx.fillRect(24 + 7 * cell, 18 + 7 * 7, cell - 3, cell - 3);
+    if (!chanHead(ctx, 24 + 7 * cell + (cell - 3) / 2, 18 + 7 * 7 + (cell - 3) / 2, cell + 4)) {
+      ctx.fillStyle = '#4d6bfe';
+      ctx.fillRect(24 + 7 * cell, 18 + 7 * 7, cell - 3, cell - 3);
+    }
     ctx.fillStyle = 'rgba(159,240,255,0.9)';
     ctx.fillRect(w - 56, 26, 14, 14);
     ctx.fillStyle = '#0b1b34';
@@ -140,7 +188,9 @@
   function previewTokenFall(ctx, w, h) {
     seaBackground(ctx, w, h, '#07132a', '#16305c');
     var px = 2;
-    pixels(ctx, WHALE_LOGO, px, 30, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
+    if (!chanBody(ctx, 54, h - 14, 52)) {
+      pixels(ctx, WHALE_LOGO, px, 30, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
+    }
     var items = [
       { x: 34, y: 22, color: '#4d6bfe', hi: '#a8c4ff', ch: 'T' },
       { x: 100, y: 12, color: '#2ee6ff', hi: '#d4fbff', ch: 'C' },
@@ -226,8 +276,10 @@
     ctx.fillRect(176, 30, 16, 16);
     ctx.fillStyle = '#07240f';
     ctx.fillRect(181, 34, 6, 8);
-    /* 小鲸鱼（和其他卡片同一只） */
-    pixels(ctx, WHALE_LOGO, 2, 152, h - 14 - 18 * 2, { X: '#4d6bfe', o: '#c9dcff' });
+    /* 小鲸鱼（和其他卡片同一只；换皮肤后变成 Whale-chan 的小头像） */
+    if (!chanHead(ctx, 176, h - 14 - 14, 30)) {
+      pixels(ctx, WHALE_LOGO, 2, 152, h - 14 - 18 * 2, { X: '#4d6bfe', o: '#c9dcff' });
+    }
   }
 
   function setup(id, draw) {
@@ -255,7 +307,8 @@
   paintHighScores();
   drawPreviews();
   updateSoundButton();
+  updateSkinButton();
   if (window.I18N && window.I18N.onChange) {
-    window.I18N.onChange(function () { drawPreviews(); updateSoundButton(); });
+    window.I18N.onChange(function () { drawPreviews(); updateSoundButton(); updateSkinButton(); });
   }
 })();

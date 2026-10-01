@@ -7,20 +7,22 @@
 
 ## 设计原则
 
-- **零依赖、零构建、零图片**：四款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D），
-  所有美术（小鲸鱼、迷宫、掉落物、粒子、UI）都是 `fillRect` / `fillText` 画出来的，没有外部图片。
+- **零依赖、零构建、零运行时外部请求**：四款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D）。
+  经典形态的全部美术（小鲸鱼、迷宫、掉落物、粒子、UI）都是 `fillRect` / `fillText` 画出来的，没有任何外部图片；
+  可选的 **Whale-chan** 角色皮肤会加载 `assets/whale-chan/` 下**仓库自带**的第三方 WebP（CC BY 4.0，不走 CDN、不请求外部域名）。
 - **不引入打包器 / 框架 / ES Module**：每个页面用普通 `<script src>` 按顺序加载，所以
   「直接双击 HTML」「任意静态服务器」「GitHub Pages 子路径」三种打开方式行为一致。
 - **玩法逻辑不跨游戏共享**：只在 `shared/` 放真正通用的东西（文案、音效开关、鲸鱼像素数据），
   不做为了「架构统一」而抽的抽象。
 
-## shared/ 三件套
+## shared/ 四件套
 
 | 文件 | 作用 |
 | --- | --- |
 | `shared/i18n.js` | 全站唯一词典（中 / 英）+ 语言检测与切换（`arcade.lang`，兼容旧的 `whaleRunner.lang`）。页面用 `data-i18n` 属性或 `I18N.t('key')`；Canvas 里的文字也走 `I18N.t`，语言切换无需刷新。 |
 | `shared/audio.js` | Web Audio 音效工具 + **全站统一 Sound 开关**。`ArcadeAudio.tone({...})` 现场合成音色（不引用任何音频文件）；`isEnabled(legacyKey)` / `setEnabled(on)` / `toggle()` 读写 `arcade.sound`，`audio.js` 在静音时 `tone()` 直接静默。 |
 | `shared/whale.js` | DeepSeek 小鲸鱼的**唯一一份**像素素材：`NORMAL_A` / `NORMAL_B`（24×18 游动两帧）、`DIVE_A` / `DIVE_B`（24×13 下潜两帧），外加 `width / height / mirror / rotate` 小工具。Whale Runner、Token Fall、大厅卡片预览都读它。 |
+| `shared/character.js` | 全站角色皮肤 **Classic Whale / Whale-chan**：读写 `arcade.characterSkin`、一次性预加载 9 张 Whale-chan WebP、`onChange` 广播、以及 `draw()`（画不出来返回 `false`，调用方回退经典小鲸鱼）。 |
 
 **Sound 优先级（第一次读取时确定）**：`arcade.sound` > 当前游戏自己的旧 key（`whaleRunner.sound` /
 `arcade.snake.sound` / `arcade.tokenFall.sound` / `arcade.attentionMaze.sound`）> 默认 `on`。
@@ -32,13 +34,17 @@
 ```html
 <script src="../../shared/i18n.js"></script>
 <script src="../../shared/audio.js"></script>
-<script src="../../shared/whale.js"></script>   <!-- 需要鲸鱼素材的页面 -->
-<script src="levels.js"></script>               <!-- Attention Maze：关卡数据 -->
+<script src="../../shared/whale.js"></script>     <!-- 需要鲸鱼素材的页面 -->
+<script src="../../shared/character.js"></script> <!-- 角色皮肤 -->
+<script src="levels.js"></script>                 <!-- Attention Maze：关卡数据 -->
 <script src="game.js"></script>
 ```
 
-`shared/whale.js` 必须在游戏脚本之前；Attention Maze 的 `levels.js` 必须在 `game.js` 之前。
+`shared/whale.js` / `shared/character.js` 必须在游戏脚本之前；Attention Maze 的 `levels.js` 必须在 `game.js` 之前。
 缺文件时游戏不会崩，但会在控制台给出明确告警。
+
+> `shared/character.js` 用**脚本自己的 URL** 推导素材目录（`shared/character.js` → `../assets/whale-chan/`），
+> 所以根目录、`/DeepSeek-Arcade/` 子路径、`file://` 三种打开方式都不用配置路径，也永远不会出现 `/assets/...` 这种根路径。
 
 ## Canvas 与 DPR
 
@@ -56,6 +62,7 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 | Context Snake 最高分 | `arcade.snake.high` |
 | Token Fall 最高分 | `arcade.tokenFall.high` |
 | Attention Maze 进度 | `arcade.attentionMaze.progress`（存最高解锁 Layer + 每关星级/最佳时间/步数，不是高分） |
+| 角色皮肤 | `arcade.characterSkin`（`classic` / `whalechan`，**默认 classic**，非法值回退 classic；不写任何游戏成绩） |
 | 音效开关 | Whale Runner：`whaleRunner.sound`；Context Snake：`arcade.snake.sound`；Token Fall：`arcade.tokenFall.sound`；Attention Maze：`arcade.attentionMaze.sound` |
 | 文案 | **只在 `shared/i18n.js` 里维护一份**，页面用 `data-i18n` 属性或 `I18N.t('key')` 取值 |
 | 音效 | Whale Runner 保留自己那套 `beep()`（三段包络专门调过，不动它），新游戏用 `shared/audio.js` |
@@ -113,6 +120,36 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
   `MOVE_REPEAT_EVERY`（按住连走的间隔）/ `TWEEN_MS`（纯视觉插值，不影响判定）/ `starsFor()` 里的星级门槛。
 - **文案**：加到 `shared/i18n.js` 的 `DICT.zh` / `DICT.en`（key 必须两边都有，测试会检查），HTML 用 `data-i18n`。
 - 改完跑一次 `bash test/run.sh`。
+
+## 角色皮肤（Classic Whale / Whale-chan）
+
+全站两套角色外观，由 `shared/character.js` 统一管理，**只影响视觉**：
+
+| 皮肤 | 素材 | 说明 |
+| --- | --- | --- |
+| `classic`（默认） | `shared/whale.js` 的字符画 + 各游戏自己的像素精灵 | 四款游戏的判定盒、难度、手感全部按原样 |
+| `whalechan` | `assets/whale-chan/*.webp`（第三方 CC BY 4.0 素材的派生 WebP） | 贴图替换，同样不动任何玩法数值 |
+
+- **状态**：`localStorage: arcade.characterSkin`，值只接受 `classic` / `whalechan`，其它一律回退 `classic`；
+  没存过时**默认 classic**，所以老玩家升级后不会突然被换角色。
+- **预加载**：模块加载时一次性 `new Image()` 9 张 WebP（合计约 180KB，全部相对路径），之后只从缓存里取，
+  绝不在 `render` 里创建图片对象。
+- **回退**：`ArcadeCharacter.draw()` 在「没启用皮肤 / 素材还没就绪 / 素材 404 或解码失败」时返回 `false`，
+  调用方立刻改画经典小鲸鱼 —— 图片问题永远不会让角色消失、报错或让 Canvas 停摆。
+- **插值**：Whale-chan 是插画不是像素画，`draw()` 会临时打开 `imageSmoothingEnabled`、画完恢复，
+  所以同一块 Canvas 上的像素物体不会被糊掉。
+- **视觉 / 判定分离**：素材尺寸永远不参与碰撞。Whale Runner 的 `BOX`、Token Fall 的 `PLAYER_HIT`、
+  Snake 的格子、Attention Maze 的 `CELL` 都保持原值；马子（见各游戏章节）只决定「贴图画在哪、画多大」。
+
+### 第三方素材授权（重要）
+
+`assets/whale-chan/` 里的图片**不是**本项目的作品，也**不在 MIT 授权内**：
+
+- 作者 / 版权人：**Er1c0v0**；来源：<https://github.com/Er1c0v0/dsh-whale-pet> 的 `character/` 目录；
+- 授权：**CC BY 4.0**（全文见 `LICENSES/CC-BY-4.0.txt`）；
+- 仓库里只放**派生 WebP**（连通域去背景 → alpha 羽化 → 裁切 → 统一比例缩放 → WebP q90），
+  不重新分发上游原始 PNG；每个文件的来源、上游 SHA-256 与改动都记在 `assets/whale-chan/ATTRIBUTION.md`；
+- 根目录 `LICENSE` 是 MIT，**只覆盖代码**；第三方声明见 `THIRD_PARTY_NOTICES.md`。
 
 ## 四款游戏的实现细节
 
@@ -244,7 +281,7 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
   切走标签页自动暂停、回来不自动继续；时间差过大（切页回来）会被钳住，掉落物不会瞬移。
 - **最高分**：`arcade.tokenFall.high`；静音开关 `arcade.tokenFall.sound`（与另外两款完全分开）。
 
-> 同样零图片：小鲸鱼和 Whale Runner 是同一只 —— 由 **DeepSeek 官方 logo 路径**光栅化出的 24×18 字符画精灵
+> 经典形态同样零图片：小鲸鱼和 Whale Runner 是同一只 —— 由 **DeepSeek 官方 logo 路径**光栅化出的 24×18 字符画精灵
 > （两帧摆尾，向左游时镜像；判定盒同样按精灵格子内缩，透明区域不算碰撞）。四类掉落物、背景数据粒子、网格、HUD、
 > 发光效果全部用 `fillRect` / `fillText` 画出来。音效用 `shared/audio.js` 现场合成
 > （TOKEN 短促提示音、COMPRESS 压缩下坠音、NOISE 错误音、THINK 上行音、Overflow 警告音、Game Over 音）。
@@ -291,7 +328,7 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
   回来不会自动继续。
 - **进度**：`arcade.attentionMaze.progress`（JSON：最高解锁层 + 每关最佳星级/时间/步数，存档损坏会自动回退默认值）。
 
-> 零图片：迷宫、俯视小鲸鱼（对字符画做 90° 整数旋转出上下左右四个朝向）、Q/K/V 节点、注意力连线
+> 经典形态零图片：迷宫、俯视小鲸鱼（对字符画做 90° 整数旋转出上下左右四个朝向）、Q/K/V 节点、注意力连线
 > （自己画的像素线，粗细 = 权重）、遮罩、HUD 全部 `fillRect`；音效用 `shared/audio.js` 现场合成，音量很克制。
 
 ## 目录结构（完整）

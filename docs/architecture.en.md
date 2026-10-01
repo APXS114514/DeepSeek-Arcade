@@ -7,20 +7,23 @@ for the test story see [docs/testing.en.md](testing.en.md).
 
 ## Design principles
 
-- **No dependencies, no build, no images**: all four games are plain HTML + CSS + JavaScript (Canvas 2D), and every
-  piece of art (whale, mazes, falling tokens, particles, UI) is drawn with `fillRect` / `fillText` — no external files.
+- **No dependencies, no build, no runtime external requests**: all four games are plain HTML + CSS + JavaScript
+  (Canvas 2D). In classic mode every piece of art (whale, mazes, falling tokens, particles, UI) is drawn with
+  `fillRect` / `fillText` — no external files at all. The optional **Whale-chan** skin loads third-party WebP files
+  **shipped inside this repo** (`assets/whale-chan/`, CC BY 4.0) — no CDN, no third-party domain at runtime.
 - **No bundler, no framework, no ES modules**: each page loads plain `<script src>` tags in order, so "open the HTML
   file directly", "any static server" and "a GitHub Pages sub-path" all behave identically.
 - **Gameplay is not shared across games**: `shared/` only holds things that are genuinely common (copy, the sound
   switch, the whale pixel data). No abstractions created just to look uniform.
 
-## The three shared modules (`shared/`)
+## The four shared modules (`shared/`)
 
 | File | Role |
 | --- | --- |
 | `shared/i18n.js` | The single dictionary (zh / en) plus language detection and switching (`arcade.lang`, with legacy `whaleRunner.lang` support). Pages use `data-i18n` attributes or `I18N.t('key')`; canvas text goes through `I18N.t` too, so switching language never needs a reload. |
 | `shared/audio.js` | Web Audio helpers **and the global Sound switch**. `ArcadeAudio.tone({...})` synthesises tones on the fly (no audio files); `isEnabled(legacyKey)` / `setEnabled(on)` / `toggle()` read and write `arcade.sound`, and `tone()` stays silent while muted. |
 | `shared/whale.js` | The **single copy** of the DeepSeek whale pixel art: `NORMAL_A` / `NORMAL_B` (24×18 swim frames), `DIVE_A` / `DIVE_B` (24×13 dive frames) plus `width / height / mirror / rotate` helpers. Whale Runner, Token Fall and the lobby previews all read it. |
+| `shared/character.js` | The global character skin **Classic Whale / Whale-chan**: reads and writes `arcade.characterSkin`, preloads the nine Whale-chan WebP files once, broadcasts `onChange`, and exposes `draw()`, which returns `false` when it cannot draw so the caller can fall back to the classic whale. |
 
 **Sound precedence (decided on first read)**: `arcade.sound` > the current game's own legacy key (`whaleRunner.sound` /
 `arcade.snake.sound` / `arcade.tokenFall.sound` / `arcade.attentionMaze.sound`) > default `on`.
@@ -33,13 +36,18 @@ the current game's own key, so one game's mute state cannot leak into another. W
 ```html
 <script src="../../shared/i18n.js"></script>
 <script src="../../shared/audio.js"></script>
-<script src="../../shared/whale.js"></script>   <!-- pages that draw the whale -->
-<script src="levels.js"></script>               <!-- Attention Maze: level data -->
+<script src="../../shared/whale.js"></script>     <!-- pages that draw the whale -->
+<script src="../../shared/character.js"></script> <!-- character skin -->
+<script src="levels.js"></script>                 <!-- Attention Maze: level data -->
 <script src="game.js"></script>
 ```
 
-`shared/whale.js` must come before the game script, and Attention Maze's `levels.js` must come before `game.js`.
-A missing file never crashes the game; it logs a clear warning to the console instead.
+`shared/whale.js` and `shared/character.js` must come before the game script, and Attention Maze's `levels.js` must
+come before `game.js`. A missing file never crashes the game; it logs a clear warning to the console instead.
+
+> `shared/character.js` derives the asset directory from **its own script URL** (`shared/character.js` →
+> `../assets/whale-chan/`), so the site root, a `/DeepSeek-Arcade/` sub-path and `file://` all work without any
+> configuration, and a root-absolute `/assets/...` path can never appear.
 
 ## Canvas & DPR
 
@@ -124,6 +132,40 @@ repository root to <https://apxs114514.github.io/DeepSeek-Arcade/>. The reposito
   never collision) / the star thresholds inside `starsFor()`.
 - **Copy**: add keys to `DICT.zh` / `DICT.en` in `shared/i18n.js` (both sides are required and tested) and use `data-i18n` in HTML.
 - After any change, run `bash test/run.sh`.
+
+## Character skins (Classic Whale / Whale-chan)
+
+Two character appearances, managed centrally by `shared/character.js`, and **both are purely cosmetic**:
+
+| Skin | Assets | Notes |
+| --- | --- | --- |
+| `classic` (default) | the character sprite in `shared/whale.js` plus each game's own pixel sprites | every hitbox, difficulty and feel value stays exactly as before |
+| `whalechan` | `assets/whale-chan/*.webp` (derived WebP of third-party CC BY 4.0 artwork) | a texture swap — still no gameplay value changes |
+
+- **State**: `localStorage: arcade.characterSkin`; only `classic` / `whalechan` are accepted and anything else falls
+  back to `classic`. When the key is missing the default is **classic**, so existing players are never re-skinned silently.
+- **Preload**: the module creates the nine `Image` objects exactly once (~180KB total, all relative paths) and only ever
+  draws from that cache — never `new Image()` inside a render loop.
+- **Fallback**: `ArcadeCharacter.draw()` returns `false` when the skin is off, the asset is still loading, or the file
+  404s / fails to decode. The caller then draws the classic whale, so a broken image can never make the character
+  disappear, throw, or stall the Canvas.
+- **Smoothing**: Whale-chan is an illustration, not pixel art. `draw()` turns `imageSmoothingEnabled` on for the
+  duration of the call and restores the previous value, so pixel objects on the same Canvas stay crisp.
+- **Visual vs collision**: image size never participates in collision. Whale Runner's `BOX`, Token Fall's `PLAYER_HIT`,
+  Snake's grid and Attention Maze's `CELL` all keep their original values; the asset only decides where and how large
+  the texture is painted.
+
+### Third-party artwork licence (important)
+
+The images under `assets/whale-chan/` are **not** this project's work and are **not covered by the MIT license**:
+
+- Author / copyright holder: **Er1c0v0**; source: the `character/` directory of
+  <https://github.com/Er1c0v0/dsh-whale-pet>;
+- Licence: **CC BY 4.0** (full text in `LICENSES/CC-BY-4.0.txt`);
+- Only **derived WebP** files are shipped (edge-connected background removal → alpha feathering → cropping → uniform
+  rescaling → WebP q90); the original upstream PNGs are not redistributed. Every source file, its upstream SHA-256
+  and the modifications are recorded in `assets/whale-chan/ATTRIBUTION.md`;
+- The root `LICENSE` is MIT and covers the **code only**; see `THIRD_PARTY_NOTICES.md`.
 
 ## How each game is implemented
 
@@ -270,7 +312,7 @@ NOISE weight 0.32), so late game is brutal but never a guaranteed numeric blow-u
   tab) is clamped so drops cannot teleport.
 - **High score**: `arcade.tokenFall.high` (sound state now comes from the global `arcade.sound`).
 
-> Also zero images: the whale is the same one as Whale Runner — the 24×18 character sprite rasterised from the **official
+> Classic mode is also zero images: the whale is the same one as Whale Runner — the 24×18 character sprite rasterised from the **official
 > DeepSeek logo path** (two tail frames, mirrored when swimming left; the hitbox is inset by sprite cells, so transparent
 > areas never collide). The four drop kinds, background particles, grid, HUD and glows are all `fillRect` / `fillText`.
 > Sounds are synthesised through `shared/audio.js` (short TOKEN blip, COMPRESS drop, NOISE error, THINK rise, overflow

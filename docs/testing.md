@@ -17,7 +17,7 @@ CI 里同样是这一条命令（`.github/workflows/pages.yml` 的 `Run tests` �
 bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```
 
-目前 **818 项**，八个套件：
+目前 **948 项**，九个套件：
 
 | 套件 | 覆盖 |
 | --- | --- |
@@ -30,7 +30,8 @@ bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH
 | Attention Maze · 玩法 | 12 关地图数据自检（15×11、四周封闭、节点都在可走格、不重叠、answer 就是注意力最高的 KEY）与 **BFS 可解性验证**、par 合理性、地图解析、走格子与撞墙不加 MOVES、提前到 EXIT 无效、
 QUERY 触发与展示时长、错误 KEY 只记一次 MISTAKE、正确 KEY 解锁 VALUE、VALUE 解锁 EXIT、权重不随机、MULTI-HEAD 阶段顺序与「两头之和」判定、RESCAN 次数与上限、暂停冻结全部计时、切页自动暂停、
 重开清理、进度解锁与星级（含「更差成绩不覆盖最佳」）、存档损坏容错、RESET 二次确认、触屏/多指/失焦松手、DPR 不影响判定 |
-| 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、四款游戏的 localStorage key 互不冲突 |
+| 角色皮肤 | `arcade.characterSkin` 默认 classic、非法值回退、开关/回调/`onChange`、重新进页面读回同一个值；**换皮肤不改任何游戏数据**（成绩 / 进度 / 音效 / 语言 key 逐个比对）；四款游戏换皮肤后**判定盒完全不变**（Runner 用固定随机种子跑同一段剧本对比死亡帧、Token Fall 对比接物结算、Snake 对比蛇头格子与长度、Maze 对比所在格与 MOVES）；素材 404 / 加载中自动回退经典小鲸鱼且不报错；9 张素材只 `new Image()` 一次；大厅按钮中英文案与预览实时跟随；素材路径不含站点绝对路径 |
+| 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、四款游戏的 localStorage key 互不冲突、角色模块的相对路径与素材存在性 |
 
 ## 关卡可解性验证（Attention Maze）
 
@@ -38,11 +39,26 @@ QUERY 触发与展示时长、错误 KEY 只记一次 MISTAKE、正确 KEY 解�
 的关卡数据，对 12 个 Layer 逐个确认：
 
 - 地图是 15×11、四周封闭、所有节点都落在可走格上、没有两个节点共用一格；
-- `answer` 确实是注意力最高的 KEY（单头看权重，多头按两个头之和取整比较，且要求余量 ≥ 0.05，避免浮点平局）；
+- `answer` 确实是注意力最高的 KEY 且没有并列（单头看权重，多头按两个头之和取整比较，且要求余量 ≥ 0.08，避免浮点平局）；
 - **起点 → QUERY → 正确 KEY → VALUE → EXIT 全程连通**（忽略关卡锁，只看地图几何）；
 - `parMoves` ≥ 最短通路（三星可达），且不会宽松到失去意义（≤ 1.6 倍），`parTime` 也在合理区间。
 
 加一个新 Layer 只要往 `levels.js` 追一条数据，这个验证器会自动替你验一遍。
+
+同一个 suite 里还有一组**关卡设计质量**检查（防止正确答案又挤到某一个 KEY 上）：
+每关唯一最高、任何 KEY 占比 ≤ 40%、不连续 3 关同一答案、K1/K2/K3 都当过答案、K4 首次登场后必须当过答案、
+K5/K6 不能只是干扰项、KEY 数量单调递增、答案不会总是最右 / 离 QUERY 最近 / 离 EXIT 最近、每关与第二名差距 ≥ 0.08。
+
+## 第三方素材与授权检查
+
+`test/engineering.test.mjs` 的最后一组是**版权防回归**，静态读文件，不需要联网：
+
+- `assets/whale-chan/ATTRIBUTION.md` 存在，且写明 `Er1c0v0` / `CC BY 4.0` / `dsh-whale-pet` / `character/` / 改动说明 / 上游 SHA-256；
+- `LICENSES/CC-BY-4.0.txt` 存在且是完整的 CC BY 4.0 法律文本；
+- `THIRD_PARTY_NOTICES.md` 存在，同时说明「代码 MIT / 鲸鱼娘美术 CC BY 4.0」并点明第三方美术不属于 MIT；
+- 根 `LICENSE` 仍然是 MIT，且写清楚 Whale-chan 不在 MIT 范围内；
+- 中英 README 都提到双角色、`arcade.characterSkin`、作者与授权；
+- 9 张派生素材齐全、总体积 < 600KB、运行时目录里没有混入上游原始 PNG。
 
 ## 加测试怎么入手
 

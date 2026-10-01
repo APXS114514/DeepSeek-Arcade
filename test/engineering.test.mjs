@@ -254,6 +254,70 @@ export function run() {
       !/coming soon|third game|三款|敬请期待/i.test(source('docs/architecture.md')));
   }
 
+  /* ================= F. 第三方素材（Whale-chan / CC BY 4.0） ================= */
+  {
+    const attrPath = path.join(ROOT, 'assets/whale-chan/ATTRIBUTION.md');
+    ok('assets/whale-chan/ATTRIBUTION.md 存在', fs.existsSync(attrPath));
+    const attr = source('assets/whale-chan/ATTRIBUTION.md');
+    ok('ATTRIBUTION 写明作者 Er1c0v0', attr.indexOf('Er1c0v0') !== -1);
+    ok('ATTRIBUTION 写明 CC BY 4.0', /CC BY 4\.0/.test(attr) && attr.indexOf('Creative Commons Attribution 4.0') !== -1);
+    ok('ATTRIBUTION 写明上游仓库 dsh-whale-pet', attr.indexOf('dsh-whale-pet') !== -1);
+    ok('ATTRIBUTION 写明素材来自 character/ 目录', attr.indexOf('character/') !== -1);
+    ok('ATTRIBUTION 记录了修改（Modifications）', attr.indexOf('Modifications') !== -1);
+    ok('ATTRIBUTION 明确说明不属于 MIT', /NOT covered by DeepSeek Arcade/i.test(attr));
+    ok('ATTRIBUTION 保留上游 SHA-256 校验信息', (attr.match(/[0-9a-f]{64}/g) || []).length >= 9,
+      String((attr.match(/[0-9a-f]{64}/g) || []).length));
+
+    const licPath = path.join(ROOT, 'LICENSES/CC-BY-4.0.txt');
+    ok('LICENSES/CC-BY-4.0.txt 存在', fs.existsSync(licPath));
+    const cc = source('LICENSES/CC-BY-4.0.txt');
+    ok('CC BY 4.0 文本是标准的 Creative Commons 授权全文',
+      cc.indexOf('Creative Commons Attribution 4.0 International Public License') !== -1 &&
+      cc.indexOf('Section 1 -- Definitions.') !== -1 && cc.length > 10000, String(cc.length));
+
+    const tpnPath = path.join(ROOT, 'THIRD_PARTY_NOTICES.md');
+    ok('THIRD_PARTY_NOTICES.md 存在', fs.existsSync(tpnPath));
+    const tpn = source('THIRD_PARTY_NOTICES.md');
+    ok('第三方声明同时写明 MIT（代码）与 CC BY 4.0（鲸鱼娘美术）',
+      tpn.indexOf('MIT') !== -1 && tpn.indexOf('CC BY 4.0') !== -1 && tpn.indexOf('Er1c0v0') !== -1);
+    ok('第三方声明明确 assets/whale-chan 不属于 MIT', /NOT MIT-licensed/i.test(tpn));
+    ok('第三方声明把 DeepSeek 品牌单独列出', /DeepSeek/.test(tpn) && /brand/i.test(tpn));
+
+    /* 根 LICENSE 仍然是 MIT，并且说清楚了鲸鱼娘素材不在 MIT 范围内 */
+    const lic = source('LICENSE');
+    ok('根 LICENSE 仍然是 MIT（没有被第三方素材改写）',
+      /^MIT License/m.test(lic) && /Copyright \(c\) 2026 APXS114514/.test(lic));
+    ok('根 LICENSE 说明了 Whale-chan 属于 CC BY 4.0、不在 MIT 内',
+      lic.indexOf('CC BY 4.0') !== -1 && lic.indexOf('Er1c0v0') !== -1 && lic.indexOf('THIRD_PARTY_NOTICES') !== -1);
+
+    /* README 两份都要说明双角色 + 授权 */
+    for (const [name, tag] of [['README.md', '鲸鱼娘'], ['README.en.md', 'Whale-chan']]) {
+      const md = source(name);
+      ok(name + ' 提到 Whale-chan 角色皮肤', md.indexOf(tag) !== -1);
+      ok(name + ' 写明 Whale-chan 美术是 CC BY 4.0', md.indexOf('CC BY 4.0') !== -1);
+      ok(name + ' 写明作者 Er1c0v0', md.indexOf('Er1c0v0') !== -1);
+      ok(name + ' 写明 arcade.characterSkin', md.indexOf('arcade.characterSkin') !== -1);
+      ok(name + ' 不再声称「整个项目零图片」',
+        !/零图片、零后端/.test(md) && !/no image files, no backend/.test(md));
+    }
+
+    /* 运行时素材：9 张，全部存在、非空、体积可控 */
+    const files = ['whalechan-idle.webp', 'whalechan-move.webp', 'whalechan-jump.webp', 'whalechan-dive.webp',
+      'whalechan-think.webp', 'whalechan-startle.webp', 'whalechan-blocked.webp',
+      'whalechan-head.webp', 'whalechan-head-think.webp'];
+    let bytes = 0, missing = '';
+    for (const f of files) {
+      const p = path.join(ROOT, 'assets/whale-chan/' + f);
+      if (!fs.existsSync(p)) { missing += f + ' '; continue; }
+      bytes += fs.statSync(p).size;
+    }
+    ok('9 张派生鲸鱼娘素材齐全', missing === '', missing);
+    ok('鲸鱼娘运行时素材总大小合理（< 600KB，实际 ' + Math.round(bytes / 1024) + 'KB）',
+      bytes > 0 && bytes < 600 * 1024, String(bytes));
+    ok('没有把上游原始 PNG 一起塞进运行时目录',
+      fs.readdirSync(path.join(ROOT, 'assets/whale-chan')).filter((f) => /\.png$/i.test(f)).length === 0);
+  }
+
   /* ================= F. 导航与 Pages 安全性 ================= */
   {
     const pages = ['index.html', 'games/runner/index.html', 'games/snake/index.html',

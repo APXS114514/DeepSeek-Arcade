@@ -39,7 +39,7 @@ export function run() {
     if (!fs.existsSync(abs)) continue;
     const src = fs.readFileSync(abs, 'utf8');
     /* 站点绝对路径（以 / 开头）在 GitHub Pages 子路径下会 404 */
-    const bad = src.match(/['"]\/[A-Za-z][A-Za-z0-9._/-]*\.(?:js|css|png|jpg|svg|json)['"]/g);
+    const bad = src.match(/['"]\/[A-Za-z][A-Za-z0-9._/-]*\.(?:js|css|png|jpg|svg|webp|json)['"]/g);
     ok(f + ' 不含站点绝对路径', !bad, bad ? bad.join(',') : '');
     /* 也不该引用不存在的同级文件 */
     const refs = src.match(/['"]([A-Za-z0-9._/-]+\.(?:js|css|png|jpg|svg))['"]/g) || [];
@@ -82,6 +82,25 @@ export function run() {
      [...snakeKeys].every((k) => !runnerKeys.has(k)),
      'runner=' + [...runnerKeys].join(',') + ' snake=' + [...snakeKeys].join(',') + ' tf=' + [...tfKeys].join(',') + ' maze=' + [...mazeKeys].join(','));
   ok('大厅读的正是 Attention Maze 的进度 key', fs.readFileSync(path.join(ROOT, 'arcade.js'), 'utf8').indexOf("arcade.attentionMaze.progress") >= 0);
+
+  /* 角色皮肤：素材必须走相对/派生路径，且真的存在 */
+  const charSrc = fs.readFileSync(path.join(ROOT, 'shared/character.js'), 'utf8');
+  ok('shared/character.js 暴露 ArcadeCharacter', charSrc.indexOf('global.ArcadeCharacter') >= 0);
+  ok('角色皮肤统一的 localStorage key 是 arcade.characterSkin', charSrc.indexOf("'arcade.characterSkin'") >= 0);
+  ok('角色皮肤不写死 /assets/ 这类站点绝对路径',
+     !/['"`]\/assets\//.test(charSrc) && charSrc.indexOf("'assets/whale-chan/'") >= 0, '');
+  const chanFiles = ['whalechan-idle.webp', 'whalechan-move.webp', 'whalechan-jump.webp', 'whalechan-dive.webp',
+    'whalechan-think.webp', 'whalechan-startle.webp', 'whalechan-blocked.webp',
+    'whalechan-head.webp', 'whalechan-head-think.webp'];
+  const chanMissing = chanFiles.filter((f) => !fs.existsSync(path.join(ROOT, 'assets/whale-chan', f)));
+  ok('shared/character.js 里列的 9 张素材都真实存在', chanMissing.length === 0, chanMissing.join(','));
+  ok('每个页面都按 i18n -> audio -> (whale) -> character -> game 的顺序加载角色模块',
+     PAGES.every((p) => {
+       const html = fs.readFileSync(path.join(ROOT, p), 'utf8');
+       const ci = html.indexOf('shared/character.js');
+       const gi = Math.max(html.indexOf('game.js'), html.indexOf('arcade.js'));
+       return ci !== -1 && ci < gi;
+     }));
 
   /* 语言 key 全站共享同一个存储键 */
   const i18n = fs.readFileSync(path.join(ROOT, 'shared/i18n.js'), 'utf8');

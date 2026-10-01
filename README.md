@@ -1,7 +1,9 @@
 # DeepSeek Arcade
 
 **四款 DeepSeek-inspired 像素小游戏合集**（非官方同人）：Whale Runner · Context Snake · Token Fall · Attention Maze。
-纯 HTML + CSS + 原生 JavaScript（Canvas 2D）——**零依赖、零构建、零图片、零后端**。
+纯 HTML + CSS + 原生 JavaScript（Canvas 2D）——**零依赖、零构建、零后端、零运行时外部请求**。
+经典形态的美术（小鲸鱼、迷宫、掉落物、粒子、UI）全部由 Canvas 代码绘制；
+可选的 **Whale-chan** 角色皮肤使用本地第三方插画素材（CC BY 4.0，见下文）。
 
 **中文** · [English](README.en.md)
 
@@ -51,14 +53,52 @@ Attention Maze 的每一关都只能靠**读权重**过关，位置和编号都�
 
 ## 技术特点
 
-- **零依赖 / 零构建**：没有 `package.json`、没有打包器、没有框架、没有外部图片或音频文件；
+- **零依赖 / 零构建**：没有 `package.json`、没有打包器、没有框架、没有 CDN、没有外部音频文件；
+  经典形态的全部美术都是代码画的，可选的 Whale-chan 皮肤用的是**仓库自带的本地图片**；
 - **一份美术**：小鲸鱼像素素材只在 `shared/whale.js` 里存一份，Whale Runner / Token Fall / 大厅预览共用；
+- **一个角色开关**：`arcade.characterSkin` 全站共享 —— 在大厅切换 Classic Whale / Whale-chan，
+  四款游戏和大厅预览立刻一起换（加载失败自动退回经典形态）；
 - **一份文案**：全站词典在 `shared/i18n.js`，Canvas 里的文字也跟着语言实时切换；
 - **一个 Sound 开关**：`arcade.sound` 全站共享 —— 在任何一款游戏里静音，另外三款一起静音（自动兼容旧设置）；
 - **Retina 清晰**：Canvas 按 DPR（上限 3）设置背板分辨率，判定仍在固定逻辑坐标里做；
 - **先测后发**：GitHub Actions 先跑完整套测试，通过之后才部署 Pages。
 
+## 角色外观：Classic Whale / Whale-chan
+
+全站有两套角色外观，**默认是 Classic Whale**（老玩家升级后不会被突然换角色）：
+
+| 皮肤 | 外观 | 说明 |
+| --- | --- | --- |
+| `classic` | 代码绘制的像素 DeepSeek 小鲸鱼 | 默认；四款游戏的手感、判定盒完全按原样 |
+| `whalechan` | 第三方插画角色「鲸鱼娘」 | 可选皮肤，**只换外观**，不改变任何玩法数值 |
+
+- 在大厅顶部点 **🐳 经典鲸鱼 / 🐳 鲸鱼娘** 即可切换，四张卡片预览会立刻跟着换；
+- 选择存在 `localStorage: arcade.characterSkin`，四款游戏共用，不需要刷新页面；
+- 角色皮肤**只影响画面**：不碰最高分、Attention Maze 进度、音效开关和语言；
+- 图片加载失败 / 被拦截时会自动画回经典小鲸鱼，游戏照常运行。
+
+角色的具体形态：
+
+- **Whale Runner**：站立 / 移动 / 跳跃 / 下潜各有对应姿态，脚底始终贴海床，判定盒完全不变；
+- **Context Snake**：只换**蛇头**那一格，身体仍然是 Context 像素块；DEEP THINK 时换成埋头工作的表情；
+- **Token Fall**：底部玩家换成鲸鱼娘，DEEP THINK 变成「埋头工作」，溢出抢救时变成慌张表情；
+- **Attention Maze**：格子制，用的是裁好的小头像（视觉 34px，逻辑仍然只占 1 格），朝左时水平镜像。
+
+### Whale-chan artwork 授权（重要）
+
+鲸鱼娘**不是** DeepSeek Arcade 画的，也**不在 MIT 授权范围内**：
+
+- **作者 / 版权人**：**Er1c0v0**
+- **来源**：GitHub 仓库 [`Er1c0v0/dsh-whale-pet`](https://github.com/Er1c0v0/dsh-whale-pet)（`character/` 目录）
+- **授权**：**CC BY 4.0**（Creative Commons Attribution 4.0 International），全文见 [`LICENSES/CC-BY-4.0.txt`](LICENSES/CC-BY-4.0.txt)
+- **完整署名与改动说明**：[`assets/whale-chan/ATTRIBUTION.md`](assets/whale-chan/ATTRIBUTION.md)
+- **第三方声明**：[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
+
+> 根目录的 [`LICENSE`](LICENSE) 是 **MIT**，只覆盖本项目**代码**。
+> 不要以为 `assets/whale-chan/*` 也是 MIT —— 它是 **CC BY 4.0**，转载或改编时请保留 `Er1c0v0` 的署名。
+
 ## 本地运行
+
 
 任选一种：
 
@@ -78,7 +118,7 @@ Attention Maze 的每一关都只能靠**读权重**过关，位置和编号都�
 bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```
 
-四款游戏共用一个无头测试环境（桩 DOM + 桩 Canvas，不需要浏览器），目前 **800+ 项**，覆盖玩法规则、
+四款游戏共用一个无头测试环境（桩 DOM + 桩 Canvas，不需要浏览器），目前 **900+ 项**，覆盖玩法规则、
 Attention Maze 12 关的 **BFS 可解性验证**、多语言词表一致性、相对路径与 localStorage key 冲突、
 以及 v1.0 的结构约定（统一 Sound / 共享素材 / 关卡拆分 / CI 配置 / LICENSE）。
 细节见 [docs/testing.md](docs/testing.md)。
@@ -93,15 +133,19 @@ CI 里跑的就是这一条命令：测试不过，Pages 不会部署（见 `.gi
 ├── shared/                               全站共用
 │   ├── i18n.js                           中英词典 + 语言切换
 │   ├── audio.js                          Web Audio 音色 + 全站统一 Sound 开关
+│   ├── character.js                      角色皮肤（Classic / Whale-chan）+ 素材预加载与回退
 │   └── whale.js                          DeepSeek 小鲸鱼像素素材（唯一一份）
 ├── games/
 │   ├── runner/                           Whale Runner
 │   ├── snake/                            Context Snake
 │   ├── token-fall/                       Token Fall
 │   └── attention-maze/                   Attention Maze（levels.js 关卡数据 + game.js 引擎）
+├── assets/whale-chan/                    Whale-chan 运行时素材（派生 WebP）+ ATTRIBUTION.md
 ├── test/                                 无头测试（桩 DOM + 桩 Canvas）
 ├── docs/                                 architecture.md · testing.md（各有 .en.md 英文版）
-├── LICENSE                               MIT（代码）
+├── LICENSES/CC-BY-4.0.txt                鲸鱼娘素材的授权全文（不是 MIT）
+├── THIRD_PARTY_NOTICES.md                第三方素材声明（MIT 代码 / CC BY 4.0 美术）
+├── LICENSE                               MIT（**只覆盖代码**）
 ├── README.md / README.en.md              项目说明（中文 / English）
 └── .github/workflows/pages.yml           先测试、再部署 GitHub Pages
 ```
@@ -118,6 +162,9 @@ CI 里跑的就是这一条命令：测试不过，Pages 不会部署（见 `.gi
 ## 声明与 License
 
 - **代码**以 **MIT License** 发布，见 [LICENSE](LICENSE)。
+- **Whale-chan 角色插画**是第三方美术素材，作者 **Er1c0v0**（<https://github.com/Er1c0v0/dsh-whale-pet>），
+  以 **CC BY 4.0** 授权，**不属于 MIT 授权范围** —— 见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+  与 [assets/whale-chan/ATTRIBUTION.md](assets/whale-chan/ATTRIBUTION.md)。
 - **DeepSeek 名称、Logo、相关图形与品牌资产不包含在 MIT 授权内**，其权利归各自权利人所有；
   小鲸鱼像素造型来自 DeepSeek 官方 logo，本项目只做同人致敬。
 - 这是一个**非官方同人项目**，与 DeepSeek 官方无关联；Whale Runner 玩法致敬 Chrome 断网小恐龙。
