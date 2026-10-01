@@ -125,6 +125,7 @@ export function run() {
     /* Token Fall：直接把掉落物喂到嘴边，换皮肤后结算必须完全一样 */
     function feedOnce(skin) {
       const b = harness({ page: 'tokenfall', exposeGame: true, saved: { 'arcade.characterSkin': skin } });
+      freezeRandom(b, 0.5);
       b.key('keydown', 'ArrowRight', 'ArrowRight'); b.key('keyup', 'ArrowRight', 'ArrowRight');
       const G = b.G;
       G.tokens.length = 0; G.spawnTimer = 1e9;
@@ -144,6 +145,7 @@ export function run() {
     /* Context Snake：蛇头换脸，但网格坐标与移动完全一样 */
     function snakeOnce(skin) {
       const b = harness({ page: 'snake', exposeGame: true, saved: { 'arcade.characterSkin': skin } });
+      freezeRandom(b, 0.5);          // 蛇的 TOKEN 是随机刷的，不钉死 Math.random 这个对比会偶发不一致
       b.key('keydown', 'ArrowRight', 'ArrowRight'); b.key('keyup', 'ArrowRight', 'ArrowRight');
       const G = b.G;
       let g = 0;
@@ -163,6 +165,7 @@ export function run() {
     /* Attention Maze：格子制，换皮肤不改玩家所在格 */
     function mazeOnce(skin) {
       const b = harness({ page: 'attentionmaze', exposeGame: true, saved: { 'arcade.characterSkin': skin } });
+      freezeRandom(b, 0.5);
       const G = b.G;
       G.startLayer(0);
       let g = 0;

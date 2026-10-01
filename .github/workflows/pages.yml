@@ -29,13 +29,6 @@ jobs:
           node-version: '20'
       - name: Run tests
         run: node test/run.mjs
-      - name: Report failures
-        if: failure()
-        run: |
-          node test/run.mjs > /tmp/arcade-tests.txt 2>&1 || true
-          grep -E "^FAIL|项失败" /tmp/arcade-tests.txt | head -25 | while IFS= read -r line; do
-            echo "::error::$line"
-          done
 
   deploy:
     name: Deploy Pages

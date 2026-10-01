@@ -29,6 +29,9 @@ export function run() {
     ok('初始长度 = 3', b.G.snake.length === 3, String(b.G.snake.length));
     ok('初始有 TOKEN', !!b.G.food);
     var h0 = { x: b.G.snake[0].x, y: b.G.snake[0].y };
+    /* TOKEN 是随机刷的：这一块只验证「走 3 格、长度不变」，
+     * 先把它挪到左上方，免得它正好刷在正前方被吃掉（那会让长度 +1，偶发失败）。 */
+    b.G.food = { x: 1, y: 1 };
     b.els.right.fire('pointerdown');
     ok('按方向键即开局', b.G.state === 'running', b.G.state);
     var moved = advanceCells(b, 3);
