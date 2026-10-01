@@ -18,11 +18,14 @@
   cursor: pointer;
 }
 
-/* 触屏十字键：上行居中，下行左/下/右 */
+/* 触屏十字键：上行居中，下行左/下/右。
+ * width:100% 不能省：竖屏下 .card 是 column flex，auto 左右外边距会取消 stretch，
+ * 只给 max-width 是「封顶不撑开」，四个键会缩成 ~31px 宽的细条（手指按不准）。 */
 .pad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+  width: 100%;
   max-width: 240px;
   margin: 12px auto 0;
 }

@@ -424,5 +424,27 @@ export function run() {
       String((lobby.match(/class="game"/g) || []).length));
   }
 
+  /* ================= H. 触屏方向键（.pad）在竖屏下不能塌 ================= */
+  {
+    /* .card 在 ≤720px 变成 column flex，此时 .pad 的 "margin: 12px auto 0"
+     * 会让 auto 左右外边距吃掉全部剩余空间并取消 align-items:stretch，
+     * 于是「只写 max-width」= 封顶不撑开 —— 四个方向键会缩成 ~31px 宽的细条。
+     * 三款游戏都靠 width:100% 兜住，这里就地钉死，别再漏（Context Snake 漏过一次）。
+     * 先剥掉 CSS 注释，否则注释里提到的 .pad{...} 会被当成规则本体。 */
+    const pads = ['games/snake/style.css', 'games/attention-maze/style.css',
+      'games/token-fall/style.css'];
+    for (const f of pads) {
+      const css = source(f).replace(/\/\*[\s\S]*?\*\//g, '');
+      const m = /\.pad\s*\{([^}]*)\}/.exec(css);
+      const body = m ? m[1].replace(/\s+/g, ' ').trim() : '';
+      ok(f + ' 的 .pad 写死 width:100%（竖屏 column flex 下不被 auto 外边距压塌）',
+        !!m && /(?:^|[;{\s])width:\s*100%/.test(body), body.slice(0, 80));
+    }
+    /* 竖屏时 .card 是 flex 容器，这条前提变了的话上面的保护要重新评估 */
+    ok('shared/arcade.css 仍在 ≤720px 把 .card 设成 column flex（.pad 保护的由来）',
+      /@media \(max-width: 720px\)[\s\S]*?\.card \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;/.test(
+        source('shared/arcade.css').replace(/\/\*[\s\S]*?\*\//g, '')));
+  }
+
   return out;
 }
