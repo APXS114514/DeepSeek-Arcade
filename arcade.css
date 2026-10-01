@@ -1,6 +1,6 @@
 /* DeepSeek Arcade 大厅专属样式（外壳见 shared/arcade.css） */
 
-.hero { text-align: center; position: relative; margin: 4px 0 20px; }
+.hero { display: flex; flex-direction: column; text-align: center; margin: 4px 0 20px; }
 
 .brand {
   margin: 0;
@@ -22,7 +22,21 @@
 
 .hero .sub { margin-top: 12px; }
 
-.hero-lang { position: absolute; top: 0; right: 0; display: flex; gap: 8px; }
+/* 顶部工具栏自己占一行（order: -1 提到标题前面）。
+ * 以前它是 position: absolute 浮在右上角，标题一长就会被按钮压住 ——
+ * 960px 卡片下 "DEEPSEEK ARCADE" 约 381px，三个按钮约 330px，必然重叠。 */
+.hero-lang {
+  order: -1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+/* .btn.ghost 的 margin-left:auto 是给 .controls 里「单个靠右按钮」用的，
+ * 工具栏里一排按钮再用它就会被拉开成一整行，这里取消掉。 */
+.hero-lang .btn.ghost { margin-left: 0; }
 
 .games { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: 1fr; }
 
@@ -89,7 +103,7 @@
   .brand { font-size: 24px; letter-spacing: 3px; }
   .brand-underline { width: 56px; margin-top: 8px; }
   .hero { margin-bottom: 14px; }
-  .hero-lang { position: static; margin-top: 12px; }
+  .hero-lang { margin-bottom: 8px; }
   .hero-lang .btn { flex: 1 1 0; width: auto; }
   .foot .play { min-width: 96px; }
 }

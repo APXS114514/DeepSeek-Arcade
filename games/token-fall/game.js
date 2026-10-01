@@ -162,12 +162,18 @@
   /* ================= 配色 ================= */
   /* HEAVY TOKEN 用亮薄荷绿：和 TOKEN 蓝 / COMPRESS 青 / NOISE 紫 / THINK 金
    * 都拉得开，另外还有专属的「四角加重标记 + H 字」，不靠颜色也能认出来。 */
+  /* text ＝ 画在深色内芯上的标签颜色，必须比内芯亮才看得清：
+   * 之前 heavy / compress / think 用的是比内芯还深的颜色（例如 #04303f 画在
+   * #0a4a61 上），H / C / <think> 基本糊成一团，这里统一改成亮色。 */
   var LOOK = {
     token: { body: '#4d6bfe', hi: '#a8c4ff', core: '#122b6e', glow: '#7fa8ff', text: '#eef4ff' },
-    heavy: { body: '#2fe39b', hi: '#d9fff1', core: '#064434', glow: '#7dffc9', text: '#03301f' },
-    compress: { body: '#2ee6ff', hi: '#d4fbff', core: '#0a4a61', glow: '#8ff2ff', text: '#04303f' },
+    heavy: { body: '#2fe39b', hi: '#d9fff1', core: '#064434', glow: '#7dffc9', text: '#eafff7' },
+    compress: { body: '#2ee6ff', hi: '#d4fbff', core: '#0a4a61', glow: '#8ff2ff', text: '#eafeff' },
     noise: { body: '#a24bff', hi: '#e3b9ff', core: '#3b0b66', glow: '#c07bff', text: '#f8ecff' },
-    think: { body: '#ffd76a', hi: '#fff4cd', core: '#5c3b00', glow: '#ffe9a3', text: '#3f2f08' }
+    /* THINK 例外：<think> 有 7 个字符，深色内芯只有 22px 宽，任何能看清的字号
+     * 都会画到芯外去。所以它不画内芯 —— 整块金色 + 深褐字，既看得清，
+     * 形状上也和 T/C/N/H 的「深芯方块」一眼区分开。 */
+    think: { body: '#ffd76a', hi: '#fff4cd', core: null, glow: '#ffe9a3', text: '#5c3b00' }
   };
 
   /* ---------------- 小鲸鱼（和 Whale Runner / 大厅预览同一只） ----------------
@@ -581,7 +587,8 @@
       gain = SCORE_THINK;
       bumpCombo();
       burst(cx, cy, LOOK.think.glow);
-      floatText(T('tokenfall.name.think') + ' +' + p.thinkCtx, cx, cy - 20, LOOK.think.text);
+      /* 和其它掉落物一样用亮色浮动字：海面是深蓝的，深褐字等于看不见 */
+      floatText(T('tokenfall.name.think') + ' +' + p.thinkCtx, cx, cy - 20, LOOK.think.hi);
       tone({ type: 'triangle', from: 660, to: 1320, ms: 220, gain: 0.055 });
     } else {                                  // NOISE：加 Context、不给分、断 Combo
       game.context += p.noiseCtx;
@@ -1037,7 +1044,9 @@
     ctx.textBaseline = 'middle';
     ctx.fillStyle = color;
     if (type === 'think') {
-      ctx.font = 'bold 9px "Courier New", ui-monospace, monospace';
+      /* <think> 是 7 个等宽字符：34px 的格子里 9px 字号要 37.8px，会画到格子外面。
+       * 收到 7px（约 29.4px），左右各留 ~2px，正好落在金色底上。 */
+      ctx.font = 'bold 7px "Courier New", ui-monospace, monospace';
       ctx.fillText(T('tokenfall.thinkName'), x + TOKEN_W / 2, y + TOKEN_H / 2 + 1);
       return;
     }
@@ -1068,8 +1077,10 @@
       ctx.fillStyle = look.hi;
       ctx.fillRect(x, y, TOKEN_W, 3);
       ctx.fillRect(x, y, 3, TOKEN_H);
-      ctx.fillStyle = look.core;
-      ctx.fillRect(x + 6, y + 6, TOKEN_W - 12, TOKEN_H - 12);
+      if (look.core) {                      // THINK 没有深色内芯，见 LOOK 注释
+        ctx.fillStyle = look.core;
+        ctx.fillRect(x + 6, y + 6, TOKEN_W - 12, TOKEN_H - 12);
+      }
 
       /* NOISE 额外画两道错位的紫光，一眼就能和 TOKEN 区分 */
       if (t.type === 'noise') {

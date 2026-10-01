@@ -4,7 +4,7 @@
  *
  * 注意：固定步长累加器有浮点误差，tick(1) 不一定会推进一次逻辑步，
  * 所以这里用 advance()/advanceMs() 按"帧数/游戏内时间"推进，而不是数 tick。 */
-import { harness } from './helpers.mjs';
+import { harness, source } from './helpers.mjs';
 
 function fresh(o) { return harness(Object.assign({ page: 'tokenfall', exposeGame: true }, o || {})); }
 
@@ -982,6 +982,37 @@ export function run() {
          }
          return true;
        })());
+  }
+
+  /* ================= 掉落物的标签必须看得清 =================
+   * 只读 game.js 里的 LOOK 调色板，算 WCAG 对比度。
+   * 这条是真实踩过的坑：heavy / compress / think 曾经用比内芯更深的字色
+   * （#04303f 画在 #0a4a61 上），H / C / <think> 基本看不见。 */
+  {
+    const src = source('games/token-fall/game.js');
+    const from = src.indexOf('var LOOK = {');
+    const to = src.indexOf('};', from);
+    ok('能在 game.js 里找到掉落物调色板', from > 0 && to > from);
+    const LOOK = new Function('return (' + src.slice(from + 'var LOOK = '.length, to + 1) + ');')();
+    const chan = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const lum = (hex) => {
+      const n = parseInt(hex.slice(1), 16);
+      return 0.2126 * chan((n >> 16) & 255) + 0.7152 * chan((n >> 8) & 255) + 0.0722 * chan(n & 255);
+    };
+    const ratio = (a, b) => {
+      const la = lum(a), lb = lum(b);
+      return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+    };
+    const types = ['token', 'heavy', 'compress', 'noise', 'think'];
+    ok('五种掉落物都有配色', types.every((t) => LOOK[t] && LOOK[t].body && LOOK[t].text), Object.keys(LOOK).join(','));
+    for (const t of types) {
+      /* THINK 没有深色内芯，字直接画在金色主体上 */
+      const bg = LOOK[t].core || LOOK[t].body;
+      const cr = ratio(LOOK[t].text, bg);
+      ok('掉落物 ' + t + ' 的标签对比度 ≥ 4.5:1（' + cr.toFixed(2) + ':1）', cr >= 4.5, cr.toFixed(2));
+    }
+    ok('THINK 不画深色内芯（<think> 有 7 个字符，22px 的芯里写不下）',
+      LOOK.think.core === null || LOOK.think.core === undefined, String(LOOK.think.core));
   }
 
   return out;
