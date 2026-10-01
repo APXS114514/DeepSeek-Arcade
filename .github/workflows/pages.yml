@@ -28,15 +28,14 @@ jobs:
         with:
           node-version: '20'
       - name: Run tests
+        run: node test/run.mjs
+      - name: Report failures
+        if: failure()
         run: |
-          set +e
-          node test/run.mjs > /tmp/arcade-tests.txt 2>&1
-          code=$?
-          tail -c 4000 /tmp/arcade-tests.txt
-          grep -E "^FAIL|失败|Error|error:" /tmp/arcade-tests.txt | head -25 | while IFS= read -r line; do
+          node test/run.mjs > /tmp/arcade-tests.txt 2>&1 || true
+          grep -E "^FAIL|项失败" /tmp/arcade-tests.txt | head -25 | while IFS= read -r line; do
             echo "::error::$line"
           done
-          exit $code
 
   deploy:
     name: Deploy Pages
