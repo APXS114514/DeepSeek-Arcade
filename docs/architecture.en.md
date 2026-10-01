@@ -302,9 +302,17 @@ the rules). Each stage is a **LAYER**, there are 12 hand-designed ones, and the 
   HEAD 2 dotted pixel line), not just different colours.
 - **How the 12 LAYERs introduce mechanics**: 01 scan-and-find-the-exit → 02 a longer serpentine corridor → 03 branches and
   comb passages → 04 the first QUERY with two KEYs → 05 three KEYs plus weights → 06 the full QUERY→KEY→VALUE→EXIT chain →
-  07 a twistier maze with the view narrowed to 2 cells → 08 the scan cut to 1.7 seconds → 09 the first MULTI-HEAD →
-  10 MULTI-HEAD plus VALUE → 11 where neither head's own favourite is the answer → 12 **FINAL ATTENTION** (everything at once).
+  07 a twistier maze with four KEYs and the view narrowed to 2 cells → 08 the scan cut to 1.7 seconds and still four KEYs →
+  09 the first MULTI-HEAD → 10 MULTI-HEAD where **HEAD 1 alone misleads you** → 11 **five KEYs** where neither head's own
+  favourite is the answer → 12 **FINAL ATTENTION**: **six KEYs** and every mechanic at once.
   Every layer is **guaranteed solvable**: the tests verify start→QUERY→correct KEY→VALUE→EXIT connectivity with BFS.
+- **The KEY count ramps from 2 up to 6, and the answer distribution is deliberately spread out**: K1–K5 all get to be the
+  correct answer at some point, no single KEY accounts for more than 25% of the answers, and no layer's answer can be
+  guessed from "right-most / farthest from QUERY / closest to EXIT". Those are not just intentions — the
+  "level design quality" group in `test/attentionmaze.test.mjs` asserts the answer share, the no-long-streaks rule,
+  that K4 really wins once after it first appears, that a newly added K5/K6 is never a pure distractor, and that every
+  answer beats the runner-up by ≥ 0.08. Adding layers or re-tuning weights will fail the suite if the answers cluster
+  on one KEY or one corner again.
 - **No death**: a wrong KEY, a detour or a forgotten route only affects TIME / MOVES / MISTAKES; only pressing **RESTART**
   restarts the layer.
 - **RESCAN**: each layer lets you re-view the whole map on demand (twice in the teaching layers, once later; the HUD shows

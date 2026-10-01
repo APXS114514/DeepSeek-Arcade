@@ -16,10 +16,12 @@ const LEGACY = {
   attentionmaze: 'arcade.attentionMaze.sound'
 };
 /* 关卡指纹：把 12 个 Layer 的地图 / 节点 / 权重 / 答案 / par 全部压成一个短哈希。
- * 拆分文件前后必须一模一样 —— 这条挂了说明有人动了关卡内容或平衡。 */
-const LAYER_HASHES = ['42e9ed3a', '75546b58', '380d07b3', '9caa1dc0', '9fe130f6', 'e7d5415',
-  '43cd73b5', 'a27338d0', '1c3931ec', '584cddc', 'b7534dea', '15b4654d'];
-const LAYER_ANSWERS = ['-', '-', '-', 'K2', 'K2', 'K3', 'K2', 'K2', 'K3', 'K2', 'K2', 'K1'];
+ * 关卡内容是数据驱动的，这条挂了说明**有人改了关卡数据**：
+ * 要么是误改（请回退），要么是刻意的平衡调整（请同步重算这份指纹，
+ * 并在 test/attentionmaze.test.mjs 的关卡设计质量检查里跑一遍）。 */
+const LAYER_HASHES = ['42e9ed3a', '75546b58', '380d07b3', 'e6623f86', '2c072172', 'ae5e8139',
+  '7a447e14', 'c8c0bb24', '64eebe3e', '74215718', '7124b232', 'fd09e1a2'];
+const LAYER_ANSWERS = ['-', '-', '-', 'K2', 'K1', 'K3', 'K4', 'K2', 'K3', 'K1', 'K4', 'K5'];
 
 function layerSignature(L) {
   const n = L.nodes;
@@ -199,7 +201,7 @@ export function run() {
     ok('12 关的地图 / 节点 / 权重 / par 与拆分前逐字节一致（指纹）',
       JSON.stringify(b.G.layers.map((L) => layerHash(layerSignature(L)))) === JSON.stringify(LAYER_HASHES),
       JSON.stringify(b.G.layers.map((L) => layerHash(layerSignature(L)))));
-    ok('12 关的答案没变（Q/K/V 与 MULTI-HEAD）',
+    ok('12 关的答案与重平衡后的分布一致（Q/K/V 与 MULTI-HEAD）',
       JSON.stringify(b.G.layers.map((L) => L.answer || '-')) === JSON.stringify(LAYER_ANSWERS),
       JSON.stringify(b.G.layers.map((L) => L.answer || '-')));
     ok('MAX_LAYERS 由关卡数据推导（12）', b.G.layers.length === 12);

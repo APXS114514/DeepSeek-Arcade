@@ -208,7 +208,7 @@ export function run() {
       for (const k of ['maze.obj.query', 'maze.obj.key', 'maze.obj.value', 'maze.obj.exit',
         'maze.star1', 'maze.star2', 'maze.star3', 'maze.tip.scan', 'maze.tip.qkv', 'maze.tip.weights',
         'maze.tip.value', 'maze.tip.focus', 'maze.tip.scanShort', 'maze.tip.multihead',
-        'maze.tip.combineHint', 'maze.tip.final', 'maze.titleShort', 'maze.short.q', 'maze.short.k',
+        'maze.tip.headTrap', 'maze.tip.combineHint', 'maze.tip.final', 'maze.titleShort', 'maze.short.q', 'maze.short.k',
         'maze.short.v', 'maze.multihead', 'maze.resume', 'maze.restart', 'maze.locked', 'maze.best']) used.add(k);
       const miss = [...used].filter((k) => !zh.has(k));
       ok('五个页面用到的 ' + used.size + ' 个 key 都有翻译', miss.length === 0, '缺=' + miss.join(','));

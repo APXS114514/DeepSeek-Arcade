@@ -37,6 +37,20 @@ Difficulty does not come from fall speed alone — it comes from **resource pres
 - **HEAVY TOKEN** (from LOAD 2): +35 points but CONTEXT +96 — the classic high-score-vs-risk choice. It counts as a real token, so your CLEAN combo continues;
 - **COMPRESS guarantees stay** so pure RNG can never make a run unwinnable, but the higher the LOAD the more extreme the threshold and the longer the wait — and you always have to move over and catch it yourself.
 
+### Attention Maze: attention and KEYs
+
+Every Attention Maze layer can only be solved by **reading the weights** — neither the KEY number nor its position gives
+anything away:
+
+- later layers show **5–6 KEYs** at once; the attention lines and weight labels get busier, but every label carries its
+  KEY number (`K4 0.83`) and the strongest weight is highlighted on top of that;
+- in **MULTI-HEAD** layers, HEAD 1 and HEAD 2 may favour different KEYs, and the answer only exists in the
+  **combination of both heads** — remembering a single round's maximum regularly leads you to the wrong KEY;
+- the correct KEY, the weights and the maps all live in `games/attention-maze/levels.js` and are **completely identical
+  every run and every restart** — the answer is never randomised;
+- the answers are deliberately spread across KEY numbers and map positions: no KEY can be guessed by "always pick it",
+  and the answer is never always the right-most KEY or the one closest to the exit.
+
 ## Technical highlights
 
 - **No dependencies / no build**: no `package.json`, no bundler, no framework, no external image or audio files;

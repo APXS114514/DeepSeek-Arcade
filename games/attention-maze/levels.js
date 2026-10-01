@@ -6,6 +6,11 @@
  * 测试会自动验证：节点在可走格上、answer 就是注意力最高的 KEY、
  * 起点→QUERY→正确 KEY→VALUE→EXIT 连通、par 合理。
  *
+ * 正确答案的分布是刻意打散的：K1~K5 都当过 answer，任何一个 KEY 都不超过
+ * 全部答案的 ~25%，也没有哪一关的答案能靠「最右 / 最远 / 最靠近 EXIT」猜出来。
+ * 关卡数量与 KEY 数量都从数据推导（game.js 里没有写死 4 个 KEY），
+ * 以后加 K7 或者加关卡都不需要改引擎。
+ *
  * 用普通 <script> 加载（不用 ES Module），页面里必须在 game.js 之前。
  * ============================================================ */
 (function (global) {
@@ -81,8 +86,9 @@
       nodes: { start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: null, keys: [], value: null }
     },
     {
-      /* L4：第一次出现 QUERY / KEY（两个 KEY） */
-      scanMs: 2800, focus: 3, rescan: 2, parTime: 28, parMoves: 28, tip: 'maze.tip.qkv',
+      /* L4：第一次出现 QUERY / KEY。只有两个 KEY，权重差距拉得很开，
+       * 教学关不反直觉：最高的那个一眼就能看出来。 */
+      scanMs: 2800, focus: 3, rescan: 2, parTime: 29, parMoves: 29, tip: 'maze.tip.qkv',
       map: [
         '###############',
         '#.............#',
@@ -103,8 +109,9 @@
       answer: 'K2'
     },
     {
-      /* L5：三个 KEY + Attention Weight，权重更接近，要看清数字 */
-      scanMs: 2800, focus: 3, rescan: 2, parTime: 24, parMoves: 23, tip: 'maze.tip.weights',
+      /* L5：三个 KEY + Attention Weight。答案故意落在「不是最右、也不是最左」的
+       * 那个 KEY 上 —— 从这一关开始就要明白：位置和编号都不说明任何问题。 */
+      scanMs: 2800, focus: 3, rescan: 2, parTime: 34, parMoves: 34, tip: 'maze.tip.weights',
       map: [
         '###############',
         '#.............#',
@@ -120,13 +127,14 @@
       ],
       nodes: {
         start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 7, y: 5 }, value: null,
-        keys: [K('K1', 3, 3, 0.44), K('K2', 13, 7, 0.91), K('K3', 1, 9, 0.63)]
+        keys: [K('K1', 3, 5, 0.93), K('K2', 13, 7, 0.41), K('K3', 1, 9, 0.68)]
       },
-      answer: 'K2'
+      answer: 'K1'
     },
     {
-      /* L6：QUERY -> KEY -> VALUE -> EXIT 完整流程 */
-      scanMs: 3000, focus: 3, rescan: 1, parTime: 34, parMoves: 37, tip: 'maze.tip.value',
+      /* L6：QUERY -> KEY -> VALUE -> EXIT 完整流程。答案是左边的 K3，
+       * 最右的 K1 只是干扰 —— 进一步打破「越靠右越重要」。 */
+      scanMs: 3000, focus: 3, rescan: 1, parTime: 34, parMoves: 34, tip: 'maze.tip.value',
       map: [
         '###############',
         '#.............#',
@@ -142,14 +150,15 @@
       ],
       nodes: {
         start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 5, y: 3 },
-        value: { x: 7, y: 9 },
-        keys: [K('K1', 9, 3, 0.72), K('K2', 1, 5, 0.38), K('K3', 13, 7, 0.94)]
+        value: { x: 13, y: 7 },
+        keys: [K('K1', 13, 3, 0.39), K('K2', 1, 5, 0.76), K('K3', 3, 7, 0.93)]
       },
       answer: 'K3'
     },
     {
-      /* L7：迷宫更绕 + 四个 KEY + VALUE，视野收到 2 格 */
-      scanMs: 2800, focus: 2, rescan: 1, parTime: 40, parMoves: 46, tip: 'maze.tip.focus',
+      /* L7：迷宫更绕 + 四个 KEY + VALUE，视野收到 2 格。
+       * K4 第一次登场就真的当一次答案（不是纯干扰项）。 */
+      scanMs: 2800, focus: 2, rescan: 1, parTime: 34, parMoves: 34, tip: 'maze.tip.focus',
       map: [
         '###############',
         '#.............#',
@@ -165,14 +174,15 @@
       ],
       nodes: {
         start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 9, y: 1 },
-        value: { x: 3, y: 9 },
-        keys: [K('K1', 1, 3, 0.51), K('K2', 13, 5, 0.86), K('K3', 5, 7, 0.29), K('K4', 9, 9, 0.67)]
+        value: { x: 7, y: 9 },
+        keys: [K('K1', 1, 5, 0.37), K('K2', 5, 3, 0.58), K('K3', 13, 3, 0.80), K('K4', 5, 9, 0.93)]
       },
-      answer: 'K2'
+      answer: 'K4'
     },
     {
-      /* L8：SCAN 时间明显变短（1.7 秒），起点在右下、出口在右上 */
-      scanMs: 1700, focus: 2, rescan: 1, parTime: 37, parMoves: 42, tip: 'maze.tip.scanShort',
+      /* L8：SCAN 时间明显变短（1.7 秒），起点在右下、出口在右上。
+       * 四个 KEY，答案是中间那个 —— 既不是最左也不是最右。 */
+      scanMs: 1700, focus: 2, rescan: 1, parTime: 38, parMoves: 38, tip: 'maze.tip.scanShort',
       map: [
         '###############',
         '#.............#',
@@ -189,13 +199,15 @@
       nodes: {
         start: { x: 1, y: 9 }, exit: { x: 13, y: 1 }, query: { x: 7, y: 5 },
         value: { x: 7, y: 9 },
-        keys: [K('K1', 3, 3, 0.58), K('K2', 11, 7, 0.79), K('K3', 13, 3, 0.41)]
+        keys: [K('K1', 3, 3, 0.63), K('K2', 5, 7, 0.94), K('K3', 13, 5, 0.48), K('K4', 9, 9, 0.77)]
       },
       answer: 'K2'
     },
     {
-      /* L9：第一次 MULTI-HEAD：两个头说的不是同一个 KEY，要综合 */
-      scanMs: 2800, focus: 3, rescan: 1, parTime: 34, parMoves: 37, tip: 'maze.tip.multihead',
+      /* L9：第一次 MULTI-HEAD。两个头各推一个不同的 KEY：
+       * HEAD 1 看 K1，HEAD 2 看 K3；综合起来 K3 明显更高 —— 教学关要让
+       * 「两个头都要看」这件事一眼就成立。 */
+      scanMs: 2800, focus: 3, rescan: 1, parTime: 38, parMoves: 38, tip: 'maze.tip.multihead',
       map: [
         '###############',
         '#.............#',
@@ -213,12 +225,13 @@
         start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 7, y: 1 }, value: null,
         keys: [K('K1', 1, 5, 0), K('K2', 13, 3, 0), K('K3', 3, 9, 0), K('K4', 11, 7, 0)]
       },
-      heads: [[0.82, 0.20, 0.77, 0.18], [0.28, 0.15, 0.91, 0.31]],
+      heads: [[0.90, 0.22, 0.71, 0.33], [0.30, 0.41, 0.95, 0.52]],
       answer: 'K3'
     },
     {
-      /* L10：MULTI-HEAD + VALUE */
-      scanMs: 2600, focus: 3, rescan: 1, parTime: 34, parMoves: 37, tip: 'maze.tip.multihead',
+      /* L10：MULTI-HEAD + VALUE。HEAD 1 单独看会指向 K2（陷阱），
+       * HEAD 2 指向 K1；只有把两个头加起来 K1 才明显胜出。 */
+      scanMs: 2600, focus: 3, rescan: 1, parTime: 38, parMoves: 38, tip: 'maze.tip.headTrap',
       map: [
         '###############',
         '#.............#',
@@ -235,14 +248,16 @@
       nodes: {
         start: { x: 1, y: 9 }, exit: { x: 1, y: 1 }, query: { x: 1, y: 5 },
         value: { x: 7, y: 9 },
-        keys: [K('K1', 13, 1, 0), K('K2', 5, 3, 0), K('K3', 9, 7, 0), K('K4', 13, 9, 0)]
+        keys: [K('K1', 9, 7, 0), K('K2', 13, 1, 0), K('K3', 5, 5, 0), K('K4', 11, 9, 0)]
       },
-      heads: [[0.31, 0.88, 0.24, 0.66], [0.72, 0.35, 0.18, 0.29]],
-      answer: 'K2'
+      heads: [[0.79, 0.93, 0.28, 0.44], [0.88, 0.34, 0.51, 0.22]],
+      answer: 'K1'
     },
     {
-      /* L11：两个头各自最高的都不是答案，必须真的综合 */
-      scanMs: 2400, focus: 2, rescan: 1, parTime: 44, parMoves: 51, tip: 'maze.tip.combineHint',
+      /* L11：五个 KEY。两个头各自的冠军都不是答案 ——
+       * HEAD 1 的冠军是 K1、HEAD 2 的冠军是 K3，而 K4 在两个头里都是第二名，
+       * 只有相加之后才浮到最高。想靠「记住某一轮的最高值」过关会必错。 */
+      scanMs: 2400, focus: 2, rescan: 1, parTime: 53, parMoves: 53, tip: 'maze.tip.combineHint',
       map: [
         '###############',
         '#.............#',
@@ -257,16 +272,18 @@
         '###############'
       ],
       nodes: {
-        start: { x: 1, y: 1 }, exit: { x: 13, y: 5 }, query: { x: 9, y: 5 },
-        value: { x: 7, y: 9 },
-        keys: [K('K1', 5, 1, 0), K('K2', 13, 1, 0), K('K3', 1, 9, 0), K('K4', 13, 9, 0)]
+        start: { x: 1, y: 1 }, exit: { x: 13, y: 9 }, query: { x: 7, y: 5 },
+        value: { x: 1, y: 9 },
+        keys: [K('K1', 3, 1, 0), K('K2', 9, 1, 0), K('K3', 5, 7, 0), K('K4', 11, 3, 0), K('K5', 13, 3, 0)]
       },
-      heads: [[0.86, 0.74, 0.31, 0.45], [0.49, 0.71, 0.26, 0.88]],
-      answer: 'K2'
+      heads: [[0.93, 0.40, 0.55, 0.88, 0.20], [0.26, 0.52, 0.94, 0.83, 0.31]],
+      answer: 'K4'
     },
     {
-      /* L12：FINAL ATTENTION —— 复杂迷宫 + 短 SCAN + 窄视野 + 单 QUERY + 四 KEY + VALUE + 双头 */
-      scanMs: 2200, focus: 2, rescan: 1, parTime: 44, parMoves: 51, tip: 'maze.tip.final', final: true,
+      /* L12：FINAL ATTENTION —— 复杂迷宫 + 短 SCAN + 窄视野 + 单 QUERY +
+       * 六个 KEY + VALUE + 双头。HEAD 1 的冠军是 K2、HEAD 2 的冠军是 K4，
+       * 而 K5 在两个头里都排在第二，只有综合之后才是唯一最高。 */
+      scanMs: 2200, focus: 2, rescan: 1, parTime: 48, parMoves: 48, tip: 'maze.tip.final', final: true,
       map: [
         '###############',
         '#.............#',
@@ -283,10 +300,13 @@
       nodes: {
         start: { x: 1, y: 9 }, exit: { x: 1, y: 5 }, query: { x: 7, y: 1 },
         value: { x: 7, y: 9 },
-        keys: [K('K1', 1, 1, 0), K('K2', 13, 1, 0), K('K3', 3, 5, 0), K('K4', 13, 9, 0)]
+        keys: [
+          K('K1', 1, 1, 0), K('K2', 11, 1, 0), K('K3', 3, 3, 0),
+          K('K4', 13, 5, 0), K('K5', 5, 5, 0), K('K6', 9, 9, 0)
+        ]
       },
-      heads: [[0.44, 0.91, 0.63, 0.25], [0.96, 0.33, 0.29, 0.71]],
-      answer: 'K1'
+      heads: [[0.34, 0.93, 0.45, 0.62, 0.90, 0.28], [0.47, 0.39, 0.31, 0.96, 0.84, 0.58]],
+      answer: 'K5'
     }
   ];
 

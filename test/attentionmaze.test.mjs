@@ -13,6 +13,8 @@ const DIRS = {
 const KEY = 'arcade.attentionMaze.progress';
 
 function fresh(o) { return harness(Object.assign({ page: 'attentionmaze', exposeGame: true }, o || {})); }
+/* 通过页面的 I18N 读一条文案（英文/中文都不影响 KEY 前缀，但不要写死） */
+function T_(b, key) { return b.I18N && b.I18N.t ? b.I18N.t(key) : key; }
 
 function advance(b, frames) {
   const n = frames || 6;
@@ -172,7 +174,7 @@ export function run() {
           for (let s = 1; s < sums.length; s++) if (sums[s] > sums[best]) best = s;
           sums.sort((a, c) => c - a);
           if (ids[best] !== L.answer) { answerOk = false; answerBad += id + ' 最高分是 ' + ids[best] + ' 不是 ' + L.answer + ' '; }
-          if (sums.length > 1 && sums[0] - sums[1] < 5) { answerOk = false; answerBad += id + ' 权重太接近（' + sums[0] + ' vs ' + sums[1] + '）'; }
+          if (sums.length > 1 && sums[0] - sums[1] < 8) { answerOk = false; answerBad += id + ' 权重太接近（' + sums[0] + ' vs ' + sums[1] + '）'; }
         }
       }
       /* 可解性：忽略锁定条件，必要节点之间必须连通 */
@@ -183,7 +185,7 @@ export function run() {
     ok('12 张地图都是 15×11', mapOk, mapBad);
     ok('12 张地图四周封闭', borderOk);
     ok('所有节点都落在可走格上且不重叠', nodeOk, nodeBad);
-    ok('answer 就是注意力最高的 KEY（多头按两头之和）', answerOk, answerBad);
+    ok('answer 就是注意力最高的 KEY（多头按两头之和，且拉开 ≥0.08）', answerOk, answerBad);
     ok('12 关全部可解：起点→QUERY→正确 KEY→VALUE→EXIT 连通', solvable, routeBad);
     ok('parMoves 不小于最短通路（三星可达）', parOk, parBad);
     ok('parMoves 也不能比最短通路宽松太多（<=1.6 倍）', layers.every((l) => {
@@ -205,11 +207,227 @@ export function run() {
     ok('L8 扫描时间明显变短', layers[7].scanMs <= 1800 && layers[7].scanMs < layers[0].scanMs);
     ok('L9 第一次出现 MULTI-HEAD', !!layers[8].heads && layers.slice(0, 8).every((l) => !l.heads));
     ok('L9~L12 是四个多头关卡', layers.slice(8).every((l) => !!l.heads && l.heads.length === 2));
+    /* 后期 KEY 数量真的在增加，而不是长期停在 4 个 */
+    ok('KEY 数量一路递增到 5 / 6（L11 五个、L12 六个）',
+      layers[10].nodes.keys.length === 5 && layers[11].nodes.keys.length === 6,
+      layers.map((l) => l.nodes.keys.length).join(','));
     ok('L12 是 FINAL ATTENTION，机制最全', !!layers[11].final &&
-      !!layers[11].heads && !!layers[11].nodes.query && !!layers[11].nodes.value && layers[11].nodes.keys.length >= 4);
+      !!layers[11].heads && !!layers[11].nodes.query && !!layers[11].nodes.value && layers[11].nodes.keys.length === 6);
     ok('每关的 tip 都是 maze.* 的 i18n key', layers.every((l) => l.tip.indexOf('maze.') === 0));
     ok('RESCAN 次数：教学关 2 次，中后期固定 1 次',
       layers.slice(0, 5).every((l) => l.rescan === 2) && layers.slice(5).every((l) => l.rescan === 1));
+  }
+
+  /* ================= A2. 关卡设计质量：答案分布 / 位置偏差 =================
+   * 这一组是防回归的「关卡设计规矩」：修好 Key Position Bias 之后，
+   * 以后再加关卡 / 调权重，只要又把答案挤到某一个 KEY 上就会立刻挂掉。 */
+  {
+    const b = fresh();
+    const layers = b.G.layers;
+    const keyed = [];
+    for (let i = 0; i < layers.length; i++) if (layers[i].nodes.keys.length) keyed.push({ i: i, L: layers[i] });
+    const idsOf = (L) => L.nodes.keys.map((k) => k.id);
+    const combined = (L) => {
+      const table = L.heads ? L.heads : [L.nodes.keys.map((k) => k.w)];
+      return idsOf(L).map((_, idx) => table.reduce((a, h) => a + Math.round(h[idx] * 100), 0));
+    };
+    const rank = (vals) => {
+      let bi = 0, tie = false;
+      for (let i = 1; i < vals.length; i++) {
+        if (vals[i] > vals[bi]) { bi = i; tie = false; }
+        else if (vals[i] === vals[bi]) tie = true;
+      }
+      return { index: bi, tie: tie, sorted: vals.slice().sort((a, c) => c - a) };
+    };
+
+    ok('含 KEY 的关卡一共 9 个（L4~L12）', keyed.length === 9 && keyed[0].i === 3, String(keyed.length));
+
+    /* ---- 唯一 answer 且确实最高 ---- */
+    let bad = '';
+    for (const e of keyed) {
+      const r = rank(combined(e.L));
+      if (r.tie) bad += 'L' + (e.i + 1) + ' 并列 ';
+      if (idsOf(e.L)[r.index] !== e.L.answer) bad += 'L' + (e.i + 1) + ' answer≠最高 ';
+    }
+    ok('每个含 KEY 的关卡都是唯一最高（没有并列），且 answer 就是它', bad === '', bad);
+
+    /* ---- 答案分布 ---- */
+    const answers = keyed.map((e) => e.L.answer);
+    const tally = {};
+    answers.forEach((a) => { tally[a] = (tally[a] || 0) + 1; });
+    const counts = Object.keys(tally).map((k) => tally[k]);
+    const maxCount = Math.max.apply(null, counts);
+    ok('没有任何 KEY 占超过 40% 的答案（最多 ' + maxCount + '/' + answers.length + ' = ' +
+      Math.round(100 * maxCount / answers.length) + '%）',
+      maxCount / answers.length <= 0.4, JSON.stringify(tally) + ' ' + answers.join(','));
+    ok('至少 4 个不同的 KEY 当过答案（不能只靠个别位置）',
+      Object.keys(tally).length >= 4, JSON.stringify(tally));
+
+    let streak = 1, maxStreak = 1;
+    for (let i = 1; i < answers.length; i++) {
+      streak = answers[i] === answers[i - 1] ? streak + 1 : 1;
+      if (streak > maxStreak) maxStreak = streak;
+    }
+    ok('相邻关卡不会连续 3 次以上用同一个答案', maxStreak <= 2, answers.join(','));
+
+    ok('K1 至少正确一次', (tally.K1 || 0) >= 1, JSON.stringify(tally));
+    ok('K2 至少正确一次', (tally.K2 || 0) >= 1, JSON.stringify(tally));
+    ok('K3 至少正确一次', (tally.K3 || 0) >= 1, JSON.stringify(tally));
+    ok('K2 不再占绝大多数（<= 2 / 9）', (tally.K2 || 0) <= 2, JSON.stringify(tally));
+
+    const firstK4 = keyed.findIndex((e) => idsOf(e.L).indexOf('K4') >= 0);
+    ok('K4 不是纯干扰项：从它首次登场（L' + (firstK4 >= 0 ? keyed[firstK4].i + 1 : '-') + '）起至少正确一次',
+      firstK4 >= 0 && keyed.slice(firstK4).some((e) => e.L.answer === 'K4'),
+      firstK4 >= 0 ? keyed.slice(firstK4).map((e) => 'L' + (e.i + 1) + ':' + e.L.answer).join(',') : 'no K4');
+
+    const late = keyed.filter((e) => idsOf(e.L).some((id) => id === 'K5' || id === 'K6'));
+    ok('后期新增的 K5 / K6 至少有一个真正成为答案（不是纯摆设）',
+      late.length > 0 && late.some((e) => e.L.answer === 'K5' || e.L.answer === 'K6'),
+      late.map((e) => 'L' + (e.i + 1) + ':' + e.L.answer).join(','));
+
+    /* ---- KEY 数量递进 ---- */
+    const kcounts = keyed.map((e) => e.L.nodes.keys.length);
+    ok('KEY 数量从 2 一路递增到 6（' + kcounts.join(',') + '）',
+      kcounts.join(',') === '2,3,3,4,4,4,4,5,6', kcounts.join(','));
+    ok('KEY 数量单调不减（中途不会变简单）',
+      kcounts.every((c, i) => i === 0 || c >= kcounts[i - 1]), kcounts.join(','));
+
+    /* ---- 位置偏差 ---- */
+    const rightmost = keyed.filter((e) => {
+      const ids = idsOf(e.L);
+      const maxX = Math.max.apply(null, e.L.nodes.keys.map((k) => k.x));
+      return e.L.nodes.keys[ids.indexOf(e.L.answer)].x === maxX;
+    }).length;
+    ok('答案不会总是最右边的 KEY（' + rightmost + '/' + keyed.length + '）',
+      rightmost <= Math.ceil(keyed.length * 0.34), String(rightmost));
+
+    const nearExit = keyed.filter((e) => {
+      const ids = idsOf(e.L);
+      const ds = e.L.nodes.keys.map((k) => bfs(e.L, k, e.L.nodes.exit));
+      if (ds.some((d) => d === null)) return false;
+      return ds[ids.indexOf(e.L.answer)] === Math.min.apply(null, ds);
+    }).length;
+    ok('答案不会总是离 EXIT 最近的 KEY（' + nearExit + '/' + keyed.length + '）',
+      nearExit <= Math.ceil(keyed.length * 0.34), String(nearExit));
+
+    const nearQuery = keyed.filter((e) => {
+      if (!e.L.nodes.query) return false;
+      const ids = idsOf(e.L);
+      const ds = e.L.nodes.keys.map((k) => bfs(e.L, e.L.nodes.query, k));
+      if (ds.some((d) => d === null)) return false;
+      return ds[ids.indexOf(e.L.answer)] === Math.min.apply(null, ds);
+    }).length;
+    ok('答案不会总是离 QUERY 最近的 KEY（' + nearQuery + '/' + keyed.length + '）',
+      nearQuery <= Math.ceil(keyed.length * 0.34), String(nearQuery));
+
+    const cells = keyed.map((e) => {
+      const k = keyById(e.L, e.L.answer);
+      return k.x + ',' + k.y;
+    });
+    ok('没有两关把答案放在同一个格子里', new Set(cells).size === cells.length, cells.join(' '));
+
+    /* ---- 每一关的答案与第二名都拉开足够差距（≥0.08） ---- */
+    const gaps = keyed.map((e) => rank(combined(e.L)).sorted);
+    ok('每关答案与第二名的差距都 ≥ 0.08',
+      gaps.every((s) => s.length > 1 ? s[0] - s[1] >= 8 : true),
+      keyed.map((e, i2) => 'L' + (e.i + 1) + ':' + (gaps[i2][0] - gaps[i2][1])).join(' '));
+  }
+
+  /* ================= A3. MULTI-HEAD 的设计目标 ================= */
+  {
+    const b = fresh();
+    const layers = b.G.layers;
+    const headWin = (L, h) => {
+      let bi = 0;
+      for (let i = 1; i < L.heads[h].length; i++) if (L.heads[h][i] > L.heads[h][bi]) bi = i;
+      return { id: L.nodes.keys[bi].id, w: L.heads[h][bi] };
+    };
+    const combinedWin = (L) => {
+      const sums = L.nodes.keys.map((_, idx) => L.heads.reduce((a, h) => a + Math.round(h[idx] * 100), 0));
+      let bi = 0, tie = false;
+      for (let i = 1; i < sums.length; i++) {
+        if (sums[i] > sums[bi]) { bi = i; tie = false; }
+        else if (sums[i] === sums[bi]) tie = true;
+      }
+      const s = sums.slice().sort((a, c) => c - a);
+      return { id: L.nodes.keys[bi].id, tie: tie, gap: s[0] - s[1], sums: sums };
+    };
+
+    const L9 = layers[8], L10 = layers[9], L11 = layers[10], L12 = layers[11];
+
+    /* L9：Multi-Head 教学关 —— 两个头各推一个不同的 KEY */
+    ok('L9（多头教学）：HEAD 1 与 HEAD 2 各自的第一名是两个不同的 KEY',
+      headWin(L9, 0).id !== headWin(L9, 1).id, headWin(L9, 0).id + '/' + headWin(L9, 1).id);
+    ok('L9：综合之后有一个明确的正确 KEY', combinedWin(L9).id === L9.answer && combinedWin(L9).gap >= 20,
+      combinedWin(L9).id + ' gap=' + combinedWin(L9).gap);
+
+    /* L10：单看 HEAD 1 会误判 */
+    ok('L10：单看 HEAD 1 会误判（HEAD 1 的第一名不是答案）',
+      headWin(L10, 0).id !== L10.answer, headWin(L10, 0).id + ' vs ' + L10.answer);
+    ok('L10：两个头综合之后答案明确', combinedWin(L10).id === L10.answer && combinedWin(L10).gap >= 20,
+      combinedWin(L10).id + ' gap=' + combinedWin(L10).gap);
+
+    /* L11：两个头各自的冠军都不是答案 —— 必须真的 Combine the heads */
+    const c11 = combinedWin(L11);
+    ok('L11：HEAD 1 单独的最高不是最终答案', headWin(L11, 0).id !== L11.answer, headWin(L11, 0).id);
+    ok('L11：HEAD 2 单独的最高不是最终答案', headWin(L11, 1).id !== L11.answer, headWin(L11, 1).id);
+    ok('L11：两个头单独的第一名彼此不同', headWin(L11, 0).id !== headWin(L11, 1).id,
+      headWin(L11, 0).id + '/' + headWin(L11, 1).id);
+    ok('L11：只有相加之后才是答案', c11.id === L11.answer && !c11.tie, c11.id);
+    ok('L11：答案与第二名差距 ≥ 0.12', c11.gap >= 12, String(c11.gap));
+    ok('L11：答案是五个 KEY 里综合最高（不是第一/第二个）',
+      L11.nodes.keys.map((k) => k.id).indexOf(c11.id) >= 2, String(L11.nodes.keys.map((k) => k.id).indexOf(c11.id)));
+
+    /* L12：FINAL ATTENTION */
+    const c12 = combinedWin(L12);
+    ok('L12：6 个 KEY 全部参与综合', c12.sums.length === 6, String(c12.sums.length));
+    ok('L12：最终答案是唯一最高（没有并列）', c12.id === L12.answer && !c12.tie, c12.id + ' tie=' + c12.tie);
+    ok('L12：答案不是任何一个头单独的第一名',
+      headWin(L12, 0).id !== L12.answer && headWin(L12, 1).id !== L12.answer,
+      headWin(L12, 0).id + '/' + headWin(L12, 1).id);
+    ok('L12：答案不是 K1 / K2（明确打破前期位置偏见）',
+      L12.answer !== 'K1' && L12.answer !== 'K2', L12.answer);
+    ok('L12：答案与第二名的差距 ≥ 0.12', c12.gap >= 12, String(c12.gap));
+    ok('L12：每个头都有一个明显的高值（≥0.90）',
+      Math.max.apply(null, L12.heads[0]) >= 0.9 && Math.max.apply(null, L12.heads[1]) >= 0.9,
+      Math.max.apply(null, L12.heads[0]) + '/' + Math.max.apply(null, L12.heads[1]));
+  }
+
+  /* ================= A4. 任意 KEY 数量的运行时支持（不做写死 4） ================= */
+  {
+    const b = fresh();
+    const G = b.G;
+    play(b, 11);                                    // L12：6 个 KEY + 双头
+    const L = G.layer;
+    ok('L12 运行时读到 6 个 KEY', L.nodes.keys.length === 6, String(L.nodes.keys.length));
+    ok('两个头的权重表长度都等于 KEY 数量（不是只读前 4 项）',
+      G.weightTables.length === 2 && G.weightTables[0].length === 6 && G.weightTables[1].length === 6,
+      JSON.stringify(G.weightTables));
+    let indexed = 0;
+    for (let i = 0; i < L.nodes.keys.length; i++) {
+      const k = L.nodes.keys[i];
+      const node = G.nodeAt[k.x + ',' + k.y];
+      if (node && node.type === 'key' && node.key.id === k.id && node.index === i) indexed++;
+    }
+    ok('每一个 KEY 都被索引进 nodeAt（编号与权重表一一对应）', indexed === 6, String(indexed));
+
+    ok('走进 QUERY 之前，关卡提示条是亮着的', G.toast.indexOf('maze.tip.') === 0, G.toast);
+    standNextTo(b, L.nodes.query);
+    ok('L12 进入多头展示', G.state === 'multihead_show', G.state);
+    ok('权重展示期间关卡提示条被收起（KEY 变多后它正好压在第一排标签上）',
+      G.toast.indexOf('maze.tip.') !== 0, G.toast);
+    b.clearLog(); advance(b, 3);
+    const expect = L.nodes.keys.map((k, i) => T_(b, 'maze.short.k') + (i + 1) + ' ' + L.heads[0][i].toFixed(2));
+    ok('注意力展示把 6 个 KEY 的权重标签全都画出来了（K1~K6，没有截断在第 4 个）',
+      expect.every((t) => b.log.texts.indexOf(t) >= 0),
+      expect.join(' ') + '  ->  ' + b.log.texts.filter((s) => s.charAt(0) === 'K').join(' '));
+    finishDisplay(b);
+    const wrong = L.nodes.keys.filter((k) => k.id !== L.answer)[0];
+    standNextTo(b, wrong);
+    ok('L12 走错 KEY 只记 MISTAKE', G.mistakes === 1 && G.state === 'playing', String(G.mistakes));
+    standNextTo(b, keyById(L, L.answer));
+    ok('L12 走对 KEY 才 ATTENTION MATCHED', G.matchedKeyId === L.answer, String(G.matchedKeyId));
+    ok('L12 六 KEY 流程无异常', b.errors.length === 0, b.errors[0]);
   }
 
   /* ================= B. 地图解析 / 走格子 ================= */

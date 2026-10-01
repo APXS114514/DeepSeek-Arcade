@@ -194,6 +194,7 @@
       'maze.tip.focus': '视野更窄了，靠记忆走',
       'maze.tip.scanShort': '扫描时间变短了，看仔细',
       'maze.tip.multihead': '两个注意力头会关注不同的 KEY',
+      'maze.tip.headTrap': '只看一个头会猜错，两个头都要记',
       'maze.tip.combineHint': '两个头都高的那个才是答案',
       'maze.tip.final': 'FINAL ATTENTION：把学过的全用上',
       'maze.tips': '<b>ATTENTION SCAN</b> 时整张地图可见，之后进入 <b>FOCUS MODE</b>：只看得到身边一圈，走过的地方留下很暗的残影。走到 <b>QUERY</b> 会亮起它到各个 <b>KEY</b> 的注意力连线与权重数字，记住权重最高的 KEY，走过去即 <b>ATTENTION MATCHED</b>，接着 <b>VALUE</b> 与 <b>EXIT</b> 依次解锁。后期出现 <b>MULTI-HEAD ATTENTION</b>：两个头分别给权重，要综合判断。走错 KEY 只记 1 次 MISTAKE，不会 Game Over；<b>RESCAN</b> 每关 1~2 次，用过最多只能拿 2 星。进度与星级存在本地浏览器里。'
@@ -351,6 +352,7 @@
       'maze.tip.focus': 'Narrower view now — trust your memory',
       'maze.tip.scanShort': 'Shorter scan — look carefully',
       'maze.tip.multihead': 'Two heads attend to different KEYs',
+      'maze.tip.headTrap': 'One head alone misleads — remember both',
       'maze.tip.combineHint': 'The KEY both heads prefer is the answer',
       'maze.tip.final': 'FINAL ATTENTION: everything at once',
       'maze.tips': '<b>ATTENTION SCAN</b> reveals the whole map, then <b>FOCUS MODE</b> shows only your surroundings, with a very dim trail of where you have been. Step on a <b>QUERY</b> to reveal its attention lines and weights to every <b>KEY</b>: remember the highest weight, walk there for <b>ATTENTION MATCHED</b>, and the <b>VALUE</b> then the <b>EXIT</b> unlock. Later layers add <b>MULTI-HEAD ATTENTION</b>: two heads give different weights you must combine. A wrong KEY only costs one MISTAKE — there is no game over. <b>RESCAN</b> is available 1-2 times per layer and caps the layer at 2 stars. Progress and stars are saved in this browser.',

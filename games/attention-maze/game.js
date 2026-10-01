@@ -431,6 +431,9 @@
   function startAttention() {
     game.queryDone = true;
     clearInput();
+    /* 权重展示期间不要再压着关卡提示条：KEY 变多以后第一排的权重标签就在顶部，
+     * 提示条正好盖在上面。提示的使命在走进 QUERY 之前已经完成了。 */
+    if (game.toast && game.toast.indexOf('maze.tip.') === 0) { game.toast = ''; game.toastMs = 0; }
     if (game.headsCount > 1) {
       game.state = 'multihead_show';
       game.attention = { ms: HEAD_MS, total: HEAD_MS, head: 0, phase: 'head1' };
@@ -1088,6 +1091,35 @@
     var maxW = -1, maxI = -1;
     for (var m = 0; m < table.length; m++) if (table[m] > maxW) { maxW = table[m]; maxI = m; }
 
+    /* 先把所有权重标签的位置算出来、互相错开，再画连线。
+     * KEY 数量是数据驱动的（2~6 个，以后还可能更多），同一行里靠得近的两个 KEY
+     * 标签会互相压住 —— 只做确定性的上下错位，底板/配色/线型都不动。 */
+    ctx.font = 'bold 10px "Courier New", ui-monospace, monospace';
+    var plates = [];
+    for (var q = 0; q < L.nodes.keys.length; q++) {
+      var kq = L.nodes.keys[q];
+      var wq = table[q] === undefined ? 0 : table[q];
+      var lq = T('maze.short.k') + (q + 1) + ' ' + wq.toFixed(2);
+      var wlq = Math.round(ctx.measureText(lq).width) + 8;
+      plates.push({
+        label: lq,
+        w: wlq,
+        x: Math.max(2, Math.min(W - wlq - 2, Math.round(cx2px(kq.x) + CELL - wlq / 2))),
+        y: Math.max(FY + 2, Math.min(FY + FH - 16, cy2px(kq.y) - 14))
+      });
+    }
+    for (var a = 0; a < plates.length; a++) {
+      for (var tries = 0; tries < 6; tries++) {
+        var hit = null;
+        for (var z = 0; z < a; z++) {
+          var A = plates[a], B = plates[z];
+          if (A.x < B.x + B.w && B.x < A.x + A.w && A.y < B.y + 14 && B.y < A.y + 14) { hit = B; break; }
+        }
+        if (!hit) break;
+        plates[a].y = (hit.y - 16 >= FY + 2) ? hit.y - 16 : hit.y + 16;
+      }
+    }
+
     for (var i = 0; i < L.nodes.keys.length; i++) {
       var k = L.nodes.keys[i];
       var w = table[i] === undefined ? 0 : table[i];
@@ -1107,17 +1139,21 @@
         }
       }
       /* 权重标签带 KEY 编号：遮罩蒙住的 KEY 也能一眼对上（K1 0.38） */
-      var label = T('maze.short.k') + (i + 1) + ' ' + w.toFixed(2);
-      ctx.font = 'bold 10px "Courier New", ui-monospace, monospace';
-      var lw = Math.round(ctx.measureText(label).width) + 8;
-      var lx = Math.max(2, Math.min(W - lw - 2, Math.round(kx + CELL / 2 - lw / 2)));
-      var ly = Math.max(FY + 2, Math.min(FY + FH - 16, ky - CELL / 2 - 14));
+      var plate = plates[i];
+      var lx = plate.x, ly = plate.y, lw = plate.w;
       ctx.fillStyle = 'rgba(4,10,24,0.88)';
       ctx.fillRect(lx, ly, lw, 14);
+      if (i === maxI) {
+        /* 最高权重那一块加一圈亮边：5~6 个 KEY 时也能一秒找到它 */
+        ctx.fillStyle = 'rgba(191,240,255,0.55)';
+        ctx.fillRect(lx, ly, lw, 1);
+        ctx.fillRect(lx, ly + 13, lw, 1);
+      }
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      ctx.font = 'bold 10px "Courier New", ui-monospace, monospace';
       ctx.fillStyle = i === maxI ? '#ffffff' : (w >= 0.5 ? '#a8dcff' : '#5f86ad');
-      ctx.fillText(label, lx + lw / 2, ly + 7);
+      ctx.fillText(plate.label, lx + lw / 2, ly + 7);
     }
   }
 
