@@ -388,10 +388,20 @@ export function run() {
       fs.existsSync(path.join(ROOT, 'tools/derive-character-assets.py')) &&
       tool.indexOf('YunYueSama') !== -1);
     ok('派生脚本不再处理已经删掉的像素皮肤', !mentionsRemovedSkin(tool) && tool.indexOf('P_GROUPS') < 0);
-    /* 跳跃姿态必须钉在与步态同向的那一帧：dense-jump 9 / 13 是反的，
-     * 单独取出来在 Whale Runner 里会看起来面朝左（曾经真的踩过这个坑）。 */
-    ok('跳跃姿态钉在与步态同向的上游帧（dense-jump 7）',
-      /"jump": \("dense-jump", 512, \[7\]/.test(tool));
+    /* 方向：上游 dense-jump 整段是镜像的（实测脸的横向偏移 walk +70、
+     * dense-jump 每帧 −15~−52），所以跳跃 / 下潜必须标成水平镜像翻回来，
+     * 否则 Whale Runner 里会「倒着飞」—— 这个坑踩过两次了。 */
+    ok('跳跃 / 下潜被标记为水平镜像（dense-jump 整段是反的）',
+      /"jump": \("dense-jump", 512, \[7\], 400, True\)/.test(tool) &&
+      /"dive": \("dense-jump", 512, \[21\], 400, True\)/.test(tool));
+    ok('步态本身不镜像（inbetween-walk 本来就是朝右的）',
+      /"walk": \("inbetween-walk", 512, \[0, 3, 4, 6, 8, 11, 12, 14\], 120, False\)/.test(tool));
+    ok('派生脚本自带方向自检（渲染完重新量脸朝向，不对就退出）',
+      tool.indexOf('MUST_FACE_RIGHT') >= 0 && tool.indexOf('def face_side(') >= 0 &&
+      tool.indexOf('方向自检失败') >= 0);
+    ok('attribution 记录了镜像这件事',
+      source('assets/whale-yunyue/ATTRIBUTION.md').indexOf('dense-jump') !== -1 &&
+      /mirrored|镜像/.test(source('assets/whale-yunyue/ATTRIBUTION.md')));
   }
 
   /* ================= G. 导航与 Pages 安全性 ================= */

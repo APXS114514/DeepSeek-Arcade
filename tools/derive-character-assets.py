@@ -43,27 +43,34 @@ CANVAS = (192, 208)
 MARGIN = {"l": 8, "r": 8, "t": 6, "b": 10}
 HEAD_SIZE = 96
 
-# 语义状态 -> (图集, cell, 帧号, 每帧毫秒)
+# 语义状态 -> (图集, cell, 帧号, 每帧毫秒, 是否水平镜像)
+#
+# 关于 flip：上游 inbetween-walk（walk 用的那套步态）是**朝右**的，
+# 但整个 dense-jump 图集是镜像的 —— 实测「脸相对头部中心的横向偏移」walk 组是
+# +70，dense-jump 每一帧都是 −15 ~ −52。也就是说跳跃 / 下潜在 Whale Runner 里
+# 会倒着飞（用户报的就是这个）。dense-jump 里没有任何一帧是朝右的，
+# 所以只能整组水平镜像翻回来；镜像不改变配色与形状，只是方向。
 GROUPS = {
-    # motion-idle [0,1,2,3]：上游 clips.shift / clips.settle 用的轻微换重心
-    "idle": ("motion-idle", 512, [0, 1, 2, 3], 260),
-    # inbetween-walk ＝上游现在真正播放的整身步态：
+    # motion-idle [0,1,2,3]：上游 clips.shift / clips.settle 用的轻微换重心（正面）
+    "idle": ("motion-idle", 512, [0, 1, 2, 3], 260, False),
+    # inbetween-walk ＝上游现在真正播放的整身步态（朝右）：
     #   clips.right = inbetween-walk [0,1,3,2,4,5,6,7,8,9,11,10,12,13,14,15] @60ms
     # 按上游的播放顺序等间隔抽 8 帧，帧时长 ×2（120ms）＝ 保留上游 960ms 的步频。
-    "walk": ("inbetween-walk", 512, [0, 3, 4, 6, 8, 11, 12, 14], 120),
-    # dense-jump 属于 clips.jump 的腾空段。[7] 是其中侧身朝右、和步态同向的一帧；
-    # 上游这一段里 9 / 13 的头发与尾鳍甩向另一侧，单独拿出来会看起来「面朝左」，
-    # 在 Whale Runner 里会和走路的朝向打架，所以不用。
-    "jump": ("dense-jump", 512, [7], 400),
-    # dense-jump 21 ＝ clips.land 的落地压缩帧，低姿态也朝右
-    "dive": ("dense-jump", 512, [21], 400),
-    # story-token 0 ＝ clips.think 第一帧（低头看 token 的工作姿势）
-    "think": ("story-token", 384, [0], 400),
-    # actions 14 ＝ clips.surprise 用到的惊慌帧（带惊叹号）
-    "startle": ("actions", 512, [14], 300),
-    # expressions 14 ＝ clips.shock 用到的崩溃 / 委屈帧
-    "blocked": ("expressions", 512, [14], 400),
+    "walk": ("inbetween-walk", 512, [0, 3, 4, 6, 8, 11, 12, 14], 120, False),
+    # dense-jump 7 ＝ clips.jump 腾空段：侧身腾空，但整段是镜像的，翻回来
+    "jump": ("dense-jump", 512, [7], 400, True),
+    # dense-jump 21 ＝ clips.land 的落地压缩帧，同样翻回来
+    "dive": ("dense-jump", 512, [21], 400, True),
+    # story-token 0 ＝ clips.think 第一帧（低头看 token 的工作姿势，正面）
+    "think": ("story-token", 384, [0], 400, False),
+    # actions 14 ＝ clips.surprise 用到的惊慌帧（带惊叹号，正面）
+    "startle": ("actions", 512, [14], 300, False),
+    # expressions 14 ＝ clips.shock 用到的崩溃 / 委屈帧（正面）
+    "blocked": ("expressions", 512, [14], 400, False),
 }
+
+# 这些状态在游戏里必须和步态同向（Whale Runner 一直往右游），派生完会自检
+MUST_FACE_RIGHT = ("jump", "dive")
 STATE_ORDER = ["idle", "walk", "jump", "dive", "think", "startle", "blocked"]
 
 
@@ -73,6 +80,38 @@ def atlas_frame(path, cols, index):
     cell = im.width // cols
     row, col = divmod(index, cols)
     return im.crop((col * cell, row * cell, (col + 1) * cell, (row + 1) * cell))
+
+
+def face_side(im):
+    """肤色（脸）重心相对头部包围盒中心的横向偏移：正数 = 脸偏右 = 朝右。
+
+    这是判断朝向的量化办法，不看头发和尾巴 —— 它们会骗人（跳起来的时候
+    头发和尾鳍甩向哪边，和角色到底面朝哪边并不一致）。"""
+    bbox = im.split()[3].getbbox()
+    if not bbox:
+        return None
+    x0, y0, x1, y1 = bbox
+    band = im.crop((x0, y0, x1, y0 + int((y1 - y0) * 0.46)))     # 头部（含头发）
+    bb = band.split()[3].getbbox()
+    if not bb:
+        return None
+    cx = (bb[0] + bb[2]) / 2.0
+    px = band.load()
+    sx = []
+    for y in range(band.height):
+        for x in range(band.width):
+            r, g, b, a = px[x, y]
+            if a > 200 and r > 205 and 150 < g < 228 and 120 < b < 210 and r > g > b:
+                sx.append(x)
+    if len(sx) < 24:
+        return None
+    return sum(sx) / len(sx) - cx
+
+
+def mean_face(images):
+    vals = [face_side(im) for im in images]
+    vals = [v for v in vals if v is not None]
+    return sum(vals) / len(vals) if vals else None
 
 
 def clean_alpha(im, threshold=8):
@@ -154,9 +193,11 @@ def derive(src, out_dir, verbose=True):
     #    这样换状态时角色大小不会变。
     groups = {}
     for state in STATE_ORDER:
-        atlas, cell, frames, ms = GROUPS[state]
+        atlas, cell, frames, ms, flip = GROUPS[state]
         path = os.path.join(whale, atlas + ".png")
         raw = [atlas_frame(path, 4, f) for f in frames]
+        if flip:                              # 方向修正，见 GROUPS 注释
+            raw = [im.transpose(Image.FLIP_LEFT_RIGHT) for im in raw]
         k = CELL_BASE / float(cell) if cell != CELL_BASE else 1.0   # 按 512 基准归一化
         bboxes = [im.split()[3].getbbox() for im in raw]
         if any(b is None for b in bboxes):
@@ -178,6 +219,7 @@ def derive(src, out_dir, verbose=True):
 
     baseline = ch - MARGIN["b"]
     info = {}
+    rendered_by_state = {}
     for state in STATE_ORDER:
         g = groups[state]
         k, s = g["k"], scale
@@ -194,6 +236,7 @@ def derive(src, out_dir, verbose=True):
             canvas.alpha_composite(resized, (int(round(ox - g["group_bbox"][0] * k * s)),
                                              int(round(oy - g["group_bbox"][1] * k * s))))
             rendered.append(clean_alpha(canvas))
+        rendered_by_state[state] = rendered
         files, seq = emit(rendered, state, out_dir, lossless=False)
         info[state] = {"files": files, "seq": seq, "ms": g["ms"], "atlas": g["atlas"]}
         if verbose:
@@ -218,6 +261,23 @@ def derive(src, out_dir, verbose=True):
     info["headThink"] = {"files": ["head-think.webp"], "seq": [0], "ms": 1000, "atlas": "story-token.png"}
     if verbose:
         print("  %-8s %-16s head.webp / head-think.webp" % ("head", "portrait.png"))
+
+    # 3) 方向自检：必须和步态同向的状态，脸的横向偏向要同号。
+    #    只看头发 / 尾鳍会判断错（dense-jump 整段就是反的），所以量的是脸。
+    ref = mean_face(rendered_by_state["walk"])
+    if verbose:
+        print("  方向自检（脸相对头部中心的偏移，正数 = 朝右；walk 基准 %+.1f）" % (ref or 0))
+    for state in STATE_ORDER:
+        got = mean_face(rendered_by_state[state])
+        label = "%+.1f" % got if got is not None else "测不出"
+        if verbose:
+            print("    %-8s %s%s" % (state, label, "  <- 必须同向" if state in MUST_FACE_RIGHT else ""))
+        if state in MUST_FACE_RIGHT:
+            if got is None or ref is None:
+                raise SystemExit("方向自检失败：%s 或 walk 测不出朝向" % state)
+            if (got > 0) != (ref > 0):
+                raise SystemExit("方向自检失败：%s（%+.1f）和步态（%+.1f）朝向相反，"
+                                 "该组需要 flip=True" % (state, got, ref))
     return info
 
 
