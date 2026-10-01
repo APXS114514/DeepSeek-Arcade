@@ -1,6 +1,6 @@
 # 测试
 
-四款游戏共用一个无头测试环境：**桩 DOM + 桩 Canvas**，直接在 Node 里把真实的 `game.js` 跑起来，
+五款游戏共用一个无头测试环境：**桩 DOM + 桩 Canvas**，直接在 Node 里把真实的 `game.js` 跑起来，
 不需要浏览器、不需要任何 npm 依赖。
 
 **中文** · [English](testing.en.md)
@@ -11,7 +11,7 @@ bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH
 
 CI 里同样是这一条命令（`.github/workflows/pages.yml` 的 `Run tests` 步骤），**测试不过就不会部署 Pages**。
 
-目前 **1000+ 项**，九个套件：
+目前 **1100+ 项**，十个套件：
 
 | 套件 | 覆盖 |
 | --- | --- |
@@ -19,13 +19,14 @@ CI 里同样是这一条命令（`.github/workflows/pages.yml` 的 `Run tests` �
 | Context Snake · 玩法 | 移动、禁止反向（含快速连按）、吃 TOKEN 增长、撞墙、撞自身、最高分、速度上限、THINK 触发与结束、触屏输入、离开页面停循环 |
 | Token Fall · 玩法 | 五类掉落物结算、CONTEXT 不低于 0、Overflow 抢救随 LOAD 收紧与取消（含「救回来不再判死」回归）、DEEP THINK 触发/到期/物理减速、Combo 增长与 x5 封顶、难度上限、高 Context 的 COMPRESS 保底、NOISE 不成墙、暂停时所有计时冻结、键盘 / 触屏 / 多指 / 拖动、切走标签页与失焦会松开输入、bfcache 返回后循环能接回来、重开清理、最高分 key、DPR 不影响判定 |
 | Token Fall · LOAD 难度曲线 | 阶段按 0/30/60/100/150 秒正确切换且永不出现 LOAD 6、每个 LOAD 的 COMPRESS 基础值与 NOISE 惩罚、自然概率随 LOAD 下降、HEAVY TOKEN 不在 LOAD 1 出现且权重始终少于 TOKEN、COMPRESSION FATIGUE（递减 / 7 秒重置 / 封顶）、Context Efficiency、压缩量按 16 取整 + 下限 64 + 永不为负、保底阈值逐级严格而 LOAD 5 仍保留极端保底、Overflow 抢救时间逐级收紧且不低于 1.2 秒、HEAVY TOKEN 继续 CLEAN、暂停 / 切页 / 重开对 LOAD、Fatigue、Overflow 的影响。**只验证 `window.TokenFallRules` 暴露的纯函数与真实行为，不做随机采样** |
-| 多语言 | 五个页面的中英切换与持久化、旧的 `whaleRunner.lang` 兼容、**全站词典 key 一一对应且无遗漏**、Token Fall 要求的 39 个 key（含 LOAD / HEAVY TOKEN / 压力提示）、Attention Maze 要求的 40 个 key 中英齐全 |
+| Context Breaker · 玩法 | 初始 serve、发球、左/右/顶墙反弹、挡板按落点给角度且永不接近水平、CONTEXT 一击碎（10 分）、DENSE 两击且首击进受损状态（20 分）、NOISE 缩窄挡板并到期恢复、THINK 减速并到期恢复、COMPRESS 全局 HP−1 且不连锁触发、掉球扣命、3 条命归零进 gameOver、清空关卡自动进下一层且球速封顶、暂停冻结球/效果计时/角色时钟、切标签页与失焦自动暂停、高分写入 `arcade.breakerHighScore` 且不覆盖历史更高分、与另外四款 key 不冲突、换皮肤不改变碰撞盒与反弹结果、素材全 404 不崩溃 |
+| 多语言 | 六个页面的中英切换与持久化、旧的 `whaleRunner.lang` 兼容、**全站词典 key 一一对应且无遗漏**、Token Fall 要求的 39 个 key（含 LOAD / HEAVY TOKEN / 压力提示）、Attention Maze 要求的 40 个 key 中英齐全、Context Breaker 要求的 32 个 key 中英齐全 |
 | Whale Runner · 冒烟 | 生命周期、暂停/静音/隐藏、判定盒几何自检、AI 连跑 20000 帧零死亡 |
 | Attention Maze · 玩法 | 12 关地图数据自检（15×11、四周封闭、节点都在可走格、不重叠、answer 就是注意力最高的 KEY）与 **BFS 可解性验证**、par 合理性、地图解析、走格子与撞墙不加 MOVES、提前到 EXIT 无效、
 QUERY 触发与展示时长、错误 KEY 只记一次 MISTAKE、正确 KEY 解锁 VALUE、VALUE 解锁 EXIT、权重不随机、MULTI-HEAD 阶段顺序与「两头之和」判定、RESCAN 次数与上限、暂停冻结全部计时、切页自动暂停、
 重开清理、进度解锁与星级（含「更差成绩不覆盖最佳」）、存档损坏容错、RESET 二次确认、触屏/多指/失焦松手、DPR 不影响判定 |
 | 角色皮肤 | `arcade.characterSkin` 默认 classic、非法值回退、`setSkin` / `cycleSkin` 来回切换、`onChange`、重新进页面读回同一个值、**旧值 `whalechan` 自动迁移成 `yunyue` 并写回**；**换皮肤不改任何游戏数据**（成绩 / 进度 / 音效 / 语言 key 逐个比对，循环一整圈后再比一次）；四款游戏换皮肤后**判定盒完全不变**（Runner 用固定随机种子跑同一段剧本对比死亡帧、Token Fall 对比接物结算、Snake 对比蛇头格子与长度、Maze 对比所在格与 MOVES）；**动画帧只由时间决定**（同一时间画 50 次仍是同一帧、8 帧 walk 真的在换帧）；暂停后角色动画时钟冻结且不再换帧；`yunyue` 绘制期间 `imageSmoothingEnabled = true`，且画完一定还原（smoothing 与 globalAlpha）；左右朝向镜像正确（Runner 不镜像、Token Fall / Snake / Maze 朝左镜像），`jump` 与步态同向；素材**懒加载**（classic 启动不下载任何图片、切换只请求当前皮肤那一套、切回来不重复 `new Image()`、hover 预热下一套）；全套 404 / 单张 404 / 加载中都回退经典小鲸鱼且不报错 |
-| 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、四款游戏的 localStorage key 互不冲突、角色注册表里的每张素材都真实存在（且目录里没有漏登记 / 多余的 WebP）、旧的第三方素材目录与 CC BY 4.0 全文已删除 |
+| 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、五款游戏的 localStorage key 互不冲突、角色注册表里的每张素材都真实存在（且目录里没有漏登记 / 多余的 WebP）、旧的第三方素材目录与 CC BY 4.0 全文已删除 |
 
 ## 关卡可解性验证（Attention Maze）
 

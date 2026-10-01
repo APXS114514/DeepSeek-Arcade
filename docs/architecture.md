@@ -7,7 +7,7 @@
 
 ## 设计原则
 
-- **零依赖、零构建、零运行时外部请求**：四款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D）。
+- **零依赖、零构建、零运行时外部请求**：五款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D）。
   经典形态的全部美术（小鲸鱼、迷宫、掉落物、粒子、UI）都是 `fillRect` / `fillText` 画出来的，没有任何外部图片；
   可选的**图片角色皮肤**（鲸鱼娘）只加载 `assets/whale-yunyue/` 下**仓库自带**的 WebP
   （第三方素材，按自己的授权；不走 CDN、不请求外部域名），而且是**懒加载**的。
@@ -50,7 +50,7 @@
 
 ## Canvas 与 DPR
 
-四款游戏都是同一个套路：**逻辑坐标恒定**（例如 Whale Runner 用 `PX` 缩放、Token Fall 固定 380×560、
+五款游戏都是同一个套路：**逻辑坐标恒定**（例如 Whale Runner 用 `PX` 缩放、Token Fall 固定 380×560、
 Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` 并 `ctx.scale(dpr, dpr)`，
 上限 3 避免高倍屏过度绘制；判定完全在逻辑坐标里做，所以换屏幕 / 换 DPR 不会改变碰撞区域。
 画布都设了 `image-rendering: pixelated`，CSS 放大时保持像素硬边。
@@ -129,7 +129,7 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 
 | 皮肤 | 素材 | 说明 |
 | --- | --- | --- |
-| `classic`（默认） | `shared/whale.js` 的字符画 + 各游戏自己的像素精灵 | 四款游戏的判定盒、难度、手感全部按原样 |
+| `classic`（默认） | `shared/whale.js` 的字符画 + 各游戏自己的像素精灵 | 五款游戏的判定盒、难度、手感全部按原样 |
 | `yunyue` | `assets/whale-yunyue/*.webp`（19 张派生 WebP，统一画布 192×208） | 贴图替换，同样不动任何玩法数值 |
 
 ### 注册表：游戏只说语义状态
@@ -217,7 +217,7 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
   派生过程可复现（`tools/derive-character-assets.py`，dev-only，运行时完全不用 Python）；
 - 第三方声明汇总在 `THIRD_PARTY_NOTICES.md`：根目录 `LICENSE` 是 MIT，**只覆盖代码与原创内容**。
 
-## 四款游戏的实现细节
+## 五款游戏的实现细节
 
 ## 🐳 Whale Runner — `games/runner/`
 
@@ -397,6 +397,44 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
 > 经典形态零图片：迷宫、俯视小鲸鱼（对字符画做 90° 整数旋转出上下左右四个朝向）、Q/K/V 节点、注意力连线
 > （自己画的像素线，粗细 = 权重）、遮罩、HUD 全部 `fillRect`；音效用 `shared/audio.js` 现场合成，音量很克制。
 
+
+---
+
+## 🐳 Context Breaker — `games/context-breaker/`
+
+用底部的 TOKEN 弹球打碎上方的 CONTEXT 砖块（Breakout / Arkanoid 玩法），第 5 款正式小游戏。
+
+**状态机**：`serve → playing → (levelClear | gameOver)`，任意时刻可 `paused`。
+暂停会**冻结球运动、特殊效果计时、关卡计时与角色动画时钟**（`game.time` 只在非暂停时推进）；
+切标签页（`visibilitychange`）与失焦（`blur`）按项目惯例自动暂停，回来不会自己继续。
+
+**五种砖块**（`SCORES` / `HITS` 两张表在 `game.js` 顶部）：
+
+| 砖块 | HP | 分数 | 击碎效果 |
+| --- | --- | --- | --- |
+| CONTEXT | 1 | 10 | 无 |
+| DENSE CONTEXT | 2 | 20 | 第一次命中变成**受损状态**（内嵌凹槽），第二次才碎 |
+| NOISE | 1 | 5 | 挡板变窄 6 秒（`PADDLE_W 86 → PADDLE_W_MIN 52`） |
+| COMPRESS | 1 | 15 | 其它所有可破坏砖块 **HP −1**，被压到 0 的直接消失；**不连锁触发效果**，避免递归 |
+| THINK | 1 | 25 | 进入 5 秒 **DEEP THINK**：球速 ×0.62，HUD 显示状态 |
+
+**关卡**：8 个预定义布局模板（矩形墙 / 中央空洞 / 阶梯 / 金字塔 / 对称双塔 / 棋盘 / 菱形 / 立柱），
+按 `(level - 1) % 模板数` 循环取用。模板只描述形状，具体砖种由 `pickType(level, index)` 用
+**确定性哈希**分配 —— 同一关每次开都完全一致，绝不随机到没法打。
+球速 `196 + 16×(level−1)`，封顶 **372 px/s**；DENSE / NOISE / COMPRESS / THINK 的比例随层数上升且各自封顶（见 `ratioAt()`）。
+
+**挡板反弹不是简单取反**：落点相对挡板中心的偏移 `rel ∈ [−1, 1]` 映射成 `rel × 60°` 的出手角 ——
+中心接近竖直、边缘最斜，角度上限保证**永远打不出接近水平的球**（离水平至少 30°）。
+每帧还会把速度重新归一到当前关卡速度，所以反复反弹不会漂移。
+
+**角色接入**：本游戏里**不出现任何素材文件名**，只对 `ArcadeCharacter` 说语义状态 ——
+静止 `idle`、左右移动 `walk`、DEEP THINK `think`、刚掉球 `startle`、游戏结束 `blocked`；
+`draw()` 返回 false（classic 皮肤或素材没就绪）时回退到 `shared/whale.js` 的字符画。
+**挡板碰撞盒永远是 `PADDLE_W × PADDLE_H` 常量**，与角色素材尺寸完全无关
+（`test/contextbreaker.test.mjs` 会比对两套皮肤下的反弹结果是否逐位相同）。
+
+**存储**：最高分 `arcade.breakerHighScore`（与另外四款互不覆盖），localStorage 不可用时静默降级。
+
 ## 目录结构（完整）
 
 ```text
@@ -405,14 +443,15 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
 ├── shared/                               真正共用的部分
 │   ├── i18n.js                           中英词典 + 语言切换
 │   ├── audio.js                          Web Audio 音色 + 全站统一 Sound 开关
-│   ├── character.js                      角色皮肤注册表（三套皮肤）+ 懒加载 / 动画时钟 / 回退
+│   ├── character.js                      角色皮肤注册表（两套皮肤）+ 懒加载 / 动画时钟 / 回退
 │   ├── whale.js                          DeepSeek 小鲸鱼像素素材（唯一一份）
 │   └── arcade.css                        设计变量 + 页面外壳（body / 卡片 / 按钮 / 返回入口）
 ├── games/
 │   ├── runner/                           Whale Runner：index.html / style.css / game.js
 │   ├── snake/                            Context Snake：index.html / style.css / game.js
 │   ├── token-fall/                       Token Fall：index.html / style.css / game.js
-│   └── attention-maze/                   Attention Maze：index.html / style.css / levels.js + game.js
+│   ├── attention-maze/                   Attention Maze：index.html / style.css / levels.js + game.js
+│   └── context-breaker/                  Context Breaker：index.html / style.css / game.js
 ├── test/                                 无头回归测试（桩 DOM + 桩 Canvas，不需要浏览器）
 │   ├── run.mjs / run.sh                  一条命令跑全部：bash test/run.sh
 │   ├── helpers.mjs                       测试环境（按页面装配 DOM）
@@ -422,7 +461,8 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
 │   ├── tokenfall.test.mjs                Token Fall 玩法、Overflow 抢救、暂停与触屏
 │   ├── attentionmaze.test.mjs            12 关可解性、Q/K/V、MULTI-HEAD、进度星级
 │   ├── engineering.test.mjs              v1.0 结构：CI、统一音效、共享素材、关卡拆分
-│   ├── i18n.test.mjs                     五个页面的中英切换 + 词典完整性
+│   ├── contextbreaker.test.mjs           Context Breaker 玩法、五种砖块、暂停冻结、高分
+│   ├── i18n.test.mjs                     六个页面的中英切换 + 词典完整性
 │   └── paths.test.mjs                    死链 / 绝对路径 / localStorage key 冲突
 ├── assets/whale-yunyue/                  鲸鱼娘运行时素材（19 张派生 WebP）+ ATTRIBUTION.md
 ├── tools/derive-character-assets.py      角色素材派生脚本（dev-only，运行时不用）

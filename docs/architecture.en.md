@@ -7,7 +7,7 @@ for the test story see [docs/testing.en.md](testing.en.md).
 
 ## Design principles
 
-- **No dependencies, no build, no runtime external requests**: all four games are plain HTML + CSS + JavaScript
+- **No dependencies, no build, no runtime external requests**: all five games are plain HTML + CSS + JavaScript
   (Canvas 2D). In classic mode every piece of art (whale, mazes, falling tokens, particles, UI) is drawn with
   `fillRect` / `fillText` — no external files at all. The two optional **image character skins** load third-party WebP
   files **shipped inside this repo** (`assets/whale-yunyue/`, under its own licence) —
@@ -53,7 +53,7 @@ come before `game.js`. A missing file never crashes the game; it logs a clear wa
 
 ## Canvas & DPR
 
-All four games follow the same pattern: **logical coordinates are fixed** (Whale Runner scales everything with `PX`,
+All five games follow the same pattern: **logical coordinates are fixed** (Whale Runner scales everything with `PX`,
 Token Fall is 380×560, Attention Maze is 420×354). DPR is only used to set `canvas.width/height` and to call
 `ctx.scale(dpr, dpr)`, capped at 3 to avoid overdrawing on high-density screens. All collision happens in logical
 coordinates, so changing screens or DPR never changes the hitboxes. Every canvas uses `image-rendering: pixelated`
@@ -446,6 +446,49 @@ the rules). Each stage is a **LAYER**, there are 12 hand-designed ones, and the 
 
 ---
 
+
+---
+
+## 🐳 Context Breaker — `games/context-breaker/`
+
+Bounce a TOKEN ball off the paddle to smash the CONTEXT bricks above (Breakout / Arkanoid) — the fifth official game.
+
+**State machine**: `serve → playing → (levelClear | gameOver)`, pausable at any time.
+Pausing freezes **ball motion, special-effect timers, the level timer and the character animation clock**
+(`game.time` only advances while not paused). Switching tabs (`visibilitychange`) or losing focus (`blur`)
+auto-pauses, following the convention of the other games — it never resumes by itself.
+
+**Five brick types** (`SCORES` / `HITS` live at the top of `game.js`):
+
+| Brick | HP | Score | Effect when broken |
+| --- | --- | --- | --- |
+| CONTEXT | 1 | 10 | none |
+| DENSE CONTEXT | 2 | 20 | the first hit leaves a **damaged state** (inset groove); the second breaks it |
+| NOISE | 1 | 5 | narrows the paddle for 6 seconds (`PADDLE_W 86 → PADDLE_W_MIN 52`) |
+| COMPRESS | 1 | 15 | every other destructible brick loses **1 HP**; those reaching 0 vanish — it does **not** chain-trigger effects, which avoids recursion |
+| THINK | 1 | 25 | grants 5 seconds of **DEEP THINK**: ball speed ×0.62, shown in the HUD |
+
+**Levels**: eight predefined layout templates (rectangle wall / centre hole / stairs / pyramid / twin towers /
+checkerboard / diamond / columns), picked by `(level - 1) % templateCount`.
+A template only describes the shape; the actual brick type is assigned by `pickType(level, index)` through a
+**deterministic hash** — the same level is byte-identical on every run, never randomly unwinnable.
+Ball speed is `196 + 16×(level−1)`, capped at **372 px/s**; the DENSE / NOISE / COMPRESS / THINK ratios rise with the
+level and each one is capped (see `ratioAt()`).
+
+**The paddle bounce is not a plain negation**: the offset from the paddle centre, `rel ∈ [−1, 1]`, maps to an exit
+angle of `rel × 60°` — near vertical in the middle, steepest at the edges — and the cap guarantees the ball
+**never flattens out** (always at least 30° off horizontal). Each frame also re-normalises the speed to the current
+level speed, so repeated bounces never drift.
+
+**Character integration**: the game contains **no asset filenames at all**; it only speaks semantic states to
+`ArcadeCharacter` — `idle` at rest, `walk` while moving, `think` during DEEP THINK, `startle` right after losing a
+ball, `blocked` on game over. When `draw()` returns false (classic skin or assets not ready) it falls back to the
+character art in `shared/whale.js`. **The paddle hitbox is always the `PADDLE_W × PADDLE_H` constant**, entirely
+independent of the character artwork size (`test/contextbreaker.test.mjs` compares the bounce result across skins).
+
+**Storage**: high score `arcade.breakerHighScore` (no collision with the other four games); degrades silently when
+localStorage is unavailable.
+
 ## Directory structure (full)
 
 ```text
@@ -454,14 +497,15 @@ the rules). Each stage is a **LAYER**, there are 12 hand-designed ones, and the 
 ├── shared/                               真正共用的部分 / shared by every page
 │   ├── i18n.js                           zh/en dictionary + language switching
 │   ├── audio.js                          Web Audio tones + global Sound switch
-│   ├── character.js                      character-skin registry (three skins) + lazy load / frame clock / fallback
+│   ├── character.js                      character-skin registry (two skins) + lazy load / frame clock / fallback
 │   ├── whale.js                          DeepSeek whale pixel data (single copy)
 │   └── arcade.css                        design tokens + page shell (body / card / buttons / back link)
 ├── games/
 │   ├── runner/                           Whale Runner: index.html / style.css / game.js
 │   ├── snake/                            Context Snake: index.html / style.css / game.js
 │   ├── token-fall/                       Token Fall: index.html / style.css / game.js
-│   └── attention-maze/                   Attention Maze: index.html / style.css / levels.js + game.js
+│   ├── attention-maze/                   Attention Maze: index.html / style.css / levels.js + game.js
+│   └── context-breaker/                  Context Breaker: index.html / style.css / game.js
 ├── test/                                 headless tests (stub DOM + stub Canvas, no browser)
 │   ├── run.mjs / run.sh                  run everything: bash test/run.sh
 │   ├── helpers.mjs                       harness (assembles the DOM per page)
@@ -471,7 +515,8 @@ the rules). Each stage is a **LAYER**, there are 12 hand-designed ones, and the 
 │   ├── tokenfall.test.mjs                Token Fall rules, overflow rescue, pause and touch
 │   ├── attentionmaze.test.mjs            12-layer solvability, Q/K/V, MULTI-HEAD, progress and stars
 │   ├── engineering.test.mjs              v1.0 contracts: CI, global sound, shared assets, level split
-│   ├── i18n.test.mjs                     zh/en switching on five pages + dictionary parity
+│   ├── contextbreaker.test.mjs           Context Breaker rules, five brick types, pause freeze, high score
+│   ├── i18n.test.mjs                     zh/en switching on six pages + dictionary parity
 │   └── paths.test.mjs                    dead links / absolute paths / localStorage key collisions
 ├── assets/
 │   └── whale-yunyue/                     Whale Girl runtime assets (19 derived WebP) + ATTRIBUTION.md
