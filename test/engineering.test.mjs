@@ -254,77 +254,144 @@ export function run() {
       !/coming soon|third game|三款|敬请期待/i.test(source('docs/architecture.md')));
   }
 
-  /* ================= F. 第三方素材（Whale-chan / CC BY 4.0） ================= */
+  /* ================= F. 第三方素材（两套鲸鱼娘，各自的授权） ================= */
   {
-    const attrPath = path.join(ROOT, 'assets/whale-chan/ATTRIBUTION.md');
-    ok('assets/whale-chan/ATTRIBUTION.md 存在', fs.existsSync(attrPath));
-    const attr = source('assets/whale-chan/ATTRIBUTION.md');
-    ok('ATTRIBUTION 写明作者 Er1c0v0', attr.indexOf('Er1c0v0') !== -1);
-    ok('ATTRIBUTION 写明 CC BY 4.0', /CC BY 4\.0/.test(attr) && attr.indexOf('Creative Commons Attribution 4.0') !== -1);
-    ok('ATTRIBUTION 写明上游仓库 dsh-whale-pet', attr.indexOf('dsh-whale-pet') !== -1);
-    ok('ATTRIBUTION 写明素材来自 character/ 目录', attr.indexOf('character/') !== -1);
-    ok('ATTRIBUTION 记录了修改（Modifications）', attr.indexOf('Modifications') !== -1);
-    ok('ATTRIBUTION 明确说明不属于 MIT', /NOT covered by DeepSeek Arcade/i.test(attr));
-    ok('ATTRIBUTION 保留上游 SHA-256 校验信息', (attr.match(/[0-9a-f]{64}/g) || []).length >= 9,
-      String((attr.match(/[0-9a-f]{64}/g) || []).length));
+    /* ---- 旧的第三方鲸鱼娘皮肤必须完全退出：素材 / 运行时 / 文档 / 测试 ----
+     * 敏感串在这里拆开拼接，否则这个测试文件会被自己扫出来。 */
+    const LEGACY_HITS = ['Er1c0' + 'v0', 'dsh-' + 'whale-pet', 'assets/whale-' + 'chan', 'whalechan' + '-'];
+    const SKIP_DIRS = new Set(['.git', 'node_modules', '.shots']);
+    const hits = [];
+    (function walk(dir) {
+      for (const name of fs.readdirSync(dir)) {
+        if (SKIP_DIRS.has(name) || name === '.DS_Store') continue;
+        const p = path.join(dir, name);
+        if (fs.statSync(p).isDirectory()) { walk(p); continue; }
+        if (!/\.(js|mjs|html|css|md|txt|json|yml|yaml|py)$/i.test(name)) continue;
+        const text = fs.readFileSync(p, 'utf8');
+        for (const bad of LEGACY_HITS) {
+          if (text.indexOf(bad) !== -1) hits.push(path.relative(ROOT, p) + ' <- ' + bad);
+        }
+      }
+    })(ROOT);
+    ok('全仓库（运行时 / 文档 / 测试）都不再引用旧的第三方鲸鱼娘皮肤',
+      hits.length === 0, hits.join(' | '));
+    ok('旧的角色素材目录已删除', !fs.existsSync(path.join(ROOT, 'assets/whale-' + 'chan')));
+    ok('LICENSES/CC-BY-4.0.txt 已删除（没有素材再使用它）',
+      !fs.existsSync(path.join(ROOT, 'LICENSES/CC-BY-4.0.txt')));
+    ok('旧素材目录名没有以临时名字复活（whale-chan-new / whale-chan2）',
+      !fs.readdirSync(path.join(ROOT, 'assets')).some((d) => /chan/i.test(d)),
+      fs.readdirSync(path.join(ROOT, 'assets')).join(','));
 
-    const licPath = path.join(ROOT, 'LICENSES/CC-BY-4.0.txt');
-    ok('LICENSES/CC-BY-4.0.txt 存在', fs.existsSync(licPath));
-    const cc = source('LICENSES/CC-BY-4.0.txt');
-    ok('CC BY 4.0 文本是标准的 Creative Commons 授权全文',
-      cc.indexOf('Creative Commons Attribution 4.0 International Public License') !== -1 &&
-      cc.indexOf('Section 1 -- Definitions.') !== -1 && cc.length > 10000, String(cc.length));
+    /* ---- 动画鲸鱼娘：YunYueSama —— 大肥鱼项目署名许可 1.0（不是 MIT） ---- */
+    const yAttrPath = path.join(ROOT, 'assets/whale-yunyue/ATTRIBUTION.md');
+    ok('assets/whale-yunyue/ATTRIBUTION.md 存在', fs.existsSync(yAttrPath));
+    const yAttr = source('assets/whale-yunyue/ATTRIBUTION.md');
+    ok('YunYue attribution 写明作者 YunYueSama', yAttr.indexOf('YunYueSama') !== -1);
+    ok('YunYue attribution 写明上游仓库地址',
+      yAttr.indexOf('https://github.com/YunYueSama/codex-deepseek-pet') !== -1);
+    ok('YunYue attribution 说明素材经过修改', /modified/i.test(yAttr));
+    ok('YunYue attribution 记录上游 commit SHA', (yAttr.match(/\b[0-9a-f]{40}\b/g) || []).length >= 1);
+    ok('YunYue attribution 写明所依据的许可与全文位置',
+      yAttr.indexOf('大肥鱼项目署名许可 1.0') !== -1 && yAttr.indexOf('YUNYUE-WHALE-PET-LICENSE.txt') !== -1);
+    ok('YunYue attribution 点明第三方权利边界（ASSET_LICENSE / design 参考图）',
+      yAttr.indexOf('ASSET_LICENSE') !== -1 && yAttr.indexOf('design/') !== -1);
 
+    const yLicPath = path.join(ROOT, 'LICENSES/YUNYUE-WHALE-PET-LICENSE.txt');
+    ok('YunYue 完整许可全文存在', fs.existsSync(yLicPath));
+    const yLic = source('LICENSES/YUNYUE-WHALE-PET-LICENSE.txt');
+    ok('YunYue 许可全文就是上游那份（许可名 / 作者 / 仓库 / 实质长度）',
+      yLic.indexOf('大肥鱼项目署名许可 1.0') !== -1 &&
+      yLic.indexOf('YunYueSama') !== -1 &&
+      yLic.indexOf('https://github.com/YunYueSama/codex-deepseek-pet') !== -1 &&
+      fs.statSync(yLicPath).size > 1500, String(fs.statSync(yLicPath).size));
+    ok('没有把 YunYue 素材描述成 MIT', /非标准 MIT/.test(yLic));
+
+    /* ---- 像素鲸鱼娘：chenthreegold —— MIT（另一份独立授权） ---- */
+    const pAttrPath = path.join(ROOT, 'assets/whale-pixel/ATTRIBUTION.md');
+    ok('assets/whale-pixel/ATTRIBUTION.md 存在', fs.existsSync(pAttrPath));
+    const pAttr = source('assets/whale-pixel/ATTRIBUTION.md');
+    ok('Pixel attribution 写明上游仓库',
+      pAttr.indexOf('chenthreegold/deepseek-whale-pet') !== -1);
+    ok('Pixel attribution 写明 MIT', /\bMIT\b/.test(pAttr));
+    ok('Pixel attribution 记录上游 commit SHA', (pAttr.match(/\b[0-9a-f]{40}\b/g) || []).length >= 1);
+    ok('Pixel attribution 说明派生处理（cropped / re-encoded …）',
+      /cropped|frame extracted|re-encoded|rescaled/i.test(pAttr));
+
+    const pLicPath = path.join(ROOT, 'LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt');
+    ok('chenthreegold 的 MIT 文本存在', fs.existsSync(pLicPath));
+    const pLic = source('LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt');
+    ok('chenthreegold 的 MIT 文本完整（MIT 标题 / 权利人 / 授权段）',
+      /^MIT License/m.test(pLic) &&
+      /Copyright \(c\) 2026 DeepSeek Whale Pet Contributors/.test(pLic) &&
+      /Permission is hereby granted, free of charge/.test(pLic));
+
+    /* ---- 汇总声明 ---- */
     const tpnPath = path.join(ROOT, 'THIRD_PARTY_NOTICES.md');
     ok('THIRD_PARTY_NOTICES.md 存在', fs.existsSync(tpnPath));
     const tpn = source('THIRD_PARTY_NOTICES.md');
-    ok('第三方声明同时写明 MIT（代码）与 CC BY 4.0（鲸鱼娘美术）',
-      tpn.indexOf('MIT') !== -1 && tpn.indexOf('CC BY 4.0') !== -1 && tpn.indexOf('Er1c0v0') !== -1);
-    ok('第三方声明明确 assets/whale-chan 不属于 MIT', /NOT MIT-licensed/i.test(tpn));
-    ok('第三方声明把 DeepSeek 品牌单独列出', /DeepSeek/.test(tpn) && /brand/i.test(tpn));
+    ok('第三方声明同时包含两个新来源',
+      tpn.indexOf('YunYueSama/codex-deepseek-pet') !== -1 &&
+      tpn.indexOf('chenthreegold/deepseek-whale-pet') !== -1);
+    ok('第三方声明把两种授权分开写：自定义署名许可 与 MIT',
+      tpn.indexOf('大肥鱼项目署名许可 1.0') !== -1 && /\bMIT\b/.test(tpn));
+    ok('第三方声明明确根 LICENSE 只覆盖代码与原创内容',
+      /code and original content|代码与原创内容/.test(tpn));
+    ok('第三方声明说明两套图片素材都不在 MIT 范围内',
+      /NOT MIT-licensed/i.test(tpn) || /都不是本项目原创/.test(tpn));
+    ok('第三方声明单独列出 DeepSeek 品牌声明',
+      /DeepSeek/.test(tpn) && /brand/i.test(tpn) && /unofficial fan project/i.test(tpn));
 
-    /* 根 LICENSE 仍然是 MIT，并且说清楚了鲸鱼娘素材不在 MIT 范围内 */
+    /* ---- 根 LICENSE ---- */
     const lic = source('LICENSE');
     ok('根 LICENSE 仍然是 MIT（没有被第三方素材改写）',
       /^MIT License/m.test(lic) && /Copyright \(c\) 2026 APXS114514/.test(lic));
-    ok('根 LICENSE 说明了 Whale-chan 属于 CC BY 4.0、不在 MIT 内',
-      lic.indexOf('CC BY 4.0') !== -1 && lic.indexOf('Er1c0v0') !== -1 && lic.indexOf('THIRD_PARTY_NOTICES') !== -1);
+    ok('根 LICENSE 指向两份第三方许可全文并说明不在 MIT 内',
+      lic.indexOf('YUNYUE-WHALE-PET-LICENSE.txt') !== -1 &&
+      lic.indexOf('CHENTHREEGOLD-WHALE-PET-MIT.txt') !== -1 &&
+      lic.indexOf('NOT part of this MIT license') !== -1);
 
-    /* README 两份都要说明双角色 + 素材来源（详细的 license 说明只放在上面那三个文件里，
-     * README 不重复长篇授权声明 —— 但来源仓库必须写清楚） */
-    for (const [name, tag] of [['README.md', '鲸鱼娘'], ['README.en.md', 'Whale-chan']]) {
+    /* ---- README：只留简洁来源说明，不塞长篇授权 ---- */
+    for (const name of ['README.md', 'README.en.md']) {
       const md = source(name);
-      ok(name + ' 提到 Whale-chan 角色皮肤', md.indexOf(tag) !== -1);
-      ok(name + ' 说明素材来自 dsh-whale-pet', md.indexOf('dsh-whale-pet') !== -1 && md.indexOf('Er1c0v0') !== -1);
       ok(name + ' 写明 arcade.characterSkin', md.indexOf('arcade.characterSkin') !== -1);
+      ok(name + ' 列出两个新来源仓库',
+        md.indexOf('YunYueSama/codex-deepseek-pet') !== -1 &&
+        md.indexOf('chenthreegold/deepseek-whale-pet') !== -1);
+      ok(name + ' 说明动画鲸鱼娘不是 MIT（大肥鱼项目署名许可）',
+        md.indexOf('大肥鱼项目署名许可') !== -1);
       ok(name + ' 不再声称「整个项目零图片」',
         !/零图片、零后端/.test(md) && !/no image files, no backend/.test(md));
-      ok(name + ' 没有把长篇授权声明塞进 README（只留来源）',
-        md.indexOf('Whale-chan artwork 授权') === -1 && md.indexOf('Whale-chan artwork licence') === -1);
+      ok(name + ' 没有把长篇授权声明塞进 README（详细内容指向专门文件）',
+        md.indexOf('YUNYUE-WHALE-PET-LICENSE.txt') !== -1);
     }
-    ok('完整授权仍然记录在库内（ATTRIBUTION / THIRD_PARTY_NOTICES / LICENSES）',
-      source('assets/whale-chan/ATTRIBUTION.md').indexOf('CC BY 4.0') !== -1 &&
-      source('THIRD_PARTY_NOTICES.md').indexOf('CC BY 4.0') !== -1 &&
-      fs.existsSync(path.join(ROOT, 'LICENSES/CC-BY-4.0.txt')));
 
-    /* 运行时素材：9 张，全部存在、非空、体积可控 */
-    const files = ['whalechan-idle.webp', 'whalechan-move.webp', 'whalechan-jump.webp', 'whalechan-dive.webp',
-      'whalechan-think.webp', 'whalechan-startle.webp', 'whalechan-blocked.webp',
-      'whalechan-head.webp', 'whalechan-head-think.webp'];
-    let bytes = 0, missing = '';
-    for (const f of files) {
-      const p = path.join(ROOT, 'assets/whale-chan/' + f);
-      if (!fs.existsSync(p)) { missing += f + ' '; continue; }
-      bytes += fs.statSync(p).size;
-    }
-    ok('9 张派生鲸鱼娘素材齐全', missing === '', missing);
-    ok('鲸鱼娘运行时素材总大小合理（< 600KB，实际 ' + Math.round(bytes / 1024) + 'KB）',
-      bytes > 0 && bytes < 600 * 1024, String(bytes));
-    ok('没有把上游原始 PNG 一起塞进运行时目录',
-      fs.readdirSync(path.join(ROOT, 'assets/whale-chan')).filter((f) => /\.png$/i.test(f)).length === 0);
+    /* ---- 运行时素材：齐全、体积可控、没有混入上游原图 ---- */
+    const sizeOf = (skin) => {
+      const dir = path.join(ROOT, 'assets/whale-' + skin);
+      const files = fs.readdirSync(dir);
+      const webp = files.filter((f) => /\.webp$/i.test(f));
+      return {
+        n: webp.length,
+        bytes: webp.reduce((total, f) => total + fs.statSync(path.join(dir, f)).size, 0),
+        png: files.filter((f) => /\.png$/i.test(f)).length,
+      };
+    };
+    const ys = sizeOf('yunyue');
+    const ps = sizeOf('pixel');
+    ok('动画鲸鱼娘素材齐全、体积可控（' + ys.n + ' 张 / ' + Math.round(ys.bytes / 1024) + 'KB < 512KB）',
+      ys.n > 0 && ys.bytes < 512 * 1024, String(ys.bytes));
+    ok('像素鲸鱼娘素材齐全、体积可控（' + ps.n + ' 张 / ' + Math.round(ps.bytes / 1024) + 'KB < 128KB）',
+      ps.n > 0 && ps.bytes < 128 * 1024, String(ps.bytes));
+    ok('两套运行时目录里都没有混入上游原始 PNG', ys.png === 0 && ps.png === 0,
+      ys.png + '/' + ps.png);
+    ok('上游数 MB 的原始图集没有被直接塞进运行时（两套合计 < 1MB）',
+      ys.bytes + ps.bytes < 1024 * 1024, String(ys.bytes + ps.bytes));
+    ok('素材派生脚本随仓库提供（可复现，且不参与运行时）',
+      fs.existsSync(path.join(ROOT, 'tools/derive-character-assets.py')) &&
+      source('tools/derive-character-assets.py').indexOf('YunYueSama') !== -1);
   }
 
-  /* ================= F. 导航与 Pages 安全性 ================= */
+  /* ================= G. 导航与 Pages 安全性 ================= */
   {
     const pages = ['index.html', 'games/runner/index.html', 'games/snake/index.html',
       'games/token-fall/index.html', 'games/attention-maze/index.html'];

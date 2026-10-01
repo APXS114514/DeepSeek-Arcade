@@ -3,7 +3,7 @@
 **四款 DeepSeek-inspired 像素小游戏合集**（非官方同人）：Whale Runner · Context Snake · Token Fall · Attention Maze。
 纯 HTML + CSS + 原生 JavaScript（Canvas 2D）——**零依赖、零构建、零后端、零运行时外部请求**。
 经典形态的美术（小鲸鱼、迷宫、掉落物、粒子、UI）全部由 Canvas 代码绘制；
-可选的 **Whale-chan** 角色皮肤使用仓库自带的第三方插画素材（来源见下文）。
+另外还有两套可选的角色皮肤（动画鲸鱼娘 / 像素鲸鱼娘），用的是仓库自带的第三方素材（来源与授权见下文）。
 
 **中文** · [English](README.en.md)
 
@@ -19,7 +19,8 @@
 | 🐳 **Token Fall** | 接物 + 资源管理 | 接住 Token · 管理上下文：LOAD 越高 C 越稀缺、NOISE 越危险，还有高分高风险的 HEAVY TOKEN |
 | 🐳 **Attention Maze** | 记忆解谜 | 记住路径 · 聚焦关键 · 找到出口（12 个手工 Layer） |
 
-四款是**同一只 DeepSeek 小鲸鱼**、同一套中英双语、同一个 Sound 开关、同一套像素风格。
+四款共用**同一套角色外观**（经典小鲸鱼 / 动画鲸鱼娘 / 像素鲸鱼娘，随时可换）、同一套中英双语、
+同一个 Sound 开关、同一套像素风格。
 
 ### Token Fall 的难度曲线
 
@@ -54,37 +55,56 @@ Attention Maze 的每一关都只能靠**读权重**过关，位置和编号都�
 ## 技术特点
 
 - **零依赖 / 零构建**：没有 `package.json`、没有打包器、没有框架、没有 CDN、没有外部音频文件；
-  经典形态的全部美术都是代码画的，可选的 Whale-chan 皮肤用的是**仓库自带的本地图片**；
+  经典形态的全部美术都是代码画的，两套可选皮肤用的是**仓库自带的本地图片**（运行时零外部请求）；
 - **一份美术**：小鲸鱼像素素材只在 `shared/whale.js` 里存一份，Whale Runner / Token Fall / 大厅预览共用；
-- **一个角色开关**：`arcade.characterSkin` 全站共享 —— 在大厅切换 Classic Whale / Whale-chan，
+- **一个角色开关**：`arcade.characterSkin` 全站共享 —— 在大厅三态循环切换，
   四款游戏和大厅预览立刻一起换（加载失败自动退回经典形态）；
+- **按皮肤懒加载**：只下载当前皮肤需要的图，经典用户一张第三方素材都不会加载；
 - **一份文案**：全站词典在 `shared/i18n.js`，Canvas 里的文字也跟着语言实时切换；
 - **一个 Sound 开关**：`arcade.sound` 全站共享 —— 在任何一款游戏里静音，另外三款一起静音（自动兼容旧设置）；
 - **Retina 清晰**：Canvas 按 DPR（上限 3）设置背板分辨率，判定仍在固定逻辑坐标里做；
 - **先测后发**：GitHub Actions 先跑完整套测试，通过之后才部署 Pages。
 
-## 角色外观：Classic Whale / Whale-chan
+## 角色外观：Classic Whale / Animated Whale Girl / Pixel Whale Girl
 
-全站有两套角色外观，**默认是 Classic Whale**（老玩家升级后不会被突然换角色）：
+全站有三套角色外观，**默认是 Classic Whale**（老玩家升级后不会被突然换角色）：
 
 | 皮肤 | 外观 | 说明 |
 | --- | --- | --- |
 | `classic` | 代码绘制的像素 DeepSeek 小鲸鱼 | 默认；四款游戏的手感、判定盒完全按原样 |
-| `whalechan` | 第三方插画角色「鲸鱼娘」 | 可选皮肤，**只换外观**，不改变任何玩法数值 |
+| `yunyue` | **动画鲸鱼娘**（高清 Q 版插画，8 帧走路循环） | 可选皮肤，**只换外观**，不改变任何玩法数值 |
+| `pixel` | **像素鲸鱼娘**（原生 72×88 像素网格，无损 WebP） | 可选皮肤，**只换外观**，同样不动玩法数值 |
 
-- 在大厅顶部点 **🐳 经典鲸鱼 / 🐳 鲸鱼娘** 即可切换，四张卡片预览会立刻跟着换；
-- 选择存在 `localStorage: arcade.characterSkin`，四款游戏共用，不需要刷新页面；
-- 角色皮肤**只影响画面**：不碰最高分、Attention Maze 进度、音效开关和语言；
-- 图片加载失败 / 被拦截时会自动画回经典小鲸鱼，游戏照常运行。
+- 在大厅顶部点角色按钮即可**三态循环**：
+  🐳 经典鲸鱼 → 🐳 动画鲸鱼娘 → 🐳 像素鲸鱼娘 → 回到经典；
+  四张卡片预览会**立刻**跟着换，不需要刷新页面；
+- 选择存在 `localStorage: arcade.characterSkin`，四款游戏共用。旧版本存过的 `whalechan`
+  会自动迁移成 `yunyue`（用户当初主动选过「鲸鱼娘」，不该被退回经典），非法值一律回退 `classic`；
+- 角色皮肤**只影响画面**：不碰最高分、Attention Maze 进度、音效开关、语言和难度；
+- 素材**按皮肤懒加载**：用经典鲸鱼时一张第三方图都不下载；鼠标移到角色按钮上会顺手预热下一套；
+- 图片没加载完或加载失败时先继续画经典小鲸鱼，素材到位后自动重绘 —— 不白屏、不消失、不报错；
+- 动画帧由时间决定（`frame = floor(time / frameMs) % 帧数`），暂停 / 切标签页时和游戏世界一起冻结；
+- 插画皮肤打开 `imageSmoothing`、像素皮肤关闭它，并且每次画完都会把 Canvas 状态还原。
 
 角色的具体形态：
 
-- **Whale Runner**：站立 / 移动 / 跳跃 / 下潜各有对应姿态，脚底始终贴海床，判定盒完全不变；
-- **Context Snake**：只换**蛇头**那一格，身体仍然是 Context 像素块；DEEP THINK 时换成埋头工作的表情；
-- **Token Fall**：底部玩家换成鲸鱼娘，DEEP THINK 变成「埋头工作」，溢出抢救时变成慌张表情；
+- **Whale Runner**：地面状态播走路 / 跑动循环，跳跃用腾空姿态，下潜用低姿态，结束时用失败表情；
+  脚底始终贴海床，判定盒（`BOX` / `MID_BOTTOM` / `LOW_BOTTOM`）完全不变；
+- **Context Snake**：只换**蛇头**那一格（小头像），身体仍然是 Context 像素块；
+  DEEP THINK 时换成埋头工作的头像；格子尺寸与碰撞不变，朝左时水平镜像；
+- **Token Fall**：底部玩家换成鲸鱼娘 —— 左右移动播走路循环、停下回到待机，
+  DEEP THINK 是埋头工作，溢出抢救是慌张表情，结束时是失败表情；
 - **Attention Maze**：格子制，用的是裁好的小头像（视觉 34px，逻辑仍然只占 1 格），朝左时水平镜像。
 
-Whale-chan 素材来自开源仓库 [`Er1c0v0/dsh-whale-pet`](https://github.com/Er1c0v0/dsh-whale-pet)。
+两套素材都来自开源仓库，但**授权不同**，不要混为一谈：
+
+- **动画鲸鱼娘** — [`YunYueSama/codex-deepseek-pet`](https://github.com/YunYueSama/codex-deepseek-pet)，
+  授权是**大肥鱼项目署名许可 1.0**（自定义许可，**不是 MIT**）；
+- **像素鲸鱼娘** — [`chenthreegold/deepseek-whale-pet`](https://github.com/chenthreegold/deepseek-whale-pet)，授权是 **MIT**。
+
+来源文件、上游 commit、做过的改动与授权全文见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、
+[`assets/whale-yunyue/ATTRIBUTION.md`](assets/whale-yunyue/ATTRIBUTION.md)、
+[`assets/whale-pixel/ATTRIBUTION.md`](assets/whale-pixel/ATTRIBUTION.md) 和 `LICENSES/`。
 
 ## 本地运行
 
@@ -106,7 +126,7 @@ Whale-chan 素材来自开源仓库 [`Er1c0v0/dsh-whale-pet`](https://github.com
 bash test/run.sh          # 等价于 node test/run.mjs（会自动回退到 DSH 自带的 node）
 ```
 
-四款游戏共用一个无头测试环境（桩 DOM + 桩 Canvas，不需要浏览器），目前 **900+ 项**，覆盖玩法规则、
+四款游戏共用一个无头测试环境（桩 DOM + 桩 Canvas，不需要浏览器），目前 **1050+ 项**，覆盖玩法规则、
 Attention Maze 12 关的 **BFS 可解性验证**、多语言词表一致性、相对路径与 localStorage key 冲突、
 以及 v1.0 的结构约定（统一 Sound / 共享素材 / 关卡拆分 / CI 配置 / LICENSE）。
 细节见 [docs/testing.md](docs/testing.md)。
@@ -121,18 +141,21 @@ CI 里跑的就是这一条命令：测试不过，Pages 不会部署（见 `.gi
 ├── shared/                               全站共用
 │   ├── i18n.js                           中英词典 + 语言切换
 │   ├── audio.js                          Web Audio 音色 + 全站统一 Sound 开关
-│   ├── character.js                      角色皮肤（Classic / Whale-chan）+ 素材预加载与回退
+│   ├── character.js                      角色皮肤注册表（三套皮肤）+ 懒加载、动画时钟与回退
 │   └── whale.js                          DeepSeek 小鲸鱼像素素材（唯一一份）
 ├── games/
 │   ├── runner/                           Whale Runner
 │   ├── snake/                            Context Snake
 │   ├── token-fall/                       Token Fall
 │   └── attention-maze/                   Attention Maze（levels.js 关卡数据 + game.js 引擎）
-├── assets/whale-chan/                    Whale-chan 运行时素材（派生 WebP）+ ATTRIBUTION.md
+├── assets/whale-yunyue/                  动画鲸鱼娘运行时素材（19 张派生 WebP）+ ATTRIBUTION.md
+├── assets/whale-pixel/                   像素鲸鱼娘运行时素材（20 张无损 WebP）+ ATTRIBUTION.md
+├── tools/derive-character-assets.py      角色素材派生脚本（dev-only，运行时不用）
 ├── test/                                 无头测试（桩 DOM + 桩 Canvas）
 ├── docs/                                 architecture.md · testing.md（各有 .en.md 英文版）
-├── LICENSES/CC-BY-4.0.txt                鲸鱼娘素材的授权全文（不是 MIT）
-├── THIRD_PARTY_NOTICES.md                第三方素材声明（MIT 代码 / CC BY 4.0 美术）
+├── LICENSES/YUNYUE-WHALE-PET-LICENSE.txt 动画鲸鱼娘的授权全文（自定义许可，不是 MIT）
+├── LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt 像素鲸鱼娘的 MIT 全文
+├── THIRD_PARTY_NOTICES.md                第三方素材声明（代码 MIT / 两套素材各自的授权）
 ├── LICENSE                               MIT（**只覆盖代码**）
 ├── README.md / README.en.md              项目说明（中文 / English）
 └── .github/workflows/pages.yml           先测试、再部署 GitHub Pages
@@ -150,7 +173,9 @@ CI 里跑的就是这一条命令：测试不过，Pages 不会部署（见 `.gi
 ## 声明与 License
 
 - **代码**以 **MIT License** 发布，见 [LICENSE](LICENSE)。
-- **Whale-chan 角色素材**来自开源仓库 <https://github.com/Er1c0v0/dsh-whale-pet>。
+- **动画鲸鱼娘素材**来自 <https://github.com/YunYueSama/codex-deepseek-pet>
+  （大肥鱼项目署名许可 1.0，**不是 MIT**）；**像素鲸鱼娘素材**来自
+  <https://github.com/chenthreegold/deepseek-whale-pet>（MIT）。两套素材都不属于本项目的 MIT 授权。
 - **DeepSeek 名称、Logo、相关图形与品牌资产不包含在 MIT 授权内**，其权利归各自权利人所有；
   小鲸鱼像素造型来自 DeepSeek 官方 logo，本项目只做同人致敬。
 - 这是一个**非官方同人项目**，与 DeepSeek 官方无关联；Whale Runner 玩法致敬 Chrome 断网小恐龙。

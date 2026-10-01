@@ -13,7 +13,7 @@
  *   难度来自「资源管理 + 风险选择」，而不是单纯把下落速度拉满。
  *
  * 原生 Canvas 2D，零依赖：经典形态下小鲸鱼 / 掉落物 / 背景 / HUD 全部代码绘制；
- * 可选的 Whale-chan 皮肤只替换底部玩家的贴图（第三方素材，CC BY 4.0）。
+ * 可选的图片皮肤只替换底部玩家的贴图（第三方素材，各按各的授权）。
  * 与另外两款游戏共用 shared/i18n.js（文案）与 shared/audio.js（音效）。
  * 逻辑坐标恒定 W×H，DPR 只改画布分辨率，不参与任何判定。
  * ============================================================ */
@@ -957,24 +957,26 @@
     }
   }
 
-  /* ================= 角色皮肤（Classic Whale / Whale-chan） =================
-   * Whale-chan 只是底部玩家的贴图：PLAYER_TOP / PLAYER_HIT / 移动速度与判定
-   * 全部不动，所以接物手感、漏接判定和经典皮肤完全一致。 */
+  /* ================= 角色皮肤（经典鲸鱼 / 动画鲸鱼娘 / 像素鲸鱼娘） =================
+   * 图片皮肤只是底部玩家的贴图：PLAYER_TOP / PLAYER_HIT / 移动速度与判定
+   * 全部不动，所以接物手感、漏接判定和经典皮肤完全一致。
+   * 动画时间用 game.player.wobbleMs —— 它只在 step() 里累加，暂停会一起冻结。 */
   var ArcadeCharacter = window.ArcadeCharacter || null;
   var CHAN_H = 78;                      // 站立视觉高度（逻辑像素）
-  var CHAN_W = CHAN_H * (300 / 340);    // 素材画布比例
 
-  function chanFrame() {
+  /* 游戏只说语义状态；素材文件名与画布比例都由 shared/character.js 决定 */
+  function characterState() {
     if (game.state === 'over') return 'blocked';
     if (game.overflowActive) return 'startle';    // 溢出抢救：慌张
     if (game.thinkMs > 0) return 'think';         // DEEP THINK：埋头工作
-    if (inputDir() !== 0 || Math.abs(game.player.vx) > 30) return 'move';
-    return 'idle';
+    if (inputDir() !== 0 || Math.abs(game.player.vx) > 30) return 'walk';   // 移动中：走路循环
+    return 'idle';                                // 站住：回到待机
   }
-  function chanBox() {
+  function characterBox(state) {
+    var m = ArcadeCharacter.measure(state, CHAN_H);
     var cx = game.player.x + PLAYER_W / 2;
     var bottom = PLAYER_TOP + PLAYER_H;
-    return { x: Math.round(cx - CHAN_W / 2), y: Math.round(bottom - CHAN_H), w: CHAN_W, h: CHAN_H };
+    return { x: Math.round(cx - m.w / 2), y: Math.round(bottom - m.h), w: m.w, h: m.h };
   }
 
   /* ================= 绘制 ================= */
@@ -1109,9 +1111,9 @@
     var x = Math.round(game.player.x);
     var y = PLAYER_TOP;
     var think = game.thinkMs > 0;
-    var chanName = ArcadeCharacter && ArcadeCharacter.isWhaleChan() ? chanFrame() : null;
-    var chan = !!(chanName && ArcadeCharacter.ready(chanName));
-    var box = chan ? chanBox() : { x: x, y: y, w: PLAYER_W, h: PLAYER_H };
+    var charState = ArcadeCharacter ? characterState() : null;
+    var chan = !!(charState && ArcadeCharacter.ready(charState));
+    var box = chan ? characterBox(charState) : { x: x, y: y, w: PLAYER_W, h: PLAYER_H };
 
     if (think) {
       ctx.globalAlpha = 0.18;
@@ -1133,9 +1135,10 @@
     }
     ctx.globalAlpha = 1;
 
-    /* Whale-chan 皮肤：画得出来就直接返回 */
-    /* 素材本体朝左：面朝右 = 镜像；面朝左 = 原图。朝向由 game.face 记住，停下不会乱翻。 */
-    if (chan && ArcadeCharacter.draw(ctx, chanName, box.x, box.y, box.w, box.h, { flip: game.face > 0 })) return;
+    /* 图片皮肤：画得出来就直接返回。
+     * 素材本体都朝右：面朝左 = 镜像，面朝右 = 原图。朝向由 game.face 记住，停下不会乱翻。 */
+    if (chan && ArcadeCharacter.draw(ctx, charState, box.x, box.y, box.w, box.h,
+          { time: game.player.wobbleMs, flip: game.face < 0 })) return;
 
     /* 摆尾两帧，110ms 一换；X 主色 / o 肚皮（和 Whale Runner 同一套配色） */
     var frame = Math.floor(game.player.wobbleMs / 110) % 2 === 0 ? WHALE_A : WHALE_B;

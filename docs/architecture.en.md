@@ -9,8 +9,9 @@ for the test story see [docs/testing.en.md](testing.en.md).
 
 - **No dependencies, no build, no runtime external requests**: all four games are plain HTML + CSS + JavaScript
   (Canvas 2D). In classic mode every piece of art (whale, mazes, falling tokens, particles, UI) is drawn with
-  `fillRect` / `fillText` — no external files at all. The optional **Whale-chan** skin loads third-party WebP files
-  **shipped inside this repo** (`assets/whale-chan/`, CC BY 4.0) — no CDN, no third-party domain at runtime.
+  `fillRect` / `fillText` — no external files at all. The two optional **image character skins** load third-party WebP
+  files **shipped inside this repo** (`assets/whale-yunyue/`, `assets/whale-pixel/`, each under its own licence) —
+  no CDN, no third-party domain at runtime, and they are loaded **lazily per skin**.
 - **No bundler, no framework, no ES modules**: each page loads plain `<script src>` tags in order, so "open the HTML
   file directly", "any static server" and "a GitHub Pages sub-path" all behave identically.
 - **Gameplay is not shared across games**: `shared/` only holds things that are genuinely common (copy, the sound
@@ -23,7 +24,7 @@ for the test story see [docs/testing.en.md](testing.en.md).
 | `shared/i18n.js` | The single dictionary (zh / en) plus language detection and switching (`arcade.lang`, with legacy `whaleRunner.lang` support). Pages use `data-i18n` attributes or `I18N.t('key')`; canvas text goes through `I18N.t` too, so switching language never needs a reload. |
 | `shared/audio.js` | Web Audio helpers **and the global Sound switch**. `ArcadeAudio.tone({...})` synthesises tones on the fly (no audio files); `isEnabled(legacyKey)` / `setEnabled(on)` / `toggle()` read and write `arcade.sound`, and `tone()` stays silent while muted. |
 | `shared/whale.js` | The **single copy** of the DeepSeek whale pixel art: `NORMAL_A` / `NORMAL_B` (24×18 swim frames), `DIVE_A` / `DIVE_B` (24×13 dive frames) plus `width / height / mirror / rotate` helpers. Whale Runner, Token Fall and the lobby previews all read it. |
-| `shared/character.js` | The global character skin **Classic Whale / Whale-chan**: reads and writes `arcade.characterSkin`, preloads the nine Whale-chan WebP files once, broadcasts `onChange`, and exposes `draw()`, which returns `false` when it cannot draw so the caller can fall back to the classic whale. |
+| `shared/character.js` | The global character-skin registry **Classic / Animated Whale Girl / Pixel Whale Girl**: reads, validates and migrates `arcade.characterSkin`, lazily loads and caches the WebP files per skin, derives animation frames from elapsed time, broadcasts `onChange`, and exposes `draw()`, which returns `false` when it cannot draw so the caller can fall back to the classic whale. Games only speak semantic states — never asset filenames. |
 
 **Sound precedence (decided on first read)**: `arcade.sound` > the current game's own legacy key (`whaleRunner.sound` /
 `arcade.snake.sound` / `arcade.tokenFall.sound` / `arcade.attentionMaze.sound`) > default `on`.
@@ -45,9 +46,10 @@ the current game's own key, so one game's mute state cannot leak into another. W
 `shared/whale.js` and `shared/character.js` must come before the game script, and Attention Maze's `levels.js` must
 come before `game.js`. A missing file never crashes the game; it logs a clear warning to the console instead.
 
-> `shared/character.js` derives the asset directory from **its own script URL** (`shared/character.js` →
-> `../assets/whale-chan/`), so the site root, a `/DeepSeek-Arcade/` sub-path and `file://` all work without any
-> configuration, and a root-absolute `/assets/...` path can never appear.
+> `shared/character.js` derives the asset **root** from its own script URL and then appends the per-skin
+> sub-directory (`shared/character.js` → `../assets/whale-yunyue/` or `../assets/whale-pixel/`), so the site root,
+> a `/DeepSeek-Arcade/` sub-path and `file://` all work without any configuration, and a root-absolute
+> `/assets/...` path can never appear.
 
 ## Canvas & DPR
 
@@ -133,39 +135,109 @@ repository root to <https://apxs114514.github.io/DeepSeek-Arcade/>. The reposito
 - **Copy**: add keys to `DICT.zh` / `DICT.en` in `shared/i18n.js` (both sides are required and tested) and use `data-i18n` in HTML.
 - After any change, run `bash test/run.sh`.
 
-## Character skins (Classic Whale / Whale-chan)
+## Character skins (Classic Whale / Animated Whale Girl / Pixel Whale Girl)
 
-Two character appearances, managed centrally by `shared/character.js`, and **both are purely cosmetic**:
+Three character appearances, managed centrally by `shared/character.js` through a **skin registry**, and **all three are
+purely cosmetic**:
 
 | Skin | Assets | Notes |
 | --- | --- | --- |
 | `classic` (default) | the character sprite in `shared/whale.js` plus each game's own pixel sprites | every hitbox, difficulty and feel value stays exactly as before |
-| `whalechan` | `assets/whale-chan/*.webp` (derived WebP of third-party CC BY 4.0 artwork) | a texture swap — still no gameplay value changes |
+| `yunyue` | `assets/whale-yunyue/*.webp` (19 derived WebP, shared 192×208 canvas) | a texture swap — still no gameplay value changes |
+| `pixel` | `assets/whale-pixel/*.webp` (20 lossless WebP, native 72×88 pixel grid) | a texture swap — still no gameplay value changes |
 
-- **State**: `localStorage: arcade.characterSkin`; only `classic` / `whalechan` are accepted and anything else falls
-  back to `classic`. When the key is missing the default is **classic**, so existing players are never re-skinned silently.
-- **Preload**: the module creates the nine `Image` objects exactly once (~180KB total, all relative paths) and only ever
-  draws from that cache — never `new Image()` inside a render loop.
-- **Fallback**: `ArcadeCharacter.draw()` returns `false` when the skin is off, the asset is still loading, or the file
-  404s / fails to decode. The caller then draws the classic whale, so a broken image can never make the character
-  disappear, throw, or stall the Canvas.
-- **Smoothing**: Whale-chan is an illustration, not pixel art. `draw()` turns `imageSmoothingEnabled` on for the
-  duration of the call and restores the previous value, so pixel objects on the same Canvas stay crisp.
-- **Visual vs collision**: image size never participates in collision. Whale Runner's `BOX`, Token Fall's `PLAYER_HIT`,
-  Snake's grid and Attention Maze's `CELL` all keep their original values; the asset only decides where and how large
-  the texture is painted.
+### Registry: games only speak semantic states
 
-### Third-party artwork licence (important)
+```js
+var SKINS = {
+  classic: { image: false, states: null },
+  yunyue:  { smoothing: true,  dir: 'assets/whale-yunyue/', states: { idle: {...}, walk: {...}, ... } },
+  pixel:   { smoothing: false, dir: 'assets/whale-pixel/',  states: { ... } }
+};
+// one state = { frames, frameMs, ratio, order? }
+//   frames  the de-duplicated filenames
+//   order   optional frame-index sequence, used when the same picture appears more than
+//           once in a loop (the 8-frame Pixel run is only 3 distinct poses upstream)
+```
 
-The images under `assets/whale-chan/` are **not** this project's work and are **not covered by the MIT license**:
+No asset filename ever appears in game code — games express `idle / walk / jump / dive / think / startle / blocked /
+head / headThink`. Public API: `getSkin()` / `setSkin()` / `cycleSkin()` / `getSkinInfo()` /
+`measure(state, h)` / `ready(state)` / `frameIndex(state, time)` /
+`draw(ctx, state, x, y, w, h, { time, flip, alpha })` / `onChange(fn)` / `preloadSkin(id)` / `preloadNext()`
+(tests also use `files(skin)` to cross-check the shipped assets).
 
-- Author / copyright holder: **Er1c0v0**; source: the `character/` directory of
-  <https://github.com/Er1c0v0/dsh-whale-pet>;
-- Licence: **CC BY 4.0** (full text in `LICENSES/CC-BY-4.0.txt`);
-- Only **derived WebP** files are shipped (edge-connected background removal → alpha feathering → cropping → uniform
-  rescaling → WebP q90); the original upstream PNGs are not redistributed. Every source file, its upstream SHA-256
-  and the modifications are recorded in `assets/whale-chan/ATTRIBUTION.md`;
-- The root `LICENSE` is MIT and covers the **code only**; see `THIRD_PARTY_NOTICES.md`.
+### State and migration
+
+- `localStorage: arcade.characterSkin`; only `classic` / `yunyue` / `pixel` are accepted.
+  When the key is missing the default is **classic**, so existing players are never re-skinned silently.
+- A legacy `whalechan` value is **migrated to `yunyue` and written back immediately** — those players had actively
+  picked a whale girl and must not fall back to the classic whale — but the old artwork itself is gone for good.
+- Anything else falls back to `classic`, without writing to storage.
+
+### Animation frame clock
+
+```js
+frame = Math.floor(animationTime / frameMs) % frameCount;
+```
+
+The frame index is a **pure function of `animationTime`**; the module keeps no frame counter of its own. Therefore:
+
+- 60 / 120 / 144Hz screens, dropped frames and repeated renders in one frame cannot change the animation speed;
+- `animationTime` is supplied by the game from a clock that only advances when gameplay advances (Whale Runner's
+  `game.animMs` only accumulates while `running`; Token Fall uses `game.player.wobbleMs`), so pausing, switching
+  tabs or reaching Game Over freezes the character animation together with the game world;
+- restarting a run resets the clock (`startRun()` sets `game.animMs = 0`);
+- Snake / Maze avatars are single-frame states, so the time argument is formal only.
+
+### Lazy loading and caching
+
+- On module init **only the current skin is loaded**: a `classic` player downloads no third-party image at all;
+- Switching skins (or calling `preloadSkin(id)`) issues that skin's requests; each filename maps to exactly one cached
+  `Image`, so switching away and back never re-downloads;
+- The lobby skin button's `pointerenter` / `focus` / `pointerdown` call `preloadNext()` to warm up the next skin,
+  so the actual switch is usually instant;
+- A single 404 only makes that one frame unavailable (drawing falls back to frame 0, then to any available frame);
+  only a full failure falls back to the classic whale.
+
+### Fallback and smoothing
+
+- `draw()` returns `false` when the skin is off, the asset is still loading, or everything failed to load. The caller
+  then draws the classic whale, so a broken image can never make the character disappear, throw, or stall the Canvas.
+- **Smoothing**: `yunyue` is an illustration, so `draw()` turns `imageSmoothingEnabled` on for the duration of the
+  call; `pixel` is pixel art, so it turns it off. Both restore `imageSmoothingEnabled` and `globalAlpha` afterwards,
+  keeping pixel objects on the same Canvas crisp.
+- **Visual vs collision**: image size never participates in collision. Whale Runner's `BOX` / `MID_BOTTOM` /
+  `LOW_BOTTOM`, Token Fall's `PLAYER_TOP` / `PLAYER_HIT` / `PLAYER_SPEED` / `PLAYER_ACCEL`, Snake's `CELL` and
+  Attention Maze's `CELL` / `nodeAt` / `MOVES` all keep their original values; the skin only decides where and how
+  large the texture is painted (`measure(state, h)` derives the width from the asset's own aspect ratio).
+
+### Semantic state per game
+
+| Game | `classic` | `yunyue` / `pixel` |
+| --- | --- | --- |
+| Whale Runner | two-frame tail-wag sprite / two dive frames | ground `walk`, airborne `jump`, `dive` when crouching, `blocked` on game over (never mirrored — the artwork faces right) |
+| Token Fall | two-frame whale sprite | `walk` while moving, `idle` when stopped, `think` during DEEP THINK, `startle` on overflow, `blocked` on game over (mirrored when facing left) |
+| Context Snake | top-down whale rotated in 90° steps | the head cell uses `head` / `headThink` (never rotated, mirrored when moving left); the body stays Context pixels |
+| Attention Maze | top-down whale | the player cell uses `head` (34px visually, still exactly 1 logical cell, mirrored when moving left) |
+
+### Third-party artwork licences (important)
+
+Neither artwork is this project's work and **neither is covered by the root MIT licence** — and they are
+**licensed differently**, so do not conflate them:
+
+| Skin | Source | Licence |
+| --- | --- | --- |
+| `yunyue` | <https://github.com/YunYueSama/codex-deepseek-pet> | **大肥鱼项目署名许可 1.0** (a custom attribution licence, **not MIT**); full text in `LICENSES/YUNYUE-WHALE-PET-LICENSE.txt` |
+| `pixel` | <https://github.com/chenthreegold/deepseek-whale-pet> | **MIT** (a separate grant, held by DeepSeek Whale Pet Contributors); full text in `LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt` |
+
+- Only **derived** files are shipped (frame selection, cropping, uniform rescaling, bottom alignment, alpha-edge
+  cleanup, re-encoding); the original upstream atlases are not redistributed, and none of the unverified community
+  reference art under `codex-deepseek-pet`'s `design/` directory is used;
+- Every source file, upstream commit and modification is recorded in `assets/whale-yunyue/ATTRIBUTION.md` and
+  `assets/whale-pixel/ATTRIBUTION.md`; the derivation is reproducible via
+  `tools/derive-character-assets.py` (dev-only — no Python is needed at runtime);
+- The summary lives in `THIRD_PARTY_NOTICES.md`: the root `LICENSE` is MIT and covers the **code and original
+  content only**.
 
 ## How each game is implemented
 
@@ -386,6 +458,7 @@ the rules). Each stage is a **LAYER**, there are 12 hand-designed ones, and the 
 ├── shared/                               真正共用的部分 / shared by every page
 │   ├── i18n.js                           zh/en dictionary + language switching
 │   ├── audio.js                          Web Audio tones + global Sound switch
+│   ├── character.js                      character-skin registry (three skins) + lazy load / frame clock / fallback
 │   ├── whale.js                          DeepSeek whale pixel data (single copy)
 │   └── arcade.css                        design tokens + page shell (body / card / buttons / back link)
 ├── games/
@@ -404,8 +477,15 @@ the rules). Each stage is a **LAYER**, there are 12 hand-designed ones, and the 
 │   ├── engineering.test.mjs              v1.0 contracts: CI, global sound, shared assets, level split
 │   ├── i18n.test.mjs                     zh/en switching on five pages + dictionary parity
 │   └── paths.test.mjs                    dead links / absolute paths / localStorage key collisions
+├── assets/
+│   ├── whale-yunyue/                     Animated Whale Girl runtime assets (19 derived WebP) + ATTRIBUTION.md
+│   └── whale-pixel/                      Pixel Whale Girl runtime assets (20 lossless WebP) + ATTRIBUTION.md
+├── tools/derive-character-assets.py      character asset derivation script (dev-only, not used at runtime)
+├── LICENSES/YUNYUE-WHALE-PET-LICENSE.txt full licence text for the Animated Whale Girl (custom, not MIT)
+├── LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt full MIT text for the Pixel Whale Girl
+├── THIRD_PARTY_NOTICES.md                third-party notices (MIT code / each artwork under its own licence)
 ├── docs/                                 architecture.md · testing.md (+ .en.md)
-├── LICENSE                               MIT (code only)
+├── LICENSE                               MIT (code and original content)
 ├── README.md / README.en.md              project overview (zh / en)
 └── .github/workflows/pages.yml           test first, then deploy GitHub Pages
 ```

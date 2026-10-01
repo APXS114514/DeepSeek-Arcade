@@ -8,7 +8,7 @@
  * 没有生命值、没有死亡：走错只记 MISTAKE，压力来自记忆与评分。
  *
  * 原生 Canvas 2D，零依赖：经典形态下迷宫 / 小鲸鱼 / 节点 / 注意力连线 / HUD 全部 fillRect；
- * 可选的 Whale-chan 皮肤只把玩家那一格换成一个裁好的小头像（第三方素材，CC BY 4.0）。
+ * 可选的图片皮肤只把玩家那一格换成一个裁好的小头像（第三方素材，各按各的授权）。
  * 与另外三款游戏共用 shared/i18n.js（文案）与 shared/audio.js（音效）。
  * 逻辑坐标恒定 W×H，DPR 只改画布分辨率，不参与任何判定。
  * ============================================================ */
@@ -1166,16 +1166,16 @@
     var px = Math.round(cx2px(game.player.px));
     var py = Math.round(cy2px(game.player.py));
 
-    /* Whale-chan 皮肤：一格 28px 塞不下立绘，这里用一张裁好的小头像，
+    /* 图片皮肤：一格 28px 塞不下立绘，这里用一张裁好的小头像，
      * 视觉上略大于格子（34px）但逻辑上仍然只占 1 格 —— 碰撞与移动规则完全不变。
      * 不做四方向新图：朝左水平镜像，上下沿用同一张正脸。 */
-    if (ArcadeCharacter && ArcadeCharacter.isWhaleChan()) {
+    if (ArcadeCharacter) {
       var size = 34;
       var bob2 = game.reducedMotion ? 0 : Math.round(Math.sin(game.now / 160));
       var ccx = cx2px(game.player.px) + CELL / 2;
       var ccy = cy2px(game.player.py) + CELL / 2 + bob2;
       if (ArcadeCharacter.draw(ctx, 'head', ccx - size / 2, ccy - size / 2, size, size,
-            { flip: game.player.dx > 0 })) {
+            { time: game.now, flip: game.player.dx < 0 })) {
         return;
       }
     }

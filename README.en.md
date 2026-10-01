@@ -4,7 +4,8 @@
 Whale Runner · Context Snake · Token Fall · Attention Maze.
 Pure HTML + CSS + vanilla JavaScript (Canvas 2D) — **no dependencies, no build step, no backend, no runtime external requests**.
 In classic mode every graphic (whale, mazes, drops, particles, UI) is drawn by Canvas code;
-the optional **Whale-chan** skin uses third-party artwork shipped in this repo (source below).
+two optional character skins (Animated Whale Girl / Pixel Whale Girl) use third-party artwork
+shipped in this repo (sources and licences below).
 
 **English** · [中文](README.md)
 
@@ -20,7 +21,8 @@ the optional **Whale-chan** skin uses third-party artwork shipped in this repo (
 | 🐳 **Token Fall** | Catcher + resource management | Catch Token · Manage context: the higher the LOAD, the rarer COMPRESS gets and the deadlier NOISE becomes — plus the high-score, high-risk HEAVY TOKEN |
 | 🐳 **Attention Maze** | Memory puzzle | Remember · Attend · Escape (12 hand-made layers) |
 
-All four share the same DeepSeek whale, the same zh/en bilingual UI, the same sound switch and the same pixel style.
+All four share the same set of character skins (Classic Whale / Animated Whale Girl / Pixel Whale Girl, swappable at
+any time), the same zh/en bilingual UI, the same sound switch and the same pixel style.
 
 ### Token Fall's difficulty curve
 
@@ -56,38 +58,67 @@ anything away:
 ## Technical highlights
 
 - **No dependencies / no build**: no `package.json`, no bundler, no framework, no CDN, no external audio files;
-  classic mode draws all of its art in code, and the optional Whale-chan skin uses images **shipped in this repo**;
+  classic mode draws all of its art in code, and the two optional skins use images **shipped in this repo** (zero runtime external requests);
 - **One copy of the art**: the whale sprite lives only in `shared/whale.js` — Whale Runner, Token Fall and the lobby previews all read it;
-- **One character switch**: `arcade.characterSkin` is global — pick Classic Whale or Whale-chan in the lobby and all four games
+- **One character switch**: `arcade.characterSkin` is global — cycle it in the lobby and all four games
   plus the lobby previews switch at once (a failed image load falls back to the classic whale);
+- **Lazy, per-skin loading**: only the current skin's images are downloaded — a Classic Whale player never fetches a
+  single third-party asset;
 - **One dictionary**: all copy lives in `shared/i18n.js`, and canvas text follows the language instantly;
 - **One sound switch**: `arcade.sound` is global — mute in any game and the other three go quiet too (old per-game settings are migrated automatically);
 - **Crisp on Retina**: canvases size their backing store by DPR (capped at 3) while all collision stays in fixed logical coordinates;
 - **Test before deploy**: GitHub Actions runs the full test suite first and only deploys Pages when it passes.
 
-## Character skin: Classic Whale / Whale-chan
+## Character skin: Classic Whale / Animated Whale Girl / Pixel Whale Girl
 
-The arcade ships two character appearances, and **Classic Whale is the default** (existing players are never
+The arcade ships three character appearances, and **Classic Whale is the default** (existing players are never
 silently re-skinned):
 
 | Skin | Appearance | Notes |
 | --- | --- | --- |
 | `classic` | the code-drawn pixel DeepSeek whale | default; every hitbox and feel value stays exactly as before |
-| `whalechan` | third-party illustrated character "Whale-chan" | optional, **visual only** — no gameplay values change |
+| `yunyue` | **Animated Whale Girl** — high-res chibi illustration with an 8-frame walk cycle | optional, **visual only** — no gameplay values change |
+| `pixel` | **Pixel Whale Girl** — native 72×88 pixel grid, lossless WebP | optional, **visual only** — no gameplay values change |
 
-- Toggle it with the **🐳 Classic / 🐳 Whale-chan** button at the top of the lobby; the four card previews update instantly;
-- The choice is stored in `localStorage: arcade.characterSkin` and shared by all four games — no page reload needed;
-- The skin is **cosmetic only**: high scores, Attention Maze progress, the sound switch and the language are untouched;
-- If an image fails to load or is blocked, the game draws the classic whale instead and keeps running.
+- The lobby button **cycles through three states**:
+  🐳 Classic Whale → 🐳 Animated Whale Girl → 🐳 Pixel Whale Girl → back to Classic. The four card previews update
+  instantly, with no page reload;
+- The choice is stored in `localStorage: arcade.characterSkin` and shared by all four games. A legacy `whalechan`
+  value is migrated to `yunyue` (those players had actively picked a whale girl and must not silently fall back to
+  the classic whale); anything invalid falls back to `classic`;
+- The skin is **cosmetic only**: high scores, Attention Maze progress, the sound switch, the language and the
+  difficulty are untouched;
+- Assets are **lazily loaded per skin**: a Classic Whale player downloads no third-party image at all. Hovering the
+  skin button warms up the next skin in the background;
+- While assets are missing or fail to load the game keeps drawing the classic whale and switches over automatically
+  once they arrive — no blank screen, no vanished character, no errors;
+- Animation frames are a pure function of time (`frame = floor(time / frameMs) % frameCount`), so they freeze together
+  with the game world when you pause or switch tabs;
+- Illustrated skins turn `imageSmoothingEnabled` on, the pixel skin turns it off, and the Canvas state is always
+  restored after each draw.
 
 Per game:
 
-- **Whale Runner**: stand / run / jump / dive poses, feet always on the seabed, hitbox untouched;
-- **Context Snake**: only the **head** cell is re-skinned — the body stays Context pixels; DEEP THINK shows the working pose;
-- **Token Fall**: the bottom player becomes Whale-chan; DEEP THINK shows her working, and the overflow rescue shows her startled;
+- **Whale Runner**: the ground state plays the walk/run cycle, jumping uses an airborne pose and diving a low pose,
+  and game over uses the failure pose; the feet always sit on the seabed and the hitboxes
+  (`BOX` / `MID_BOTTOM` / `LOW_BOTTOM`) are untouched;
+- **Context Snake**: only the **head** cell is re-skinned with a small avatar — the body stays Context pixels.
+  DEEP THINK shows the working avatar; the grid size and collision are unchanged, and it is mirrored when moving left;
+- **Token Fall**: the bottom player becomes the whale girl — left/right movement plays the walk cycle and stopping
+  returns to idle, DEEP THINK shows her working, the overflow rescue shows her startled and game over shows her defeated;
 - **Attention Maze**: a cropped head icon (34px visually, still exactly 1 logical cell), mirrored when moving left.
 
-The Whale-chan artwork comes from the open-source repository [`Er1c0v0/dsh-whale-pet`](https://github.com/Er1c0v0/dsh-whale-pet).
+Both artworks come from open-source repositories, but under **different licences** — do not conflate them:
+
+- **Animated Whale Girl** — [`YunYueSama/codex-deepseek-pet`](https://github.com/YunYueSama/codex-deepseek-pet),
+  licensed under **大肥鱼项目署名许可 1.0** (a custom attribution licence, **not MIT**);
+- **Pixel Whale Girl** — [`chenthreegold/deepseek-whale-pet`](https://github.com/chenthreegold/deepseek-whale-pet),
+  licensed under the **MIT License**.
+
+Source files, upstream commits, the modifications made and the full licence texts live in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md),
+[`assets/whale-yunyue/ATTRIBUTION.md`](assets/whale-yunyue/ATTRIBUTION.md),
+[`assets/whale-pixel/ATTRIBUTION.md`](assets/whale-pixel/ATTRIBUTION.md) and `LICENSES/`.
 
 ## Run locally
 
@@ -109,7 +140,7 @@ Either:
 bash test/run.sh          # same as node test/run.mjs
 ```
 
-All four games share one headless test harness (stub DOM + stub Canvas, no browser needed). 900+ assertions cover
+All four games share one headless test harness (stub DOM + stub Canvas, no browser needed). 1050+ assertions cover
 gameplay rules, a **BFS solvability check for all 12 Attention Maze layers**, i18n dictionary parity, relative paths
 and localStorage key collisions, plus the v1.0 structural contracts (global sound, shared assets, level data split,
 CI config, LICENSE). Details in [docs/testing.en.md](docs/testing.en.md).
@@ -124,6 +155,7 @@ CI runs exactly this command: if the tests fail, Pages is not deployed (see `.gi
 ├── shared/                               Shared by every page
 │   ├── i18n.js                           zh/en dictionary + language switching
 │   ├── audio.js                          Web Audio tones + the global Sound switch
+│   ├── character.js                      Character-skin registry (three skins) + lazy loading, frame clock, fallback
 │   ├── whale.js                          The DeepSeek whale pixel data (single copy)
 │   └── arcade.css                        Design tokens + page shell
 ├── games/
@@ -131,11 +163,14 @@ CI runs exactly this command: if the tests fail, Pages is not deployed (see `.gi
 │   ├── snake/                            Context Snake
 │   ├── token-fall/                       Token Fall
 │   └── attention-maze/                   Attention Maze (levels.js data + game.js engine)
-├── assets/whale-chan/                    Whale-chan runtime assets (derived WebP) + ATTRIBUTION.md
+├── assets/whale-yunyue/                  Animated Whale Girl runtime assets (19 derived WebP) + ATTRIBUTION.md
+├── assets/whale-pixel/                   Pixel Whale Girl runtime assets (20 lossless WebP) + ATTRIBUTION.md
+├── tools/derive-character-assets.py      Asset derivation script (dev-only, not used at runtime)
 ├── test/                                 Headless tests (stub DOM + stub Canvas)
 ├── docs/                                 architecture.md · testing.md (+ .en.md)
-├── LICENSES/CC-BY-4.0.txt                Full licence text for the Whale-chan artwork (not MIT)
-├── THIRD_PARTY_NOTICES.md                Third-party notices (MIT code / CC BY 4.0 artwork)
+├── LICENSES/YUNYUE-WHALE-PET-LICENSE.txt Full licence text for the Animated Whale Girl (custom, not MIT)
+├── LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt Full MIT text for the Pixel Whale Girl
+├── THIRD_PARTY_NOTICES.md                Third-party notices (MIT code / each artwork under its own licence)
 ├── LICENSE                               MIT (**code only**)
 ├── README.md / README.en.md              Project overview (zh / en)
 └── .github/workflows/pages.yml           Test first, then deploy to GitHub Pages
@@ -151,8 +186,9 @@ CI runs exactly this command: if the tests fail, Pages is not deployed (see `.gi
 ## Notice & License
 
 - **The code** is released under the **MIT License** — see [LICENSE](LICENSE).
-- **The Whale-chan character artwork** comes from the open-source repository
-  <https://github.com/Er1c0v0/dsh-whale-pet>.
+- **The Animated Whale Girl artwork** comes from <https://github.com/YunYueSama/codex-deepseek-pet>
+  (大肥鱼项目署名许可 1.0 — **not MIT**); **the Pixel Whale Girl artwork** comes from
+  <https://github.com/chenthreegold/deepseek-whale-pet> (MIT). Neither is covered by this project's MIT grant.
 - **The DeepSeek name, logo, related graphics and brand assets are NOT covered by the MIT license**; all rights remain
   with their respective owners. The whale pixel art is derived from the official DeepSeek logo, as a fan tribute.
 - This is an **unofficial fan project**, not affiliated with DeepSeek. Whale Runner's gameplay pays homage to

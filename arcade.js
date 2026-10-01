@@ -1,7 +1,10 @@
 /* ============================================================
  * DeepSeek Arcade — 大厅脚本
  * 只做三件事：把各游戏的本地最高分填进卡片；画卡片预览图；
- * 提供全站角色外观（Classic Whale / Whale-chan）的切换按钮。
+ * 提供全站角色外观（经典鲸鱼 → 动画鲸鱼娘 → 像素鲸鱼娘）的三态循环按钮。
+ *
+ * 卡片预览复用 shared/character.js，不自己建素材加载系统：
+ * 当前皮肤是图片皮肤时，预览会跑一个很轻的 rAF 只用来推进角色动画时间。
  * 语言与切换由 shared/i18n.js 负责，角色状态由 shared/character.js 负责，
  * 这里都不重复实现。
  * ============================================================ */
@@ -69,46 +72,93 @@
   var soundBtn = document.getElementById('sound');
   if (soundBtn) soundBtn.addEventListener('click', toggleSound);
 
-  /* ---------------- 全站角色外观：按钮 + 让预览跟着皮肤走 ---------------- */
+  /* ---------------- 全站角色外观：三态循环按钮 + 让预览跟着皮肤走 ---------------- */
   var ArcadeCharacter = window.ArcadeCharacter || null;
 
-  function chanBody(ctx, cx, bottom, h) {
-    if (!ArcadeCharacter || !ArcadeCharacter.isWhaleChan()) return false;
-    var w = h * (300 / 340);                    // 身体素材统一 300×340 画布
-    return ArcadeCharacter.draw(ctx, 'idle', cx - w / 2, bottom - h, w, h);
+  /* 身体 / 头像的预览绘制。素材没就绪（或当前是经典皮肤）时返回 false，
+   * 调用方照常画代码像素小鲸鱼，所以切换过程中不会出现空窗。 */
+  function skinBody(ctx, state, cx, bottom, h, time) {
+    if (!ArcadeCharacter) return false;
+    var m = ArcadeCharacter.measure(state, h);
+    return ArcadeCharacter.draw(ctx, state, cx - m.w / 2, bottom - m.h, m.w, m.h, { time: time });
   }
-  function chanHead(ctx, cx, cy, size) {
-    if (!ArcadeCharacter || !ArcadeCharacter.isWhaleChan()) return false;
-    return ArcadeCharacter.draw(ctx, 'head', cx - size / 2, cy - size / 2, size, size);
+  function skinHead(ctx, state, cx, cy, size, time) {
+    if (!ArcadeCharacter) return false;
+    return ArcadeCharacter.draw(ctx, state, cx - size / 2, cy - size / 2, size, size, { time: time });
   }
 
   function updateSkinButton() {
     var btn = document.getElementById('skin');
     if (!btn) return;
     var I = window.I18N;
-    var chan = !!(ArcadeCharacter && ArcadeCharacter.isWhaleChan());
-    var text = chan ? 'skin.whalechan' : 'skin.classic';
-    btn.textContent = (I && I.t) ? I.t(text) : (chan ? '🐳 Whale-chan' : '🐳 Classic');
-    btn.setAttribute('aria-pressed', chan ? 'true' : 'false');
+    var info = ArcadeCharacter ? ArcadeCharacter.getSkinInfo() : null;
+    var key = (info && info.label) || 'skin.classic';
+    var fallback = ArcadeCharacter ? ArcadeCharacter.getSkin() : 'classic';
+    btn.textContent = (I && I.t) ? I.t(key) : fallback;
+    btn.setAttribute('aria-pressed', (ArcadeCharacter && ArcadeCharacter.getSkin() !== 'classic') ? 'true' : 'false');
     var aria = (I && I.t) ? I.t('skin.aria') : 'Switch character skin';
     btn.setAttribute('title', aria);
     btn.setAttribute('aria-label', aria);
   }
-  function toggleSkin() {
+  function cycleSkin() {
     if (!ArcadeCharacter) return;
-    ArcadeCharacter.toggleSkin();               // 立刻写入 arcade.characterSkin
+    ArcadeCharacter.cycleSkin();                // 立刻写入 arcade.characterSkin
     updateSkinButton();
-    drawPreviews();                             // 四张卡片预览同步换人，不需要刷新页面
+    drawPreviews(previewTime);                  // 四张卡片预览同步换人，不需要刷新页面
+    syncPreviewLoop();
     if (ArcadeAudio && ArcadeAudio.isEnabled()) {
       ArcadeAudio.tone({ type: 'triangle', from: 620, to: 980, ms: 110, gain: 0.04 });
     }
   }
   var skinBtn = document.getElementById('skin');
-  if (skinBtn) skinBtn.addEventListener('click', toggleSkin);
-  if (ArcadeCharacter) {
-    /* 换皮肤、以及 Whale-chan 素材加载完成后都重画一次 */
-    ArcadeCharacter.onChange(function () { updateSkinButton(); drawPreviews(); });
+  if (skinBtn) {
+    skinBtn.addEventListener('click', cycleSkin);
+    /* 用户把鼠标移到 / 键盘聚焦到按钮上时，顺手把「下一套」皮肤预加载了，
+     * 真的按下切换时通常已经 ready，不会先闪一下经典鲸鱼。 */
+    var warmNextSkin = function () { if (ArcadeCharacter) ArcadeCharacter.preloadNext(); };
+    skinBtn.addEventListener('pointerenter', warmNextSkin);
+    skinBtn.addEventListener('focus', warmNextSkin);
+    skinBtn.addEventListener('pointerdown', warmNextSkin);
   }
+  if (ArcadeCharacter) {
+    /* 换皮肤、以及当前皮肤素材加载完成后都重画一次 */
+    ArcadeCharacter.onChange(function () {
+      updateSkinButton();
+      drawPreviews(previewTime);
+      syncPreviewLoop();
+    });
+  }
+
+  /* ---------------- 预览动画时钟 ----------------
+   * 只有画得出来的图片皮肤才转 rAF；经典皮肤保持「画一次就完事」。
+   * dt 做了钳制，切走标签页回来不会一次性把角色动画追帧跑完。 */
+  var previewTime = 0;
+  var previewLast = 0;
+  var previewRaf = 0;
+
+  function previewAnimating() {
+    return !!(ArcadeCharacter && ArcadeCharacter.getSkinInfo().image && ArcadeCharacter.isActive());
+  }
+  function previewTick(now) {
+    previewRaf = 0;
+    if (!previewLast) previewLast = now;
+    var dt = now - previewLast;
+    previewLast = now;
+    if (dt > 250) dt = STEP_MS;
+    previewTime += Math.max(0, dt);
+    drawPreviews(previewTime);
+    if (previewAnimating() && typeof window.requestAnimationFrame === 'function') {
+      previewRaf = window.requestAnimationFrame(previewTick);
+    } else {
+      previewLast = 0;
+    }
+  }
+  function syncPreviewLoop() {
+    var want = previewAnimating() && typeof window.requestAnimationFrame === 'function';
+    if (want && !previewRaf) { previewLast = 0; previewRaf = window.requestAnimationFrame(previewTick); }
+    else if (!want && previewRaf) { window.cancelAnimationFrame(previewRaf); previewRaf = 0; }
+  }
+  var STEP_MS = 1000 / 60;
 
   /* ---------------- 卡片预览：经典形态是纯代码像素画 ---------------- */
   var URCHIN = [
@@ -152,18 +202,18 @@
     for (var i = 0; i < 6; i++) ctx.fillRect(10 + i * 38, h - 8, 12, 2);
   }
 
-  function previewRunner(ctx, w, h) {
+  function previewRunner(ctx, w, h, time) {
     seaBackground(ctx, w, h, '#08152c', '#2a4a86');
     var px = 2;
-    /* 素材没加载好 / 还是经典皮肤时 chanBody 返回 false，这里继续画像素小鲸鱼 */
-    if (!chanBody(ctx, 48, h - 14, 52)) {
+    /* 素材没加载好 / 还是经典皮肤时 skinBody 返回 false，这里继续画像素小鲸鱼 */
+    if (!skinBody(ctx, 'walk', 48, h - 14, 52, time)) {
       pixels(ctx, WHALE_LOGO, px, 24, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
     }
     pixels(ctx, URCHIN, 5, w - 78, h - 14 - 5 * 5, { X: '#8d6ce0' });
     pixels(ctx, URCHIN, 4, w - 44, h - 14 - 5 * 4, { X: '#e07a8e' });
   }
 
-  function previewSnake(ctx, w, h) {
+  function previewSnake(ctx, w, h, time) {
     seaBackground(ctx, w, h, '#08152c', '#16305c');
     var cell = 14;
     for (var i = 0; i < 7; i++) {
@@ -174,7 +224,7 @@
     }
     ctx.fillStyle = '#dbe7ff';
     ctx.fillRect(24 + 7 * cell + 2, 18 + 7 * 7 + 2, 5, 5);
-    if (!chanHead(ctx, 24 + 7 * cell + (cell - 3) / 2, 18 + 7 * 7 + (cell - 3) / 2, cell + 4)) {
+    if (!skinHead(ctx, 'head', 24 + 7 * cell + (cell - 3) / 2, 18 + 7 * 7 + (cell - 3) / 2, cell + 4, time)) {
       ctx.fillStyle = '#4d6bfe';
       ctx.fillRect(24 + 7 * cell, 18 + 7 * 7, cell - 3, cell - 3);
     }
@@ -185,10 +235,10 @@
   }
 
   /* TOKEN FALL：小鲸鱼 + 往下掉的 TOKEN / COMPRESS / NOISE */
-  function previewTokenFall(ctx, w, h) {
+  function previewTokenFall(ctx, w, h, time) {
     seaBackground(ctx, w, h, '#07132a', '#16305c');
     var px = 2;
-    if (!chanBody(ctx, 54, h - 14, 52)) {
+    if (!skinBody(ctx, 'idle', 54, h - 14, 52, time)) {
       pixels(ctx, WHALE_LOGO, px, 30, h - 14 - 18 * px, { X: '#4d6bfe', o: '#c9dcff' });
     }
     var items = [
@@ -229,7 +279,7 @@
   }
 
   /* ATTENTION MAZE：小鲸鱼 + QUERY/KEY 注意力连线（粗细亮度不同）+ 出口 */
-  function previewMaze(ctx, w, h) {
+  function previewMaze(ctx, w, h, time) {
     seaBackground(ctx, w, h, '#07102a', '#16305c');
     var walls = [[12, 26, 30, 9], [54, 26, 26, 9], [12, 50, 26, 9], [92, 52, 34, 9], [12, 78, 44, 9], [104, 26, 30, 9]];
     for (var i = 0; i < walls.length; i++) {
@@ -276,39 +326,53 @@
     ctx.fillRect(176, 30, 16, 16);
     ctx.fillStyle = '#07240f';
     ctx.fillRect(181, 34, 6, 8);
-    /* 小鲸鱼（和其他卡片同一只；换皮肤后变成 Whale-chan 的小头像） */
-    if (!chanHead(ctx, 176, h - 14 - 14, 30)) {
+    /* 小鲸鱼（和其他卡片同一只；换皮肤后变成鲸鱼娘的小头像） */
+    if (!skinHead(ctx, 'head', 176, h - 14 - 14, 30, time)) {
       pixels(ctx, WHALE_LOGO, 2, 152, h - 14 - 18 * 2, { X: '#4d6bfe', o: '#c9dcff' });
     }
   }
 
-  function setup(id, draw) {
+  var PREVIEW_W = 224;
+  var PREVIEW_H = 120;
+  var previewCtx = {};
+
+  function setup(id, draw, time) {
     var cv = document.getElementById(id);
     if (!cv || !cv.getContext) return;
-    var ctx = cv.getContext('2d');
-    if (!ctx) return;
-    var w = 224;
-    var h = 120;
-    var dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
-    cv.width = Math.round(w * dpr);
-    cv.height = Math.round(h * dpr);
-    if (ctx.scale) ctx.scale(dpr, dpr);
+    var ctx = previewCtx[id];
+    if (!ctx) {
+      ctx = cv.getContext('2d');
+      if (!ctx) return;
+      previewCtx[id] = ctx;
+      var dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+      cv.width = Math.round(PREVIEW_W * dpr);
+      cv.height = Math.round(PREVIEW_H * dpr);
+      if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      else if (ctx.scale) ctx.scale(dpr, dpr);
+    }
+    /* 预览底色 / 经典像素画保持硬边；角色模块会临时改再改回来 */
     ctx.imageSmoothingEnabled = false;
-    draw(ctx, w, h);
+    draw(ctx, PREVIEW_W, PREVIEW_H, time);
   }
 
-  function drawPreviews() {
-    setup('preview-runner', previewRunner);
-    setup('preview-snake', previewSnake);
-    setup('preview-tokenfall', previewTokenFall);
-    setup('preview-maze', previewMaze);
+  function drawPreviews(time) {
+    var t = typeof time === 'number' ? time : 0;
+    setup('preview-runner', previewRunner, t);
+    setup('preview-snake', previewSnake, t);
+    setup('preview-tokenfall', previewTokenFall, t);
+    setup('preview-maze', previewMaze, t);
   }
 
   paintHighScores();
-  drawPreviews();
+  drawPreviews(previewTime);
   updateSoundButton();
   updateSkinButton();
+  syncPreviewLoop();
   if (window.I18N && window.I18N.onChange) {
-    window.I18N.onChange(function () { drawPreviews(); updateSoundButton(); updateSkinButton(); });
+    window.I18N.onChange(function () {
+      drawPreviews(previewTime);
+      updateSoundButton();
+      updateSkinButton();
+    });
   }
 })();

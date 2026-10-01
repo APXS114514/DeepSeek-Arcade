@@ -139,22 +139,36 @@ export function harness(opts) {
   const log = { texts: [], rects: 0, warns: [], draws: [], scales: [] };
   const errors = [];
 
-  const makeCtx = () => ({
-    fillStyle: '#000', strokeStyle: '#000', globalAlpha: 1, font: '10px x',
-    textAlign: 'left', textBaseline: 'top', lineWidth: 1,
-    measureText: () => ({ width: 20 }),
-    createLinearGradient: () => ({ addColorStop() {} }),
-    scale: (x, y) => { log.scales.push([x, y]); },
-    save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {}, beginPath() {},
-    arc() {}, fill() {}, stroke() {}, closePath() {}, moveTo() {}, lineTo() {}, setLineDash() {},
-    fillRect: () => { log.rects++; },
-    fillText: (s) => { log.texts.push(String(s)); },
-    drawImage: (img, dx, dy, dw, dh) => { log.draws.push({ img, x: dx, y: dy, w: dw, h: dh }); },
-  });
+  /* 桩 Canvas：多记一点「画这张图时 ctx 处于什么状态」，
+   * 用来验证角色模块会临时改 imageSmoothingEnabled / globalAlpha 再恢复。 */
+  const makeCtx = () => {
+    const c = {
+      fillStyle: '#000', strokeStyle: '#000', globalAlpha: 1, font: '10px x',
+      textAlign: 'left', textBaseline: 'top', lineWidth: 1,
+      imageSmoothingEnabled: true,          // 真实 Canvas2D 的默认值
+      measureText: () => ({ width: 20 }),
+      createLinearGradient: () => ({ addColorStop() {} }),
+      scale: (x, y) => { log.scales.push([x, y]); },
+      setTransform: () => {},
+      save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {}, beginPath() {},
+      arc() {}, fill() {}, stroke() {}, closePath() {}, moveTo() {}, lineTo() {}, setLineDash() {},
+      fillRect: () => { log.rects++; },
+      fillText: (s) => { log.texts.push(String(s)); },
+      drawImage: (img, dx, dy, dw, dh) => {
+        log.draws.push({
+          img, x: dx, y: dy, w: dw, h: dh,
+          smooth: c.imageSmoothingEnabled, alpha: c.globalAlpha,
+        });
+      },
+    };
+    return c;
+  };
 
   /* 桩 Image：默认「加载成功」，opts.images = "fail" 时模拟 404 / 解码失败。
    * 同步触发 onload / onerror，测试才好断言（真实浏览器是异步的）。 */
   const imageMode = opts.images || 'ok';
+  /* 只让「路径里含某个片段」的那一张图 404，用来验证单张素材缺失不会拖垮整套皮肤 */
+  const failMatch = opts.failMatch || null;
   const imageList = [];
   function StubImage() {
     this.onload = null; this.onerror = null;
@@ -167,7 +181,9 @@ export function harness(opts) {
     set(v) {
       this._src = String(v);
       if (imageMode === 'pending') return;
-      if (imageMode === 'fail') { this.naturalWidth = 0; if (this.onerror) this.onerror(); return; }
+      if (imageMode === 'fail' || (failMatch && this._src.indexOf(failMatch) >= 0)) {
+        this.naturalWidth = 0; if (this.onerror) this.onerror(); return;
+      }
       this.naturalWidth = 300; this.naturalHeight = 340; this.width = 300; this.height = 340;
       if (this.onload) this.onload();
     },

@@ -57,30 +57,33 @@
   if ((!WHALE_A || !WHALE_DIVE_A) && window.console && window.console.warn) {
     window.console.warn('[whale] 缺少 shared/whale.js：小鲸鱼素材没加载，请检查页面脚本顺序');
   }
-  /* ---------------- 角色皮肤（Whale Runner / Whale-chan） ----------------
-   * Whale-chan 是纯视觉层：物理、速度、障碍、判定盒（下面 BOX / MID_BOTTOM…）
-   * 一个都不动。她的「脚底」永远贴在海床上，和经典小鲸鱼的底部对齐，
+  /* ---------------- 角色皮肤（经典鲸鱼 / 动画鲸鱼娘 / 像素鲸鱼娘） ----------------
+   * 图片皮肤是纯视觉层：物理、速度、障碍、判定盒（下面 BOX / MID_BOTTOM…）
+   * 一个都不动。所有素材都按「脚底贴海床」归一化过，和经典小鲸鱼的底部对齐，
    * 所以跳跃高度和下潜躲中层生物的手感完全一致。 */
   var ArcadeCharacter = window.ArcadeCharacter || null;
   var CHAN_STAND_H = 78 * S;      // 站立视觉高度（逻辑像素，跟 PX 一起缩放）
   var CHAN_DIVE_H = 42 * S;       // 下潜：压到中层障碍的下沿以下，眼睛看着就不会「撞」
-  var CHAN_W_RATIO = 300 / 340;   // 素材画布比例（统一 300×340）
 
-  function chanFrame(p) {
+  /* 游戏只说语义状态，素材文件名由 shared/character.js 决定 */
+  function characterState(p) {
     if (game.state === 'over') return 'blocked';
     if (p.crouch) return 'dive';
     if (!p.onGround) return 'jump';
-    return p.frame ? 'move' : 'idle';
+    return 'walk';                // 一路向右游 = 一直播步行循环
   }
   /* 画得出来返回 true；没启用皮肤 / 素材没好 -> false，调用方继续画像素小鲸鱼 */
-  function drawWhaleChan(p) {
-    if (!ArcadeCharacter || !ArcadeCharacter.isWhaleChan()) return false;
+  function drawCharacter(p) {
+    if (!ArcadeCharacter) return false;
+    var state = characterState(p);
     var h = p.crouch ? CHAN_DIVE_H : CHAN_STAND_H;
-    var w = h * CHAN_W_RATIO;
+    var m = ArcadeCharacter.measure(state, h);
     var cx = p.x + (BOX.stand.dx + BOX.stand.w / 2) * PX;    // 对准判定盒中心，不是精灵中心
     var bottom = p.y + (p.crouch ? DIVE_H : WHALE_H);
-    /* 素材本体是朝左的（尾巴在右边），小鲸鱼一直向右游，所以固定镜像成朝右 */
-    return ArcadeCharacter.draw(ctx, chanFrame(p), cx - w / 2, bottom - h, w, h, { flip: true });
+    /* 两套鲸鱼娘素材本体都朝右，小鲸鱼也一直向右游，所以不镜像。
+     * 动画时间用 game.animMs：只在 running 时推进，暂停会连角色一起冻住。 */
+    return ArcadeCharacter.draw(ctx, state, cx - m.w / 2, bottom - m.h, m.w, m.h,
+      { time: game.animMs });
   }
 
   var URCHIN = [
@@ -287,6 +290,7 @@
     nextMilestone: 100,
     spawnAt: 560 * S,
     overCooldown: 0,
+    animMs: 0,             // 角色动画时钟：只在 running 时推进（暂停/结算都冻结）
     obstacles: [],
     bubbles: [],
     player: {
@@ -397,6 +401,7 @@
     game.nextMilestone = 100;
     game.spawnAt = 560 * S;
     game.overCooldown = 0;
+    game.animMs = 0;                       // 重开一局：角色动画相位复位
     game.obstacles.length = 0;
     game.bubbles.length = 0;
     p.x = PLAYER_X;
@@ -590,6 +595,8 @@
 
     if (game.state !== 'running') return;
 
+    game.animMs += STEP;
+
     /* --- 速度与分数 --- */
     game.speed = Math.min(MAX_SPEED, game.speed + ACCEL);
     game.distance += game.speed;
@@ -702,7 +709,7 @@
 
   function drawPlayer(t) {
     var p = game.player;
-    if (drawWhaleChan(p)) return;              // Whale-chan 皮肤：只换外观，判定盒不变
+    if (drawCharacter(p)) return;              // 图片皮肤：只换外观，判定盒不变
     var ink = { X: t.whale, o: t.belly };
     if (p.crouch) {
       drawSprite(p.frame ? WHALE_DIVE_B : WHALE_DIVE_A, PX, p.x, p.y, ink);   // 下潜也有专门的两帧

@@ -9,7 +9,8 @@
 
 - **零依赖、零构建、零运行时外部请求**：四款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D）。
   经典形态的全部美术（小鲸鱼、迷宫、掉落物、粒子、UI）都是 `fillRect` / `fillText` 画出来的，没有任何外部图片；
-  可选的 **Whale-chan** 角色皮肤会加载 `assets/whale-chan/` 下**仓库自带**的第三方 WebP（CC BY 4.0，不走 CDN、不请求外部域名）。
+  两套可选的**图片角色皮肤**只加载 `assets/whale-yunyue/` 与 `assets/whale-pixel/` 下**仓库自带**的 WebP
+  （第三方素材，各按各的授权；不走 CDN、不请求外部域名），而且是**按皮肤懒加载**的。
 - **不引入打包器 / 框架 / ES Module**：每个页面用普通 `<script src>` 按顺序加载，所以
   「直接双击 HTML」「任意静态服务器」「GitHub Pages 子路径」三种打开方式行为一致。
 - **玩法逻辑不跨游戏共享**：只在 `shared/` 放真正通用的东西（文案、音效开关、鲸鱼像素数据），
@@ -22,7 +23,7 @@
 | `shared/i18n.js` | 全站唯一词典（中 / 英）+ 语言检测与切换（`arcade.lang`，兼容旧的 `whaleRunner.lang`）。页面用 `data-i18n` 属性或 `I18N.t('key')`；Canvas 里的文字也走 `I18N.t`，语言切换无需刷新。 |
 | `shared/audio.js` | Web Audio 音效工具 + **全站统一 Sound 开关**。`ArcadeAudio.tone({...})` 现场合成音色（不引用任何音频文件）；`isEnabled(legacyKey)` / `setEnabled(on)` / `toggle()` 读写 `arcade.sound`，`audio.js` 在静音时 `tone()` 直接静默。 |
 | `shared/whale.js` | DeepSeek 小鲸鱼的**唯一一份**像素素材：`NORMAL_A` / `NORMAL_B`（24×18 游动两帧）、`DIVE_A` / `DIVE_B`（24×13 下潜两帧），外加 `width / height / mirror / rotate` 小工具。Whale Runner、Token Fall、大厅卡片预览都读它。 |
-| `shared/character.js` | 全站角色皮肤 **Classic Whale / Whale-chan**：读写 `arcade.characterSkin`、一次性预加载 9 张 Whale-chan WebP、`onChange` 广播、以及 `draw()`（画不出来返回 `false`，调用方回退经典小鲸鱼）。 |
+| `shared/character.js` | 全站角色皮肤注册表 **Classic / Animated Whale Girl / Pixel Whale Girl**：读写并迁移 `arcade.characterSkin`、按皮肤懒加载 + 缓存 WebP、按时间算动画帧、`onChange` 广播、以及 `draw()`（画不出来返回 `false`，调用方回退经典小鲸鱼）。游戏只说语义状态，不接触素材文件名。 |
 
 **Sound 优先级（第一次读取时确定）**：`arcade.sound` > 当前游戏自己的旧 key（`whaleRunner.sound` /
 `arcade.snake.sound` / `arcade.tokenFall.sound` / `arcade.attentionMaze.sound`）> 默认 `on`。
@@ -43,7 +44,8 @@
 `shared/whale.js` / `shared/character.js` 必须在游戏脚本之前；Attention Maze 的 `levels.js` 必须在 `game.js` 之前。
 缺文件时游戏不会崩，但会在控制台给出明确告警。
 
-> `shared/character.js` 用**脚本自己的 URL** 推导素材目录（`shared/character.js` → `../assets/whale-chan/`），
+> `shared/character.js` 用**脚本自己的 URL** 推导素材根目录，再按皮肤拼上各自的子目录
+> （`shared/character.js` → `../assets/whale-yunyue/` 或 `../assets/whale-pixel/`），
 > 所以根目录、`/DeepSeek-Arcade/` 子路径、`file://` 三种打开方式都不用配置路径，也永远不会出现 `/assets/...` 这种根路径。
 
 ## Canvas 与 DPR
@@ -62,7 +64,7 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 | Context Snake 最高分 | `arcade.snake.high` |
 | Token Fall 最高分 | `arcade.tokenFall.high` |
 | Attention Maze 进度 | `arcade.attentionMaze.progress`（存最高解锁 Layer + 每关星级/最佳时间/步数，不是高分） |
-| 角色皮肤 | `arcade.characterSkin`（`classic` / `whalechan`，**默认 classic**，非法值回退 classic；不写任何游戏成绩） |
+| 角色皮肤 | `arcade.characterSkin`（`classic` / `yunyue` / `pixel`，**默认 classic**，非法值回退 classic；旧值 `whalechan` 自动迁移成 `yunyue`；不写任何游戏成绩） |
 | 音效开关 | Whale Runner：`whaleRunner.sound`；Context Snake：`arcade.snake.sound`；Token Fall：`arcade.tokenFall.sound`；Attention Maze：`arcade.attentionMaze.sound` |
 | 文案 | **只在 `shared/i18n.js` 里维护一份**，页面用 `data-i18n` 属性或 `I18N.t('key')` 取值 |
 | 音效 | Whale Runner 保留自己那套 `beep()`（三段包络专门调过，不动它），新游戏用 `shared/audio.js` |
@@ -121,35 +123,103 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 - **文案**：加到 `shared/i18n.js` 的 `DICT.zh` / `DICT.en`（key 必须两边都有，测试会检查），HTML 用 `data-i18n`。
 - 改完跑一次 `bash test/run.sh`。
 
-## 角色皮肤（Classic Whale / Whale-chan）
+## 角色皮肤（Classic Whale / Animated Whale Girl / Pixel Whale Girl）
 
-全站两套角色外观，由 `shared/character.js` 统一管理，**只影响视觉**：
+全站三套角色外观，由 `shared/character.js` 用一张**皮肤注册表**统一管理，**只影响视觉**：
 
 | 皮肤 | 素材 | 说明 |
 | --- | --- | --- |
 | `classic`（默认） | `shared/whale.js` 的字符画 + 各游戏自己的像素精灵 | 四款游戏的判定盒、难度、手感全部按原样 |
-| `whalechan` | `assets/whale-chan/*.webp`（第三方 CC BY 4.0 素材的派生 WebP） | 贴图替换，同样不动任何玩法数值 |
+| `yunyue` | `assets/whale-yunyue/*.webp`（19 张派生 WebP，统一画布 192×208） | 贴图替换，同样不动任何玩法数值 |
+| `pixel` | `assets/whale-pixel/*.webp`（20 张无损 WebP，原生 72×88 像素网格） | 贴图替换，同样不动任何玩法数值 |
 
-- **状态**：`localStorage: arcade.characterSkin`，值只接受 `classic` / `whalechan`，其它一律回退 `classic`；
-  没存过时**默认 classic**，所以老玩家升级后不会突然被换角色。
-- **预加载**：模块加载时一次性 `new Image()` 9 张 WebP（合计约 180KB，全部相对路径），之后只从缓存里取，
-  绝不在 `render` 里创建图片对象。
-- **回退**：`ArcadeCharacter.draw()` 在「没启用皮肤 / 素材还没就绪 / 素材 404 或解码失败」时返回 `false`，
-  调用方立刻改画经典小鲸鱼 —— 图片问题永远不会让角色消失、报错或让 Canvas 停摆。
-- **插值**：Whale-chan 是插画不是像素画，`draw()` 会临时打开 `imageSmoothingEnabled`、画完恢复，
-  所以同一块 Canvas 上的像素物体不会被糊掉。
-- **视觉 / 判定分离**：素材尺寸永远不参与碰撞。Whale Runner 的 `BOX`、Token Fall 的 `PLAYER_HIT`、
-  Snake 的格子、Attention Maze 的 `CELL` 都保持原值；马子（见各游戏章节）只决定「贴图画在哪、画多大」。
+### 注册表：游戏只说语义状态
+
+```js
+var SKINS = {
+  classic: { image: false, states: null },
+  yunyue:  { smoothing: true,  dir: 'assets/whale-yunyue/', states: { idle: {...}, walk: {...}, ... } },
+  pixel:   { smoothing: false, dir: 'assets/whale-pixel/',  states: { ... } }
+};
+// 一个状态 = { frames, frameMs, ratio, order? }
+//   frames  不重复的文件名
+//   order   可选的帧索引序列，用来表达「同一张图在循环里出现多次」
+//           （例如 Pixel 的 8 帧跑动去重后只有 3 个姿势）
+```
+
+游戏代码里**不出现任何素材文件名**，只表达语义状态：
+`idle / walk / jump / dive / think / startle / blocked / head / headThink`。
+对外 API：`getSkin()` / `setSkin()` / `cycleSkin()` / `getSkinInfo()` / `measure(state, h)` /
+`ready(state)` / `frameIndex(state, time)` / `draw(ctx, state, x, y, w, h, { time, flip, alpha })` /
+`onChange(fn)` / `preloadSkin(id)` / `preloadNext()`（测试还会用 `files(skin)` 核对素材）。
+
+### 状态与迁移
+
+- `localStorage: arcade.characterSkin`，值只接受 `classic` / `yunyue` / `pixel`；
+- **没存过时默认 `classic`**，所以老玩家升级后不会突然被换角色；
+- 读到旧版本的 `whalechan` 会**迁移成 `yunyue` 并立刻写回**（那些用户当初主动选过「鲸鱼娘」，
+  不该被退回经典），但旧素材本身已经彻底删除、不会再加载；
+- 其它非法值一律回退 `classic`，并且不写存储。
+
+### 动画帧时钟
+
+```js
+frame = Math.floor(animationTime / frameMs) % frameCount;
+```
+
+帧号是 `animationTime` 的**纯函数**，模块自己不留帧计数器，所以：
+
+- 60 / 120 / 144Hz 屏幕、掉帧、同一帧里重复 render 都不会改变动画速度；
+- `animationTime` 由游戏给，而且用的是各自「只在推进玩法时才累加」的时钟
+  （Runner 的 `game.animMs` 只在 `running` 时累加；Token Fall 用 `game.player.wobbleMs`），
+  所以暂停、切标签页、Game Over 都会让角色动画和游戏世界一起冻结；
+- 重开一局会复位时钟（`startRun()` 里 `game.animMs = 0`）；
+- Snake / Maze 的头像是单帧状态，时间参数只走个形式。
+
+### 懒加载与缓存
+
+- 模块初始化时**只加载当前皮肤**：`classic` 用户一张第三方图都不会下载；
+- 切换或调用 `preloadSkin(id)` 才发起该皮肤的请求；每个文件名在缓存里只对应一个 `Image`，
+  切走再切回来不会重复请求；
+- 大厅角色按钮的 `pointerenter` / `focus` / `pointerdown` 会调用 `preloadNext()` 预热下一套，
+  真正切换时通常已经就绪；
+- 某一张图 404 只会让那一帧不可用（自动退到第 0 帧、再到任意可用帧），整套失败才回退经典。
+
+### 回退与平滑
+
+- `draw()` 在「没启用图片皮肤 / 素材还没就绪 / 全部加载失败」时返回 `false`，
+  调用方立刻改画经典小鲸鱼 —— 图片问题永远不会让角色消失、报错或让 Canvas 停摆；
+- **插值**：`yunyue` 是插画，`draw()` 临时打开 `imageSmoothingEnabled`；`pixel` 是像素画，临时关闭。
+  两者画完都把 `imageSmoothingEnabled` 与 `globalAlpha` 还原，同屏的像素物体不会被糊掉；
+- **视觉 / 判定分离**：素材尺寸永远不参与碰撞。Whale Runner 的 `BOX` / `MID_BOTTOM` / `LOW_BOTTOM`、
+  Token Fall 的 `PLAYER_TOP` / `PLAYER_HIT` / `PLAYER_SPEED` / `PLAYER_ACCEL`、Snake 的 `CELL`、
+  Attention Maze 的 `CELL` / `nodeAt` / `MOVES` 全部保持原值；
+  皮肤只决定「贴图画在哪、画多大」（用 `measure(state, h)` 按素材比例算宽度）。
+
+### 每款游戏的语义状态映射
+
+| 游戏 | `classic` | `yunyue` / `pixel` |
+| --- | --- | --- |
+| Whale Runner | 字符画两帧摆尾 / 下潜两帧 | 地面 `walk`、空中 `jump`、下潜 `dive`、结束 `blocked`（不镜像：素材朝右） |
+| Token Fall | 像素小鲸鱼两帧摆尾 | 移动 `walk`、站住 `idle`、DEEP THINK `think`、溢出 `startle`、结束 `blocked`（朝左镜像） |
+| Context Snake | 俯视四向小鲸鱼（整体旋转） | 蛇头那一格用 `head` / `headThink`（不旋转，朝左镜像），身体仍是 Context 像素块 |
+| Attention Maze | 俯视四向小鲸鱼 | 玩家那一格用 `head`（视觉 34px，逻辑仍是 1 格，朝左镜像） |
 
 ### 第三方素材授权（重要）
 
-`assets/whale-chan/` 里的图片**不是**本项目的作品，也**不在 MIT 授权内**：
+两套素材**都不是**本项目的作品，也**都不在**根目录 MIT 授权内，而且**两者的授权不同**，不要混为一谈：
 
-- 作者 / 版权人：**Er1c0v0**；来源：<https://github.com/Er1c0v0/dsh-whale-pet> 的 `character/` 目录；
-- 授权：**CC BY 4.0**（全文见 `LICENSES/CC-BY-4.0.txt`）；
-- 仓库里只放**派生 WebP**（连通域去背景 → alpha 羽化 → 裁切 → 统一比例缩放 → WebP q90），
-  不重新分发上游原始 PNG；每个文件的来源、上游 SHA-256 与改动都记在 `assets/whale-chan/ATTRIBUTION.md`；
-- 根目录 `LICENSE` 是 MIT，**只覆盖代码**；第三方声明见 `THIRD_PARTY_NOTICES.md`。
+| 皮肤 | 来源 | 授权 |
+| --- | --- | --- |
+| `yunyue` | <https://github.com/YunYueSama/codex-deepseek-pet> | **大肥鱼项目署名许可 1.0**（自定义许可，**不是 MIT**），全文 `LICENSES/YUNYUE-WHALE-PET-LICENSE.txt` |
+| `pixel` | <https://github.com/chenthreegold/deepseek-whale-pet> | **MIT**（另一份独立授权，权利人 DeepSeek Whale Pet Contributors），全文 `LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt` |
+
+- 仓库里只放**派生素材**（挑帧 / 裁切 / 统一缩放 / 底部对齐 / 清理 alpha 毛边 / 重新编码），
+  不重新分发上游原始图集；也**没有**使用 `codex-deepseek-pet` 里 `design/` 下授权未核实的社区参考图；
+- 每个文件的来源、上游 commit、改动清单记在 `assets/whale-yunyue/ATTRIBUTION.md` 与
+  `assets/whale-pixel/ATTRIBUTION.md`；派生过程可复现（`tools/derive-character-assets.py`，dev-only，
+  运行时完全不用 Python）；
+- 第三方声明汇总在 `THIRD_PARTY_NOTICES.md`：根目录 `LICENSE` 是 MIT，**只覆盖代码与原创内容**。
 
 ## 四款游戏的实现细节
 
@@ -339,6 +409,7 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 ├── shared/                               真正共用的部分
 │   ├── i18n.js                           中英词典 + 语言切换
 │   ├── audio.js                          Web Audio 音色 + 全站统一 Sound 开关
+│   ├── character.js                      角色皮肤注册表（三套皮肤）+ 懒加载 / 动画时钟 / 回退
 │   ├── whale.js                          DeepSeek 小鲸鱼像素素材（唯一一份）
 │   └── arcade.css                        设计变量 + 页面外壳（body / 卡片 / 按钮 / 返回入口）
 ├── games/
@@ -357,12 +428,17 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 │   ├── engineering.test.mjs              v1.0 结构：CI、统一音效、共享素材、关卡拆分
 │   ├── i18n.test.mjs                     五个页面的中英切换 + 词典完整性
 │   └── paths.test.mjs                    死链 / 绝对路径 / localStorage key 冲突
+├── assets/
+│   ├── whale-yunyue/                     动画鲸鱼娘运行时素材（19 张派生 WebP）+ ATTRIBUTION.md
+│   └── whale-pixel/                      像素鲸鱼娘运行时素材（20 张无损 WebP）+ ATTRIBUTION.md
+├── tools/derive-character-assets.py      角色素材派生脚本（dev-only，运行时不用）
+├── LICENSES/YUNYUE-WHALE-PET-LICENSE.txt 动画鲸鱼娘的授权全文（自定义许可，不是 MIT）
+├── LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt 像素鲸鱼娘的 MIT 全文
+├── THIRD_PARTY_NOTICES.md                第三方素材声明（代码 MIT / 两套素材各自的授权）
 ├── docs/                                 architecture.md · testing.md（各有 .en.md 英文版）
-├── LICENSE                               MIT（代码）
+├── LICENSE                               MIT（代码与原创内容）
 ├── README.md / README.en.md              项目说明（中文 / English）
 └── .github/workflows/pages.yml           先测试、再部署 GitHub Pages
 ```
-
-> 注：`docs/` 是文档，`test/` 是无头测试，两者都不参与线上页面，但会随 Pages 一起发布（体积很小）。
 
 > 注：`docs/` 是文档，`test/` 是无头测试，两者都不参与线上页面，但会随 Pages 一起发布（体积很小）。

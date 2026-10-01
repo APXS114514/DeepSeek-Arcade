@@ -3,7 +3,7 @@
  * 经典贪吃蛇，蓝色像素海域：吃 TOKEN 让 CONTEXT 变长，
  * 低概率出现的 THINK 会进入 4 秒 DEEP THINK（减速 + 泛蓝光）。
  * 原生 Canvas 2D，零依赖：经典形态下鲸鱼头/TOKEN/网格/粒子全部代码绘制；
- * 可选的 Whale-chan 皮肤只把「蛇头」那一格换成仓库自带的第三方 WebP（CC BY 4.0）。
+ * 可选的图片皮肤只把「蛇头」那一格换成仓库自带的小头像（第三方素材，各按各的授权）。
  * 与 Whale Runner 共用 shared/i18n.js（文案）与 shared/audio.js（音效）。
  * ============================================================ */
 (function () {
@@ -501,12 +501,14 @@
       ctx.globalAlpha = 1;
     }
 
-    /* Whale-chan 皮肤：一张正面脸不整体旋转（转 90° 很难看），
-     * 改成「朝左时水平镜像」，上下方向沿用同一张脸。 */
-    if (ArcadeCharacter && ArcadeCharacter.isWhaleChan()) {
+    /* 图片皮肤：只把「蛇头」那一格换成头像，整条蛇不改成人物身体。
+     * 正面脸不整体旋转（转 90° 很难看），改成「朝左时水平镜像」，
+     * 上下方向沿用同一张脸。格子尺寸与碰撞完全不变。 */
+    if (ArcadeCharacter) {
       var size = CELL * 1.25;                 // 略大于格子，缩到 30px 才看得清
       if (ArcadeCharacter.draw(ctx, think ? 'headThink' : 'head',
-            cx - size / 2, cy - size / 2, size, size, { flip: game.dir.x > 0 })) {
+            cx - size / 2, cy - size / 2, size, size,
+            { time: clock, flip: game.dir.x < 0 })) {
         return;
       }
     }

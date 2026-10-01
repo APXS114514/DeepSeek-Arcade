@@ -2,7 +2,7 @@
  * 直接在文件系统里按相对路径解析，等价于 GitHub Pages 的 /whale-runner/ 子路径。 */
 import fs from 'node:fs';
 import path from 'node:path';
-import { ROOT } from './helpers.mjs';
+import { ROOT, harness } from './helpers.mjs';
 
 const PAGES = ['index.html', 'games/runner/index.html', 'games/snake/index.html',
   'games/token-fall/index.html', 'games/attention-maze/index.html'];
@@ -88,12 +88,31 @@ export function run() {
   ok('shared/character.js 暴露 ArcadeCharacter', charSrc.indexOf('global.ArcadeCharacter') >= 0);
   ok('角色皮肤统一的 localStorage key 是 arcade.characterSkin', charSrc.indexOf("'arcade.characterSkin'") >= 0);
   ok('角色皮肤不写死 /assets/ 这类站点绝对路径',
-     !/['"`]\/assets\//.test(charSrc) && charSrc.indexOf("'assets/whale-chan/'") >= 0, '');
-  const chanFiles = ['whalechan-idle.webp', 'whalechan-move.webp', 'whalechan-jump.webp', 'whalechan-dive.webp',
-    'whalechan-think.webp', 'whalechan-startle.webp', 'whalechan-blocked.webp',
-    'whalechan-head.webp', 'whalechan-head-think.webp'];
-  const chanMissing = chanFiles.filter((f) => !fs.existsSync(path.join(ROOT, 'assets/whale-chan', f)));
-  ok('shared/character.js 里列的 9 张素材都真实存在', chanMissing.length === 0, chanMissing.join(','));
+     !/['"`]\/assets\//.test(charSrc) &&
+     charSrc.indexOf("'assets/whale-yunyue/'") >= 0 &&
+     charSrc.indexOf("'assets/whale-pixel/'") >= 0, '');
+  ok('旧的第三方角色素材目录已经彻底不存在',
+     !fs.existsSync(path.join(ROOT, 'assets/whale-' + 'chan')));
+  ok('没有素材再使用的 CC BY 4.0 全文已被删除（不留无引用 License）',
+     !fs.existsSync(path.join(ROOT, 'LICENSES/CC-BY-4.0.txt')));
+
+  const chb = harness({ page: 'runner' });
+  const A = chb.window.ArcadeCharacter;
+  ok('classic 皮肤不使用任何图片素材', A.files('classic').length === 0);
+  for (const skin of ['yunyue', 'pixel']) {
+    const info = A.getSkinInfo(skin);
+    const files = A.files(skin);
+    const dir = path.join(ROOT, info.dir);
+    const missing = files.filter((f) => !fs.existsSync(path.join(dir, f)));
+    ok('角色皮肤 ' + skin + ' 注册的 ' + files.length + ' 张素材都真实存在', missing.length === 0, missing.join(','));
+    const onDisk = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => /\.webp$/.test(f)) : [];
+    ok('角色皮肤 ' + skin + ' 目录里没有多余 / 漏登记的 WebP',
+       onDisk.length === files.length && onDisk.every((f) => files.includes(f)),
+       'disk=' + onDisk.length + ' registry=' + files.length);
+    ok('角色皮肤 ' + skin + ' 的素材目录名不用 whale-chan / whale-chan-new 这类临时名字',
+       info.dir === 'assets/whale-' + skin + '/', info.dir);
+  }
+
   ok('每个页面都按 i18n -> audio -> (whale) -> character -> game 的顺序加载角色模块',
      PAGES.every((p) => {
        const html = fs.readFileSync(path.join(ROOT, p), 'utf8');
