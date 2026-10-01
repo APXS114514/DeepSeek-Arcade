@@ -3,7 +3,7 @@
 **四款 DeepSeek-inspired 像素小游戏合集**（非官方同人）：Whale Runner · Context Snake · Token Fall · Attention Maze。
 纯 HTML + CSS + 原生 JavaScript（Canvas 2D）——**零依赖、零构建、零后端、零运行时外部请求**。
 经典形态的美术（小鲸鱼、迷宫、掉落物、粒子、UI）全部由 Canvas 代码绘制；
-可选的 **Whale-chan** 角色皮肤使用本地第三方插画素材（CC BY 4.0，见下文）。
+可选的 **Whale-chan** 角色皮肤使用仓库自带的第三方插画素材（来源见下文）。
 
 **中文** · [English](README.en.md)
 
@@ -84,21 +84,9 @@ Attention Maze 的每一关都只能靠**读权重**过关，位置和编号都�
 - **Token Fall**：底部玩家换成鲸鱼娘，DEEP THINK 变成「埋头工作」，溢出抢救时变成慌张表情；
 - **Attention Maze**：格子制，用的是裁好的小头像（视觉 34px，逻辑仍然只占 1 格），朝左时水平镜像。
 
-### Whale-chan artwork 授权（重要）
-
-鲸鱼娘**不是** DeepSeek Arcade 画的，也**不在 MIT 授权范围内**：
-
-- **作者 / 版权人**：**Er1c0v0**
-- **来源**：GitHub 仓库 [`Er1c0v0/dsh-whale-pet`](https://github.com/Er1c0v0/dsh-whale-pet)（`character/` 目录）
-- **授权**：**CC BY 4.0**（Creative Commons Attribution 4.0 International），全文见 [`LICENSES/CC-BY-4.0.txt`](LICENSES/CC-BY-4.0.txt)
-- **完整署名与改动说明**：[`assets/whale-chan/ATTRIBUTION.md`](assets/whale-chan/ATTRIBUTION.md)
-- **第三方声明**：[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
-
-> 根目录的 [`LICENSE`](LICENSE) 是 **MIT**，只覆盖本项目**代码**。
-> 不要以为 `assets/whale-chan/*` 也是 MIT —— 它是 **CC BY 4.0**，转载或改编时请保留 `Er1c0v0` 的署名。
+Whale-chan 素材来自开源仓库 [`Er1c0v0/dsh-whale-pet`](https://github.com/Er1c0v0/dsh-whale-pet)。
 
 ## 本地运行
-
 
 任选一种：
 
@@ -162,9 +150,7 @@ CI 里跑的就是这一条命令：测试不过，Pages 不会部署（见 `.gi
 ## 声明与 License
 
 - **代码**以 **MIT License** 发布，见 [LICENSE](LICENSE)。
-- **Whale-chan 角色插画**是第三方美术素材，作者 **Er1c0v0**（<https://github.com/Er1c0v0/dsh-whale-pet>），
-  以 **CC BY 4.0** 授权，**不属于 MIT 授权范围** —— 见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-  与 [assets/whale-chan/ATTRIBUTION.md](assets/whale-chan/ATTRIBUTION.md)。
+- **Whale-chan 角色素材**来自开源仓库 <https://github.com/Er1c0v0/dsh-whale-pet>。
 - **DeepSeek 名称、Logo、相关图形与品牌资产不包含在 MIT 授权内**，其权利归各自权利人所有；
   小鲸鱼像素造型来自 DeepSeek 官方 logo，本项目只做同人致敬。
 - 这是一个**非官方同人项目**，与 DeepSeek 官方无关联；Whale Runner 玩法致敬 Chrome 断网小恐龙。

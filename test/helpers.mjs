@@ -136,7 +136,7 @@ export function harness(opts) {
   if (!page) throw new Error('未知页面: ' + pageName);
 
   const px = opts.px === undefined ? 3 : opts.px;
-  const log = { texts: [], rects: 0, warns: [], draws: [] };
+  const log = { texts: [], rects: 0, warns: [], draws: [], scales: [] };
   const errors = [];
 
   const makeCtx = () => ({
@@ -144,7 +144,8 @@ export function harness(opts) {
     textAlign: 'left', textBaseline: 'top', lineWidth: 1,
     measureText: () => ({ width: 20 }),
     createLinearGradient: () => ({ addColorStop() {} }),
-    scale() {}, save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {}, beginPath() {},
+    scale: (x, y) => { log.scales.push([x, y]); },
+    save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {}, beginPath() {},
     arc() {}, fill() {}, stroke() {}, closePath() {}, moveTo() {}, lineTo() {}, setLineDash() {},
     fillRect: () => { log.rects++; },
     fillText: (s) => { log.texts.push(String(s)); },

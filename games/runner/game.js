@@ -79,7 +79,8 @@
     var w = h * CHAN_W_RATIO;
     var cx = p.x + (BOX.stand.dx + BOX.stand.w / 2) * PX;    // 对准判定盒中心，不是精灵中心
     var bottom = p.y + (p.crouch ? DIVE_H : WHALE_H);
-    return ArcadeCharacter.draw(ctx, chanFrame(p), cx - w / 2, bottom - h, w, h);
+    /* 素材本体是朝左的（尾巴在右边），小鲸鱼一直向右游，所以固定镜像成朝右 */
+    return ArcadeCharacter.draw(ctx, chanFrame(p), cx - w / 2, bottom - h, w, h, { flip: true });
   }
 
   var URCHIN = [

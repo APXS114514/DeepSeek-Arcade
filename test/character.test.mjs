@@ -199,6 +199,73 @@ export function run() {
       b.store.get(SKIN_KEY) === 'classic' && drewAssets(b).length === 0, drewAssets(b).join('|'));
   }
 
+  /* ================= C2. Whale-chan 的朝向（素材本体朝左，朝右要镜像） ================= */
+  {
+    const b = fresh({ images: 'ok', saved: { 'arcade.characterSkin': 'whalechan' } });
+    b.log.scales.length = 0;
+    b.key('keydown', ' ', 'Space'); b.key('keyup', ' ', 'Space');
+    advance(b, 10);
+    ok('Whale Runner：Whale-chan 被水平镜像（小鲸鱼一直朝右跑）',
+      b.log.scales.some((s) => s[0] === -1), JSON.stringify(b.log.scales.slice(0, 3)));
+
+    const c = fresh({ images: 'ok', saved: { 'arcade.characterSkin': 'classic' } });
+    c.log.scales.length = 0;
+    c.key('keydown', ' ', 'Space'); c.key('keyup', ' ', 'Space');
+    advance(c, 10);
+    ok('Whale Runner：经典像素小鲸鱼不会被镜像（行为不变）',
+      c.log.scales.length === 0, JSON.stringify(c.log.scales.slice(0, 3)));
+  }
+  {
+    /* Token Fall：朝向跟着移动方向走，松手后保持上一次的方向 */
+    function tokenFallFace(dir) {
+      const b = harness({ page: 'tokenfall', exposeGame: true, images: 'ok', saved: { 'arcade.characterSkin': 'whalechan' } });
+      b.key('keydown', 'ArrowRight', 'ArrowRight'); b.key('keyup', 'ArrowRight', 'ArrowRight');
+      advance(b, 6);
+      if (dir) {
+        b.key('keydown', dir, dir); advance(b, 40); b.key('keyup', dir, dir);
+      }
+      advance(b, 6);
+      b.log.scales.length = 0;          // 只看「当前朝向」这一段，别把开局的镜像算进来
+      advance(b, 3);
+      return b.log.scales.some((s) => s[0] === -1);
+    }
+    ok('Token Fall：往右移动时 Whale-chan 面朝右（镜像）', tokenFallFace('ArrowRight') === true);
+    ok('Token Fall：往左移动时 Whale-chan 面朝左（原图）', tokenFallFace('ArrowLeft') === false);
+    ok('Token Fall：开局静止时面朝右', tokenFallFace(null) === true);
+  }
+  {
+    function snakeFace(dir) {
+      const b = harness({ page: 'snake', exposeGame: true, images: 'ok', saved: { 'arcade.characterSkin': 'whalechan' } });
+      b.key('keydown', 'ArrowUp', 'ArrowUp'); b.key('keyup', 'ArrowUp', 'ArrowUp');
+      advance(b, 6);
+      b.key('keydown', dir, dir); b.key('keyup', dir, dir);
+      advance(b, 30);
+      b.log.scales.length = 0;
+      advance(b, 10);
+      return b.log.scales.some((s) => s[0] === -1);
+    }
+    ok('Context Snake：往右走时 Whale-chan 面朝右', snakeFace('ArrowRight') === true);
+    ok('Context Snake：往左走时 Whale-chan 面朝左', snakeFace('ArrowLeft') === false);
+  }
+  {
+    function mazeFace(dir, tx) {
+      const b = harness({ page: 'attentionmaze', exposeGame: true, images: 'ok', saved: { 'arcade.characterSkin': 'whalechan' } });
+      const G = b.G;
+      G.startLayer(0);
+      let g = 0;
+      while (G.state !== 'playing' && g++ < 600) b.tick(1);
+      /* 挪到走廊中间，保证往左真的能走（L1 的起点贴着左墙） */
+      G.player.cx = tx; G.player.cy = 5; G.player.px = tx; G.player.py = 5;
+      b.key('keydown', dir, dir); b.key('keyup', dir, dir);
+      advance(b, 20);
+      b.log.scales.length = 0;
+      advance(b, 6);
+      return b.log.scales.some((s) => s[0] === -1);
+    }
+    ok('Attention Maze：往右走时 Whale-chan 面朝右', mazeFace('ArrowRight', 5) === true);
+    ok('Attention Maze：往左走时 Whale-chan 面朝左', mazeFace('ArrowLeft', 7) === false);
+  }
+
   /* ================= D. 素材加载失败 -> 回退经典 ================= */
   {
     const b = harness({ page: 'runner', exposeGame: true, images: 'fail', saved: { 'arcade.characterSkin': 'whalechan' } });

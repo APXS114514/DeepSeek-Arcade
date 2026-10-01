@@ -330,7 +330,8 @@
     compressChance: LOADS[0].w.compress,
     compressStreak: 0,         // COMPRESSION FATIGUE：短期已经接过几个 C
     compressSinceMs: 0,        // 距离上一个 C 多久（>= 7 秒就重置递减）
-    heavyCaught: 0             // 本局接到的 HEAVY TOKEN 数量
+    heavyCaught: 0,            // 本局接到的 HEAVY TOKEN 数量
+    face: 1                    // Whale-chan 朝向：1 = 朝右，-1 = 朝左（停住时保持上一次的方向）
   };
 
   try {
@@ -388,6 +389,7 @@
     game.compressStreak = 0;
     game.compressSinceMs = 0;
     game.heavyCaught = 0;
+    game.face = 1;
     game.thinkMs = 0;
     game.thinkCooldownMs = 0;
     game.speedScale = 1;
@@ -764,7 +766,9 @@
 
   /* ================= 逻辑推进 ================= */
   function movePlayer(dt) {
-    var target = inputDir() * PLAYER_SPEED;
+    var dir = inputDir();
+    if (dir !== 0) game.face = dir;          // 只换朝向，不影响任何移动数值
+    var target = dir * PLAYER_SPEED;
     var accel = PLAYER_ACCEL * dt / 1000;
     if (game.player.vx < target) game.player.vx = Math.min(target, game.player.vx + accel);
     else game.player.vx = Math.max(target, game.player.vx - accel);
@@ -775,6 +779,8 @@
       var step = PLAYER_SPEED * 1.25 * dt / 1000;
       var dx = drag.targetX - cx;
       game.player.x += Math.abs(dx) <= step ? dx : (dx > 0 ? step : -step);
+      if (dx > 1) game.face = 1;             // 拖动同样决定朝向
+      else if (dx < -1) game.face = -1;
       game.player.vx = 0;
     }
 
@@ -1128,7 +1134,8 @@
     ctx.globalAlpha = 1;
 
     /* Whale-chan 皮肤：画得出来就直接返回 */
-    if (chan && ArcadeCharacter.draw(ctx, chanName, box.x, box.y, box.w, box.h)) return;
+    /* 素材本体朝左：面朝右 = 镜像；面朝左 = 原图。朝向由 game.face 记住，停下不会乱翻。 */
+    if (chan && ArcadeCharacter.draw(ctx, chanName, box.x, box.y, box.w, box.h, { flip: game.face > 0 })) return;
 
     /* 摆尾两帧，110ms 一换；X 主色 / o 肚皮（和 Whale Runner 同一套配色） */
     var frame = Math.floor(game.player.wobbleMs / 110) % 2 === 0 ? WHALE_A : WHALE_B;

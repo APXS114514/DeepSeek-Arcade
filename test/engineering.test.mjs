@@ -290,16 +290,22 @@ export function run() {
     ok('根 LICENSE 说明了 Whale-chan 属于 CC BY 4.0、不在 MIT 内',
       lic.indexOf('CC BY 4.0') !== -1 && lic.indexOf('Er1c0v0') !== -1 && lic.indexOf('THIRD_PARTY_NOTICES') !== -1);
 
-    /* README 两份都要说明双角色 + 授权 */
+    /* README 两份都要说明双角色 + 素材来源（详细的 license 说明只放在上面那三个文件里，
+     * README 不重复长篇授权声明 —— 但来源仓库必须写清楚） */
     for (const [name, tag] of [['README.md', '鲸鱼娘'], ['README.en.md', 'Whale-chan']]) {
       const md = source(name);
       ok(name + ' 提到 Whale-chan 角色皮肤', md.indexOf(tag) !== -1);
-      ok(name + ' 写明 Whale-chan 美术是 CC BY 4.0', md.indexOf('CC BY 4.0') !== -1);
-      ok(name + ' 写明作者 Er1c0v0', md.indexOf('Er1c0v0') !== -1);
+      ok(name + ' 说明素材来自 dsh-whale-pet', md.indexOf('dsh-whale-pet') !== -1 && md.indexOf('Er1c0v0') !== -1);
       ok(name + ' 写明 arcade.characterSkin', md.indexOf('arcade.characterSkin') !== -1);
       ok(name + ' 不再声称「整个项目零图片」',
         !/零图片、零后端/.test(md) && !/no image files, no backend/.test(md));
+      ok(name + ' 没有把长篇授权声明塞进 README（只留来源）',
+        md.indexOf('Whale-chan artwork 授权') === -1 && md.indexOf('Whale-chan artwork licence') === -1);
     }
+    ok('完整授权仍然记录在库内（ATTRIBUTION / THIRD_PARTY_NOTICES / LICENSES）',
+      source('assets/whale-chan/ATTRIBUTION.md').indexOf('CC BY 4.0') !== -1 &&
+      source('THIRD_PARTY_NOTICES.md').indexOf('CC BY 4.0') !== -1 &&
+      fs.existsSync(path.join(ROOT, 'LICENSES/CC-BY-4.0.txt')));
 
     /* 运行时素材：9 张，全部存在、非空、体积可控 */
     const files = ['whalechan-idle.webp', 'whalechan-move.webp', 'whalechan-jump.webp', 'whalechan-dive.webp',

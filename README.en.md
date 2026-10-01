@@ -4,7 +4,7 @@
 Whale Runner · Context Snake · Token Fall · Attention Maze.
 Pure HTML + CSS + vanilla JavaScript (Canvas 2D) — **no dependencies, no build step, no backend, no runtime external requests**.
 In classic mode every graphic (whale, mazes, drops, particles, UI) is drawn by Canvas code;
-the optional **Whale-chan** skin uses local third-party artwork (CC BY 4.0 — see below).
+the optional **Whale-chan** skin uses third-party artwork shipped in this repo (source below).
 
 **English** · [中文](README.md)
 
@@ -87,19 +87,7 @@ Per game:
 - **Token Fall**: the bottom player becomes Whale-chan; DEEP THINK shows her working, and the overflow rescue shows her startled;
 - **Attention Maze**: a cropped head icon (34px visually, still exactly 1 logical cell), mirrored when moving left.
 
-### Whale-chan artwork licence (important)
-
-Whale-chan is **not** drawn by DeepSeek Arcade and is **not covered by the MIT license**:
-
-- **Author / copyright holder**: **Er1c0v0**
-- **Source**: GitHub repository [`Er1c0v0/dsh-whale-pet`](https://github.com/Er1c0v0/dsh-whale-pet) (the `character/` directory)
-- **Licence**: **CC BY 4.0** (Creative Commons Attribution 4.0 International) — full text in [`LICENSES/CC-BY-4.0.txt`](LICENSES/CC-BY-4.0.txt)
-- **Full attribution and list of modifications**: [`assets/whale-chan/ATTRIBUTION.md`](assets/whale-chan/ATTRIBUTION.md)
-- **Third-party notices**: [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)
-
-> The root [`LICENSE`](LICENSE) is **MIT** and covers this project's **code** only.
-> Do not assume `assets/whale-chan/*` is MIT — it is **CC BY 4.0**, and attribution to `Er1c0v0` must be kept
-> if you redistribute or adapt it.
+The Whale-chan artwork comes from the open-source repository [`Er1c0v0/dsh-whale-pet`](https://github.com/Er1c0v0/dsh-whale-pet).
 
 ## Run locally
 
@@ -163,9 +151,8 @@ CI runs exactly this command: if the tests fail, Pages is not deployed (see `.gi
 ## Notice & License
 
 - **The code** is released under the **MIT License** — see [LICENSE](LICENSE).
-- **The Whale-chan character artwork** is third-party material by **Er1c0v0** (<https://github.com/Er1c0v0/dsh-whale-pet>),
-  licensed under **CC BY 4.0** and **NOT covered by the MIT license** — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-  and [assets/whale-chan/ATTRIBUTION.md](assets/whale-chan/ATTRIBUTION.md).
+- **The Whale-chan character artwork** comes from the open-source repository
+  <https://github.com/Er1c0v0/dsh-whale-pet>.
 - **The DeepSeek name, logo, related graphics and brand assets are NOT covered by the MIT license**; all rights remain
   with their respective owners. The whale pixel art is derived from the official DeepSeek logo, as a fan tribute.
 - This is an **unofficial fan project**, not affiliated with DeepSeek. Whale Runner's gameplay pays homage to

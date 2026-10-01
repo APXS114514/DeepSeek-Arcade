@@ -1175,7 +1175,7 @@
       var ccx = cx2px(game.player.px) + CELL / 2;
       var ccy = cy2px(game.player.py) + CELL / 2 + bob2;
       if (ArcadeCharacter.draw(ctx, 'head', ccx - size / 2, ccy - size / 2, size, size,
-            { flip: game.player.dx < 0 })) {
+            { flip: game.player.dx > 0 })) {
         return;
       }
     }

@@ -506,7 +506,7 @@
     if (ArcadeCharacter && ArcadeCharacter.isWhaleChan()) {
       var size = CELL * 1.25;                 // 略大于格子，缩到 30px 才看得清
       if (ArcadeCharacter.draw(ctx, think ? 'headThink' : 'head',
-            cx - size / 2, cy - size / 2, size, size, { flip: game.dir.x < 0 })) {
+            cx - size / 2, cy - size / 2, size, size, { flip: game.dir.x > 0 })) {
         return;
       }
     }
