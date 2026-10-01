@@ -1,5 +1,5 @@
 /* ============================================================
- * DeepSeek Arcade — 角色皮肤注册表（Classic / YunYue / Pixel）
+ * DeepSeek Arcade — 角色皮肤注册表（Classic Whale / Whale Girl）
  *
  * 设计目标：四款游戏只说「语义状态」（idle / walk / think …），
  * 由这张注册表决定当前皮肤该画哪张图、要不要开 imageSmoothing。
@@ -7,8 +7,7 @@
  *
  * 皮肤：
  *   classic  纯代码像素小鲸鱼（不由本模块绘制，draw() 返回 false）
- *   yunyue   YunYueSama/codex-deepseek-pet      —— 高清 Q 版动画，smoothing = true
- *   pixel    chenthreegold/deepseek-whale-pet   —— 像素画，smoothing = false
+ *   yunyue   鲸鱼娘 YunYueSama/codex-deepseek-pet —— 高清 Q 版动画，smoothing = true
  *
  * 仍然零依赖 / 零构建 / 零网络请求：
  *   - localStorage key 固定 'arcade.characterSkin'，默认 classic；
@@ -16,30 +15,30 @@
  *   - 素材没就绪时 draw() 返回 false，调用方照常画经典小鲸鱼，绝不会白屏。
  *
  * 用法：
- *   ArcadeCharacter.getSkin()                     // 'classic' | 'yunyue' | 'pixel'
- *   ArcadeCharacter.setSkin('pixel')              // 立刻写入 localStorage
- *   ArcadeCharacter.cycleSkin()                   // classic -> yunyue -> pixel -> classic
+ *   ArcadeCharacter.getSkin()                     // 'classic' | 'yunyue'
+ *   ArcadeCharacter.setSkin('yunyue')             // 立刻写入 localStorage
+ *   ArcadeCharacter.cycleSkin()                   // classic -> yunyue -> classic
  *   ArcadeCharacter.getSkinInfo()                 // { id, label, smoothing, image, dir }
  *   ArcadeCharacter.measure('walk', 78)           // { w, h } 按素材比例算宽度
  *   ArcadeCharacter.ready('walk')                 // 这套皮肤的这个状态能不能画
  *   ArcadeCharacter.draw(ctx, 'walk', x, y, w, h, { time: ms, flip: true })
  *   ArcadeCharacter.frameIndex('walk', ms)        // 只算帧号，不画
  *   ArcadeCharacter.onChange(fn)                  // fn(skinId, 'skin' | 'assets')
- *   ArcadeCharacter.preloadSkin('pixel')
+ *   ArcadeCharacter.preloadSkin('yunyue')
  *   ArcadeCharacter.preloadNext()                 // hover 时偷跑下一套
  *
  * 动画帧只由时间决定（frame = floor(time / frameMs) % frames.length），
  * time 由调用方给，所以暂停、切标签页时动画会跟着游戏世界一起冻结。
  *
  * 版权：本文件是 DeepSeek Arcade 自己的 MIT 代码；
- * 两套图片素材各有各的授权，见 THIRD_PARTY_NOTICES.md 与各自的 ATTRIBUTION.md。
+ * 鲸鱼娘素材不属于 MIT，见 THIRD_PARTY_NOTICES.md 与 assets/whale-yunyue/ATTRIBUTION.md。
  * ============================================================ */
 (function (global) {
   'use strict';
 
   var KEY = 'arcade.characterSkin';
   var CLASSIC = 'classic';
-  var ORDER = [CLASSIC, 'yunyue', 'pixel'];
+  var ORDER = [CLASSIC, 'yunyue'];
 
   /* 旧版本只存过 'whalechan'（已删除的第三方皮肤）。
    * 用户当初是主动选了「鲸鱼娘」，所以迁到最接近的动画鲸鱼娘而不是退回经典，
@@ -65,7 +64,6 @@
   function fileAt(d, i) { return d.order ? d.frames[d.order[i]] : d.frames[i]; }
 
   var YUNYUE_RATIO = 192 / 208;    // 全身画布 192×208
-  var PIXEL_RATIO = 72 / 88;       // 原生像素网格 72×88
   var HEAD_RATIO = 1;              // 头像一律正方形
 
   var SKINS = {
@@ -81,29 +79,11 @@
         idle: run('idle', 4, 260),
         /* inbetween-walk ＝上游真正在播的整身步态，等间隔取 8 帧，总时长仍是 960ms */
         walk: run('walk', 8, 120),
-        jump: one('jump', 400),          // dense-jump 腾空帧
+        jump: one('jump', 400),          // dense-jump 腾空帧（和步态同向，朝右）
         dive: one('dive', 400),          // dense-jump 落地压缩帧（低姿态）
         think: one('think', 400),        // story-token 工作姿势
         startle: one('startle', 300),    // actions 惊慌帧
         blocked: one('blocked', 400),    // expressions 崩溃帧
-        head: one('head', 1000, HEAD_RATIO),
-        headThink: one('head-think', 1000, HEAD_RATIO)
-      }
-    },
-    pixel: {
-      id: 'pixel', label: 'skin.pixel', smoothing: false,
-      dir: 'assets/whale-pixel/', bodyRatio: PIXEL_RATIO, image: true,
-      states: {
-        /* 上游 idle[dy=0,1,0,-1] 的上下浮动（去重后 3 张图） */
-        idle: run('idle', 3, 200, null, [0, 1, 0, 2]),
-        /* running-right 的完整一步：3 个姿势 + 2/4px 位移，按上游顺序循环 */
-        walk: run('walk', 3, 100, null, [0, 1, 2, 1, 0, 1, 2, 1]),
-        /* jumping：蹲 -> 腾空 -> 落地 */
-        jump: run('jump', 4, 90, null, [0, 1, 2, 1, 3]),
-        dive: one('dive', 400),          // 同一行里最低的姿态
-        think: run('think', 2, 260),     // review：arm="think" + sparkle
-        startle: run('startle', 2, 180), // waiting：冒号抖动
-        blocked: run('blocked', 3, 160, null, [0, 1, 0, 2, 0, 1, 0, 2]),   // failed：垂手 + 汗
         head: one('head', 1000, HEAD_RATIO),
         headThink: one('head-think', 1000, HEAD_RATIO)
       }

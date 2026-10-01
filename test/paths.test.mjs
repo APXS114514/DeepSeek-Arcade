@@ -88,18 +88,25 @@ export function run() {
   ok('shared/character.js 暴露 ArcadeCharacter', charSrc.indexOf('global.ArcadeCharacter') >= 0);
   ok('角色皮肤统一的 localStorage key 是 arcade.characterSkin', charSrc.indexOf("'arcade.characterSkin'") >= 0);
   ok('角色皮肤不写死 /assets/ 这类站点绝对路径',
-     !/['"`]\/assets\//.test(charSrc) &&
-     charSrc.indexOf("'assets/whale-yunyue/'") >= 0 &&
-     charSrc.indexOf("'assets/whale-pixel/'") >= 0, '');
+     !/['"`]\/assets\//.test(charSrc) && charSrc.indexOf("'assets/whale-yunyue/'") >= 0, '');
+  /* 被删掉的像素皮肤名字拆开拼接，保持仓库里连字符串都不残留 */
+  const REMOVED_SKIN_SLUG = 'whale-' + 'pixel';
+  ok('角色注册表里已经没有像素皮肤', charSrc.indexOf("'pixel'") < 0 && charSrc.indexOf(REMOVED_SKIN_SLUG) < 0);
   ok('旧的第三方角色素材目录已经彻底不存在',
      !fs.existsSync(path.join(ROOT, 'assets/whale-' + 'chan')));
+  ok('已经删掉的像素皮肤素材目录不存在', !fs.existsSync(path.join(ROOT, 'assets/' + REMOVED_SKIN_SLUG)));
   ok('没有素材再使用的 CC BY 4.0 全文已被删除（不留无引用 License）',
      !fs.existsSync(path.join(ROOT, 'LICENSES/CC-BY-4.0.txt')));
+  ok('没有素材再使用的像素皮肤 MIT 全文已被删除（不留无引用 License）',
+     !fs.existsSync(path.join(ROOT, 'LICENSES/CHEN' + 'THREEGOLD-WHALE-PET-MIT.txt')));
+  ok('LICENSES/ 里剩下的都是真有素材在用的许可',
+     fs.readdirSync(path.join(ROOT, 'LICENSES')).sort().join(',') === 'YUNYUE-WHALE-PET-LICENSE.txt',
+     fs.readdirSync(path.join(ROOT, 'LICENSES')).join(','));
 
   const chb = harness({ page: 'runner' });
   const A = chb.window.ArcadeCharacter;
   ok('classic 皮肤不使用任何图片素材', A.files('classic').length === 0);
-  for (const skin of ['yunyue', 'pixel']) {
+  for (const skin of A.SKINS.filter((s) => s !== 'classic')) {
     const info = A.getSkinInfo(skin);
     const files = A.files(skin);
     const dir = path.join(ROOT, info.dir);
@@ -109,7 +116,7 @@ export function run() {
     ok('角色皮肤 ' + skin + ' 目录里没有多余 / 漏登记的 WebP',
        onDisk.length === files.length && onDisk.every((f) => files.includes(f)),
        'disk=' + onDisk.length + ' registry=' + files.length);
-    ok('角色皮肤 ' + skin + ' 的素材目录名不用 whale-chan / whale-chan-new 这类临时名字',
+    ok('角色皮肤 ' + skin + ' 的素材目录名清晰且长期可维护（不用 whale-chan2 这类临时名字）',
        info.dir === 'assets/whale-' + skin + '/', info.dir);
   }
 

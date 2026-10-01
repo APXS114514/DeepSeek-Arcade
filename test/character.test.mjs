@@ -1,15 +1,14 @@
-/* 角色皮肤系统：Classic Whale / Animated Whale Girl / Pixel Whale Girl
+/* 角色皮肤系统：Classic Whale / Whale Girl
  *  - 全站共享 arcade.characterSkin（默认 classic；非法值回退 classic；
  *    旧值 whalechan 自动迁移到 yunyue 并写回）
  *  - 四款游戏换皮肤只换外观：判定盒 / 网格 / 难度 / 成绩全部不变
- *  - 素材按皮肤懒加载，动画帧只由时间决定，加载失败自动回退经典小鲸鱼
+ *  - 素材懒加载，动画帧只由时间决定，加载失败自动回退经典小鲸鱼
  */
 import vm from 'node:vm';
 import { harness } from './helpers.mjs';
 
 const SKIN_KEY = 'arcade.characterSkin';
 const YUNYUE_DIR = 'assets/whale-yunyue/';
-const PIXEL_DIR = 'assets/whale-pixel/';
 
 function fresh(o) { return harness(Object.assign({ page: 'runner', exposeGame: true }, o || {})); }
 /* 把 Math.random 钉死，让物理 / 生成完全确定，不同皮肤才好逐帧对比 */
@@ -33,11 +32,7 @@ function fakeCtx(smooth) {
   };
   return { ctx: c, calls: calls };
 }
-/* 用 harness 的桩 Image 也能当画布图源：造一张「已解码」的假图 */
-function ready(skin) {
-  const b = harness({ page: 'lobby', saved: { [SKIN_KEY]: skin } });
-  return b;
-}
+function ready(skin) { return harness({ page: 'lobby', saved: { [SKIN_KEY]: skin } }); }
 
 export function run() {
   const out = [];
@@ -50,17 +45,17 @@ export function run() {
     ok('shared/character.js 暴露了 ArcadeCharacter', !!C);
     ok('默认皮肤是 classic', C.getSkin() === 'classic', C.getSkin());
     ok('没存过时不会写入 arcade.characterSkin（老玩家不被改设置）', !b.store.has(SKIN_KEY), String(b.store.get(SKIN_KEY)));
-    ok('皮肤列表正好是 classic / yunyue / pixel', C.SKINS.join(',') === 'classic,yunyue,pixel', C.SKINS.join(','));
+    ok('皮肤列表正好是 classic / yunyue', C.SKINS.join(',') === 'classic,yunyue', C.SKINS.join(','));
+    ok('已经删掉的 pixel 皮肤不在列表里', C.SKINS.indexOf('pixel') < 0);
 
     C.setSkin('yunyue');
     ok('setSkin("yunyue") 立刻写入 arcade.characterSkin', b.store.get(SKIN_KEY) === 'yunyue', String(b.store.get(SKIN_KEY)));
-    C.setSkin('pixel');
-    ok('setSkin("pixel") 立刻写入 arcade.characterSkin', b.store.get(SKIN_KEY) === 'pixel' && C.getSkin() === 'pixel');
+    ok('setSkin("yunyue") 后 getSkin 一致', C.getSkin() === 'yunyue');
 
     C.setSkin('classic');
     ok('cycleSkin() classic -> yunyue', C.cycleSkin() === 'yunyue' && b.store.get(SKIN_KEY) === 'yunyue');
-    ok('cycleSkin() yunyue -> pixel', C.cycleSkin() === 'pixel' && b.store.get(SKIN_KEY) === 'pixel');
-    ok('cycleSkin() pixel -> classic', C.cycleSkin() === 'classic' && b.store.get(SKIN_KEY) === 'classic');
+    ok('cycleSkin() yunyue -> classic', C.cycleSkin() === 'classic' && b.store.get(SKIN_KEY) === 'classic');
+    ok('只有两套皮肤，循环能一直来回切', C.cycleSkin() === 'yunyue' && C.cycleSkin() === 'classic');
 
     C.setSkin('abc');
     ok('非法皮肤值回退 classic', C.getSkin() === 'classic' && b.store.get(SKIN_KEY) === 'classic', C.getSkin());
@@ -90,8 +85,9 @@ export function run() {
     ok('重新进页面能读回 yunyue', b.window.ArcadeCharacter.getSkin() === 'yunyue');
   }
   {
+    /* 被删掉的 pixel 皮肤留下的旧值：不再是合法皮肤，按非法值回退 classic */
     const b = harness({ page: 'runner', saved: { [SKIN_KEY]: 'pixel' } });
-    ok('重新进页面能读回 pixel', b.window.ArcadeCharacter.getSkin() === 'pixel');
+    ok('已删除的 pixel 皮肤值按非法值回退 classic', b.window.ArcadeCharacter.getSkin() === 'classic');
   }
   {
     const b = harness({ page: 'runner', saved: { [SKIN_KEY]: 'nonsense' } });
@@ -117,36 +113,33 @@ export function run() {
       [...b.store.keys()].join(','));
     b.els.skin.fire('click');
     b.els.skin.fire('click');
-    ok('循环一整圈后仍然只有 arcade.characterSkin 被写',
+    ok('来回切一圈后仍然只有 arcade.characterSkin 被写',
       [...b.store.keys()].filter((k) => k !== SKIN_KEY).length === keys.length &&
       keys.every((k) => b.store.get(k) === before[k]));
   }
   {
-    /* 按钮文案：三态循环，中英都要对 */
+    /* 按钮文案：中英都要对 */
     const b = harness({ page: 'lobby', navLang: 'zh-CN' });
     ok('大厅角色按钮默认文案', b.els.skin.textContent === '🐳 经典鲸鱼', b.els.skin.textContent);
     b.els.skin.fire('click');
-    ok('第一次点击 -> 动画鲸鱼娘', b.els.skin.textContent === '🐳 动画鲸鱼娘', b.els.skin.textContent);
+    ok('第一次点击 -> 鲸鱼娘', b.els.skin.textContent === '🐳 鲸鱼娘', b.els.skin.textContent);
     b.els.skin.fire('click');
-    ok('第二次点击 -> 像素鲸鱼娘', b.els.skin.textContent === '🐳 像素鲸鱼娘', b.els.skin.textContent);
-    b.els.skin.fire('click');
-    ok('第三次点击 -> 回到经典鲸鱼', b.els.skin.textContent === '🐳 经典鲸鱼', b.els.skin.textContent);
+    ok('第二次点击 -> 回到经典鲸鱼', b.els.skin.textContent === '🐳 经典鲸鱼', b.els.skin.textContent);
     ok('按钮带 aria-label（可访问性）', (b.els.skin.getAttribute('aria-label') || '').length > 0,
       b.els.skin.getAttribute('aria-label'));
     b.els.lang.fire('click');
     ok('切英文后按钮文案同步', b.els.skin.textContent === '🐳 Classic Whale', b.els.skin.textContent);
     b.els.skin.fire('click');
-    ok('英文下第一次点击 -> Animated Whale Girl', b.els.skin.textContent === '🐳 Animated Whale Girl', b.els.skin.textContent);
+    ok('英文下点击 -> Whale Girl', b.els.skin.textContent === '🐳 Whale Girl', b.els.skin.textContent);
     b.els.skin.fire('click');
-    ok('英文下第二次点击 -> Pixel Whale Girl', b.els.skin.textContent === '🐳 Pixel Whale Girl', b.els.skin.textContent);
+    ok('英文下再点一次 -> 回到 Classic Whale', b.els.skin.textContent === '🐳 Classic Whale', b.els.skin.textContent);
   }
   {
-    /* 大厅不再出现含糊的「鲸鱼娘 / Whale-chan」这种唯一名称 */
     const b = harness({ page: 'lobby', navLang: 'zh-CN' });
     const seen = [b.els.skin.textContent];
-    for (let i = 0; i < 3; i++) { b.els.skin.fire('click'); seen.push(b.els.skin.textContent); }
-    ok('三态文案互不相同且都写明是哪一套',
-      new Set(seen.slice(0, 3)).size === 3 && seen.every((s) => s.indexOf('鲸鱼') !== -1 || s.indexOf('Whale') !== -1),
+    for (let i = 0; i < 2; i++) { b.els.skin.fire('click'); seen.push(b.els.skin.textContent); }
+    ok('两套皮肤文案互不相同且都写明是哪一套',
+      new Set(seen.slice(0, 2)).size === 2 && seen.every((s) => s.indexOf('鲸鱼') !== -1),
       seen.join(' | '));
   }
 
@@ -158,34 +151,17 @@ export function run() {
     b.log.draws.length = 0;
     advance(b, 40);
     const names = assetNames(b);
-    ok('Whale Runner 的 YunYue 皮肤用 drawImage 画出来（不是像素精灵）',
+    ok('Whale Runner 的鲸鱼娘皮肤用 drawImage 画出来（不是像素精灵）',
       names.some((s) => /^walk-\d+\.webp$/.test(s)), names.slice(0, 3).join('|'));
     ok('Whale Runner 的地面状态在用 walk 多帧循环',
       new Set(names.filter((s) => /^walk-\d+\.webp$/.test(s))).size >= 4,
       [...new Set(names)].join(','));
     const d = b.log.draws[b.log.draws.length - 1];
-    ok('YunYue 绘制尺寸保持素材比例（宽/高 ≈ 192/208）',
+    ok('鲸鱼娘绘制尺寸保持素材比例（宽/高 ≈ 192/208）',
       !!d && Math.abs((d.w / d.h) - (192 / 208)) < 0.02, d ? (d.w / d.h).toFixed(3) : 'none');
   }
   {
-    const b = fresh({ images: 'ok' });
-    b.window.ArcadeCharacter.setSkin('pixel');
-    b.key('keydown', ' ', 'Space'); b.key('keyup', ' ', 'Space');
-    b.log.draws.length = 0;
-    advance(b, 40);
-    const names = assetNames(b);
-    ok('Whale Runner 的 Pixel 皮肤用 drawImage 画出来',
-      names.some((s) => /^walk-\d+\.webp$/.test(s)), names.slice(0, 3).join('|'));
-    /* 上游 Pixel 的 8 帧跑动只有 3 个不重复姿势，所以 3 就是完整循环 */
-    ok('Whale Runner 的 Pixel 地面状态在用 walk 多帧循环',
-      new Set(names.filter((s) => /^walk-\d+\.webp$/.test(s))).size >= 3,
-      [...new Set(names)].join(','));
-    const d = b.log.draws[b.log.draws.length - 1];
-    ok('Pixel 绘制尺寸保持素材比例（宽/高 = 72/88）',
-      !!d && Math.abs((d.w / d.h) - (72 / 88)) < 0.02, d ? (d.w / d.h).toFixed(3) : 'none');
-  }
-  {
-    /* 同一段确定性剧本，三套皮肤必须跑到同一帧才 Game Over（判定盒没变） */
+    /* 同一段确定性剧本，两套皮肤必须跑到同一帧才 Game Over（判定盒没变） */
     function runOnce(skin) {
       const b = harness({ page: 'runner', exposeGame: true, saved: { [SKIN_KEY]: skin } });
       freezeRandom(b, 0.5);
@@ -197,10 +173,8 @@ export function run() {
     }
     const a = runOnce('classic');
     const c = runOnce('yunyue');
-    const d = runOnce('pixel');
     ok('Whale Runner：换皮肤后同一帧碰撞、同一分数（判定盒不变）',
-      JSON.stringify(a) === JSON.stringify(c) && JSON.stringify(a) === JSON.stringify(d),
-      JSON.stringify(a) + ' / ' + JSON.stringify(c) + ' / ' + JSON.stringify(d));
+      JSON.stringify(a) === JSON.stringify(c), JSON.stringify(a) + ' / ' + JSON.stringify(c));
   }
   {
     /* Token Fall：直接把掉落物喂到嘴边，换皮肤后结算必须完全一样 */
@@ -218,11 +192,9 @@ export function run() {
     }
     const a = feedOnce('classic');
     const c = feedOnce('yunyue');
-    const d = feedOnce('pixel');
     ok('Token Fall：换皮肤后接物判定与结算完全一致（玩家 72×54 不变）',
-      JSON.stringify(a) === JSON.stringify(c) && JSON.stringify(a) === JSON.stringify(d) &&
-      a.w === 72 && a.h === 54 && a.caught,
-      JSON.stringify(a) + ' / ' + JSON.stringify(c) + ' / ' + JSON.stringify(d));
+      JSON.stringify(a) === JSON.stringify(c) && a.w === 72 && a.h === 54 && a.caught,
+      JSON.stringify(a) + ' / ' + JSON.stringify(c));
   }
   {
     /* Context Snake：蛇头换脸，但网格坐标与移动完全一样 */
@@ -239,13 +211,10 @@ export function run() {
     }
     const a = snakeOnce('classic');
     const c = snakeOnce('yunyue');
-    const d = snakeOnce('pixel');
     ok('Context Snake：换皮肤后蛇头格子 / 长度 / 分数完全一样',
-      a.head === c.head && a.len === c.len && a.score === c.score &&
-      a.head === d.head && a.len === d.len && a.score === d.score,
-      JSON.stringify(a) + ' / ' + JSON.stringify(c) + ' / ' + JSON.stringify(d));
-    ok('Context Snake：YunYue 模式下确实画了头像素材', c.drew > 0, String(c.drew));
-    ok('Context Snake：Pixel 模式下确实画了头像素材', d.drew > 0, String(d.drew));
+      a.head === c.head && a.len === c.len && a.score === c.score,
+      JSON.stringify(a) + ' / ' + JSON.stringify(c));
+    ok('Context Snake：鲸鱼娘模式下确实画了头像素材', c.drew > 0, String(c.drew));
   }
   {
     /* Attention Maze：格子制，换皮肤不改玩家所在格 */
@@ -260,17 +229,13 @@ export function run() {
       advance(b, 30);
       b.log.draws.length = 0;
       advance(b, 4);
-      const cell = G.CELL === undefined ? null : G.CELL;
-      return { cell: G.player.cx + ',' + G.player.cy, moves: G.moves, drew: b.log.draws.length, cellSize: cell };
+      return { cell: G.player.cx + ',' + G.player.cy, moves: G.moves, drew: b.log.draws.length };
     }
     const a = mazeOnce('classic');
     const c = mazeOnce('yunyue');
-    const d = mazeOnce('pixel');
     ok('Attention Maze：换皮肤后玩家格子与 MOVES 完全一样',
-      a.cell === c.cell && a.moves === c.moves && a.cell === d.cell && a.moves === d.moves,
-      JSON.stringify(a) + ' / ' + JSON.stringify(c) + ' / ' + JSON.stringify(d));
-    ok('Attention Maze：YunYue 模式下确实画了头像素材', c.drew > 0, String(c.drew));
-    ok('Attention Maze：Pixel 模式下确实画了头像素材', d.drew > 0, String(d.drew));
+      a.cell === c.cell && a.moves === c.moves, JSON.stringify(a) + ' / ' + JSON.stringify(c));
+    ok('Attention Maze：鲸鱼娘模式下确实画了头像素材', c.drew > 0, String(c.drew));
   }
   {
     /* 大厅四张预览：切皮肤后都要跟着换角色，并且不刷新页面 */
@@ -281,14 +246,8 @@ export function run() {
     ok('大厅切换后四张预览都重画（Runner / Snake / Token Fall / Maze 一起换）',
       b.log.draws.length >= 4, String(b.log.draws.length));
     const srcs = drewAssets(b);
-    ok('Runner 预览用到了 YunYue walk 素材', srcs.some((s) => s.indexOf(YUNYUE_DIR + 'walk-') >= 0), srcs.join('|'));
-    ok('Snake / Maze 预览用到了 YunYue 头像素材', srcs.some((s) => s.indexOf(YUNYUE_DIR + 'head.webp') >= 0), srcs.join('|'));
-    b.log.draws.length = 0;
-    b.els.skin.fire('click');
-    const srcs2 = drewAssets(b);
-    ok('切到 Pixel 后预览改用 Pixel 素材',
-      b.store.get(SKIN_KEY) === 'pixel' && srcs2.some((s) => s.indexOf(PIXEL_DIR) >= 0) &&
-      srcs2.every((s) => s.indexOf(YUNYUE_DIR) < 0), srcs2.join('|'));
+    ok('Runner 预览用到了鲸鱼娘 walk 素材', srcs.some((s) => s.indexOf(YUNYUE_DIR + 'walk-') >= 0), srcs.join('|'));
+    ok('Snake / Maze 预览用到了鲸鱼娘头像素材', srcs.some((s) => s.indexOf(YUNYUE_DIR + 'head.webp') >= 0), srcs.join('|'));
     b.log.draws.length = 0;
     b.els.skin.fire('click');
     ok('切回经典后预览不再画任何图片素材',
@@ -299,10 +258,10 @@ export function run() {
   {
     const b = ready('yunyue');
     const A = b.window.ArcadeCharacter;
-    ok('YunYue walk 一共 8 帧', A.frameCount('walk') === 8, String(A.frameCount('walk')));
-    ok('YunYue walk 帧时长 120ms', A.frameMs('walk') === 120, String(A.frameMs('walk')));
+    ok('鲸鱼娘 walk 一共 8 帧', A.frameCount('walk') === 8, String(A.frameCount('walk')));
+    ok('鲸鱼娘 walk 帧时长 120ms', A.frameMs('walk') === 120, String(A.frameMs('walk')));
     const seq = [0, 100, 120, 240, 360, 480, 840, 960, 1080].map((t) => A.frameIndex('walk', t));
-    ok('YunYue walk 帧号随时间前进并回环（0,0,1,2,3,4,7,0,1）',
+    ok('鲸鱼娘 walk 帧号随时间前进并回环（0,0,1,2,3,4,7,0,1）',
       seq.join(',') === '0,0,1,2,3,4,7,0,1', seq.join(','));
 
     const f = fakeCtx();
@@ -318,22 +277,6 @@ export function run() {
       A.frameIndex('walk', 1000) === A.frameIndex('walk', 1000) && A.frameIndex('walk', 1000) === 0);
   }
   {
-    const b = ready('pixel');
-    const A = b.window.ArcadeCharacter;
-    ok('Pixel walk 播放序列是上游的 8 帧一步', A.frameCount('walk') === 8, String(A.frameCount('walk')));
-    ok('Pixel walk 帧时长 100ms', A.frameMs('walk') === 100, String(A.frameMs('walk')));
-    const seq = [0, 99, 100, 200, 400, 700, 800].map((t) => A.frameIndex('walk', t));
-    ok('Pixel walk 帧号随时间前进并回环（0,0,1,2,4,7,0）',
-      seq.join(',') === '0,0,1,2,4,7,0', seq.join(','));
-    const g = fakeCtx();
-    for (let t = 0; t < 800; t += 100) A.draw(g.ctx, 'walk', 0, 0, 10, 10, { time: t });
-    const drawnWalk = g.calls.map((c) => c.img.split('/').pop());
-    ok('Pixel walk 真的在换帧（不是左右平移一张图）',
-      new Set(drawnWalk).size >= 3, [...new Set(drawnWalk)].join(','));
-    ok('Pixel walk 一整轮只用到上游那 3 个不重复姿势',
-      new Set(drawnWalk).size === 3 && drawnWalk.length === 8, drawnWalk.join(','));
-  }
-  {
     /* 多帧不靠模块自身「记住状态」：同一时刻反复调用拿到同一帧，
      * 这一点让 60 / 120 / 144Hz 屏幕不可能跑出不同速度。 */
     const b = ready('yunyue');
@@ -342,6 +285,22 @@ export function run() {
     ok('frameIndex 与调用次数无关（同一时间恒定同一帧）',
       A.frameIndex('walk', t) === 2 && A.frameIndex('walk', t) === A.frameIndex('walk', t),
       String(A.frameIndex('walk', t)));
+  }
+  {
+    /* 语义状态必须齐全：四款游戏只用这些名字 */
+    const A = ready('yunyue').window.ArcadeCharacter;
+    const states = ['idle', 'walk', 'jump', 'dive', 'think', 'startle', 'blocked', 'head', 'headThink'];
+    ok('注册表的状态列表就是游戏认识的语义状态',
+      A.STATES.slice().sort().join(',') === states.slice().sort().join(','), A.STATES.join(','));
+    const missing = states.filter((s) => A.frameCount(s) <= 0);
+    ok('每个语义状态都真的有帧', missing.length === 0, missing.join(','));
+    const nofiles = states.filter((s) => A.ratio(s, 'yunyue') <= 0);
+    ok('每个语义状态都有可用的宽高比（measure 不会算出 0 宽）', nofiles.length === 0, nofiles.join(','));
+    ok('全身状态用同一个画布比例（换状态不会突然变形）',
+      ['idle', 'walk', 'jump', 'dive', 'think', 'startle', 'blocked']
+        .every((s) => Math.abs(A.ratio(s, 'yunyue') - 192 / 208) < 1e-9));
+    ok('头像是正方形（Snake / Maze 只用 head / headThink）',
+      A.ratio('head', 'yunyue') === 1 && A.ratio('headThink', 'yunyue') === 1);
   }
   {
     /* 暂停：Whale Runner 的角色动画时钟只在 running 时推进 */
@@ -400,7 +359,7 @@ export function run() {
   }
   {
     /* 重开一局：动画时间必须复位 */
-    const b = harness({ page: 'runner', exposeGame: true, images: 'ok', saved: { [SKIN_KEY]: 'pixel' } });
+    const b = harness({ page: 'runner', exposeGame: true, images: 'ok', saved: { [SKIN_KEY]: 'yunyue' } });
     freezeRandom(b, 0.5);
     b.key('keydown', ' ', 'Space'); b.key('keyup', ' ', 'Space');
     advance(b, 30);
@@ -419,15 +378,8 @@ export function run() {
     b.log.scales.length = 0;
     b.key('keydown', ' ', 'Space'); b.key('keyup', ' ', 'Space');
     advance(b, 10);
-    ok('Whale Runner：YunYue 一直朝右游，不做镜像',
+    ok('Whale Runner：鲸鱼娘一直朝右游，不做镜像',
       !b.log.scales.some((s) => s[0] === -1), JSON.stringify(b.log.scales.slice(0, 3)));
-
-    const c = fresh({ images: 'ok', saved: { [SKIN_KEY]: 'pixel' } });
-    c.log.scales.length = 0;
-    c.key('keydown', ' ', 'Space'); c.key('keyup', ' ', 'Space');
-    advance(c, 10);
-    ok('Whale Runner：Pixel 一直朝右游，不做镜像',
-      !c.log.scales.some((s) => s[0] === -1), JSON.stringify(c.log.scales.slice(0, 3)));
 
     const d = fresh({ images: 'ok', saved: { [SKIN_KEY]: 'classic' } });
     d.log.scales.length = 0;
@@ -469,7 +421,7 @@ export function run() {
   }
   {
     function mazeFace(dir, tx) {
-      const b = harness({ page: 'attentionmaze', exposeGame: true, images: 'ok', saved: { [SKIN_KEY]: 'pixel' } });
+      const b = harness({ page: 'attentionmaze', exposeGame: true, images: 'ok', saved: { [SKIN_KEY]: 'yunyue' } });
       const G = b.G;
       G.startLayer(0);
       let g = 0;
@@ -485,29 +437,18 @@ export function run() {
     ok('Attention Maze：往左走时头像被镜像', mazeFace('ArrowLeft', 7) === true);
   }
 
-  /* ================= F. smoothing：插画开、像素关，画完必须还原 ================= */
+  /* ================= F. smoothing：插画开、画完必须还原 ================= */
   {
     const b = ready('yunyue');
     const A = b.window.ArcadeCharacter;
     const y = fakeCtx(true);
-    ok('YunYue 画得出来', A.draw(y.ctx, 'walk', 0, 0, 10, 10, { time: 0 }) === true);
-    ok('YunYue 绘制期间 imageSmoothingEnabled = true', y.calls[0].smooth === true);
-    ok('YunYue：draw 结束后 ctx 状态还原', y.ctx.imageSmoothingEnabled === true && y.ctx.globalAlpha === 1);
+    ok('鲸鱼娘画得出来', A.draw(y.ctx, 'walk', 0, 0, 10, 10, { time: 0 }) === true);
+    ok('鲸鱼娘绘制期间 imageSmoothingEnabled = true', y.calls[0].smooth === true);
+    ok('鲸鱼娘：draw 结束后 ctx 状态还原', y.ctx.imageSmoothingEnabled === true && y.ctx.globalAlpha === 1);
 
     const y2 = fakeCtx(false);
     A.draw(y2.ctx, 'walk', 0, 0, 10, 10, { time: 0 });
-    ok('YunYue：原本 smoothing 关闭时，画完仍然关闭', y2.ctx.imageSmoothingEnabled === false);
-
-    const p = fakeCtx(true);
-    const pb = ready('pixel');
-    const PA = pb.window.ArcadeCharacter;
-    ok('Pixel 画得出来', PA.draw(p.ctx, 'walk', 0, 0, 10, 10, { time: 0 }) === true);
-    ok('Pixel 绘制期间 imageSmoothingEnabled = false（像素不被糊掉）', p.calls[0].smooth === false);
-    ok('Pixel：draw 结束后 ctx 状态还原', p.ctx.imageSmoothingEnabled === true && p.ctx.globalAlpha === 1);
-
-    const p2 = fakeCtx(false);
-    PA.draw(p2.ctx, 'walk', 0, 0, 10, 10, { time: 0 });
-    ok('Pixel：原本 smoothing 关闭时，画完仍然关闭', p2.ctx.imageSmoothingEnabled === false);
+    ok('鲸鱼娘：原本 smoothing 关闭时，画完仍然关闭', y2.ctx.imageSmoothingEnabled === false);
 
     const al = fakeCtx(true);
     al.ctx.globalAlpha = 0.4;
@@ -515,11 +456,10 @@ export function run() {
     ok('opts.alpha 是乘在原有 globalAlpha 上的', Math.abs(al.calls[0].alpha - 0.2) < 1e-9, String(al.calls[0].alpha));
     ok('draw 结束后 globalAlpha 也还原', al.ctx.globalAlpha === 0.4, String(al.ctx.globalAlpha));
 
-    const info1 = A.getSkinInfo();
-    const info2 = PA.getSkinInfo();
-    ok('皮肤注册表声明 YunYue smoothing = true', info1.smoothing === true && info1.image === true);
-    ok('皮肤注册表声明 Pixel smoothing = false', info2.smoothing === false && info2.image === true);
-    ok('皮肤注册表声明 Classic 不是图片皮肤', b.window.ArcadeCharacter.getSkinInfo('classic').image === false);
+    const info = A.getSkinInfo();
+    ok('皮肤注册表声明鲸鱼娘 smoothing = true', info.smoothing === true && info.image === true);
+    ok('皮肤注册表声明 Classic 不是图片皮肤', A.getSkinInfo('classic').image === false);
+    ok('注册表里只有两套皮肤（不会有第三套幽灵皮肤）', A.SKINS.length === 2, A.SKINS.join(','));
   }
 
   /* ================= G. 懒加载与缓存 ================= */
@@ -535,11 +475,11 @@ export function run() {
     const expect = countFiles(A, 'yunyue');
     A.setSkin('yunyue');
     const srcs = requested(b);
-    ok('切到 YunYue 只请求 YunYue 的素材',
+    ok('切到鲸鱼娘只请求鲸鱼娘的素材',
       srcs.length > 0 && srcs.every((s) => s.indexOf(YUNYUE_DIR) >= 0), srcs.slice(0, 2).join('|'));
-    ok('切到 YunYue 不会顺手下载 Pixel 素材', srcs.every((s) => s.indexOf(PIXEL_DIR) < 0));
-    ok('YunYue 素材数量与注册表一致（' + expect + ' 张）', srcs.length === expect, String(srcs.length));
+    ok('素材数量与注册表一致（' + expect + ' 张）', srcs.length === expect, String(srcs.length));
     ok('素材路径是相对路径（不含站点绝对 /assets/）', srcs.every((s) => s.indexOf('/assets/') < 0));
+    ok('不会再请求已经删掉的像素皮肤素材', srcs.every((s) => s.indexOf('whale-' + 'pixel') < 0));
     const n0 = b.images.length;
     A.setSkin('yunyue');
     ok('重复 setSkin 同一套不会重复 new Image', b.images.length === n0, String(b.images.length));
@@ -548,22 +488,11 @@ export function run() {
     ok('切走再切回来不会重新加载（走缓存）', b.images.length === n0, n0 + ' -> ' + b.images.length);
   }
   {
-    const b = harness({ page: 'lobby' });
-    const A = b.window.ArcadeCharacter;
-    const expect = countFiles(A, 'pixel');
-    A.setSkin('pixel');
-    const srcs = requested(b);
-    ok('切到 Pixel 只请求 Pixel 的素材',
-      srcs.length > 0 && srcs.every((s) => s.indexOf(PIXEL_DIR) >= 0), srcs.slice(0, 2).join('|'));
-    ok('切到 Pixel 不会顺手下载 YunYue 素材', srcs.every((s) => s.indexOf(YUNYUE_DIR) < 0));
-    ok('Pixel 素材数量与注册表一致（' + expect + ' 张）', srcs.length === expect, String(srcs.length));
-  }
-  {
-    /* hover 预加载：只把「下一套」拉起来，不影响当前选择 */
+    /* hover 预加载：经典状态下把鲸鱼娘拉起来，但不改当前选择 */
     const b = harness({ page: 'lobby' });
     b.els.skin.fire('pointerenter');
     const srcs = requested(b);
-    ok('hover 皮肤按钮时预加载下一套（YunYue）',
+    ok('hover 皮肤按钮时预加载鲸鱼娘素材',
       srcs.length > 0 && srcs.every((s) => s.indexOf(YUNYUE_DIR) >= 0), srcs.slice(0, 2).join('|'));
     ok('预加载不会偷偷改掉当前皮肤', b.store.get(SKIN_KEY) === undefined);
   }
@@ -618,7 +547,7 @@ export function run() {
   {
     const b = harness({ page: 'lobby', images: 'fail' });
     const A = b.window.ArcadeCharacter;
-    A.setSkin('pixel');
+    A.setSkin('yunyue');
     ok('素材全挂时 isActive() 为 false（预览会继续画经典）', A.isActive() === false);
     ok('素材全挂时也不会抛错', b.errors.length === 0, b.errors[0]);
   }

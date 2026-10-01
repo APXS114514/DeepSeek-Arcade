@@ -24,7 +24,7 @@ CI 里同样是这一条命令（`.github/workflows/pages.yml` 的 `Run tests` �
 | Attention Maze · 玩法 | 12 关地图数据自检（15×11、四周封闭、节点都在可走格、不重叠、answer 就是注意力最高的 KEY）与 **BFS 可解性验证**、par 合理性、地图解析、走格子与撞墙不加 MOVES、提前到 EXIT 无效、
 QUERY 触发与展示时长、错误 KEY 只记一次 MISTAKE、正确 KEY 解锁 VALUE、VALUE 解锁 EXIT、权重不随机、MULTI-HEAD 阶段顺序与「两头之和」判定、RESCAN 次数与上限、暂停冻结全部计时、切页自动暂停、
 重开清理、进度解锁与星级（含「更差成绩不覆盖最佳」）、存档损坏容错、RESET 二次确认、触屏/多指/失焦松手、DPR 不影响判定 |
-| 角色皮肤 | `arcade.characterSkin` 默认 classic、非法值回退、`setSkin` / `cycleSkin` 三态循环、`onChange`、重新进页面读回同一个值、**旧值 `whalechan` 自动迁移成 `yunyue` 并写回**；**换皮肤不改任何游戏数据**（成绩 / 进度 / 音效 / 语言 key 逐个比对，循环一整圈后再比一次）；四款游戏换皮肤后**判定盒完全不变**（Runner 用固定随机种子跑同一段剧本对比死亡帧、Token Fall 对比接物结算、Snake 对比蛇头格子与长度、Maze 对比所在格与 MOVES）；**动画帧只由时间决定**（同一时间画 50 次仍是同一帧、多帧 walk 真的在换帧、Pixel 一整轮只用到 3 个不重复姿势）；暂停后角色动画时钟冻结且不再换帧；`yunyue` 绘制期间 `imageSmoothingEnabled = true`、`pixel` 为 `false`，且画完一定还原（smoothing 与 globalAlpha）；左右朝向镜像正确（Runner 不镜像、Token Fall / Snake / Maze 朝左镜像）；素材**懒加载**（classic 启动不下载任何图片、切一套只请求那一套、切回来不重复 `new Image()`、hover 预热下一套）；全套 404 / 单张 404 / 加载中都回退经典小鲸鱼且不报错 |
+| 角色皮肤 | `arcade.characterSkin` 默认 classic、非法值回退、`setSkin` / `cycleSkin` 来回切换、`onChange`、重新进页面读回同一个值、**旧值 `whalechan` 自动迁移成 `yunyue` 并写回**；**换皮肤不改任何游戏数据**（成绩 / 进度 / 音效 / 语言 key 逐个比对，循环一整圈后再比一次）；四款游戏换皮肤后**判定盒完全不变**（Runner 用固定随机种子跑同一段剧本对比死亡帧、Token Fall 对比接物结算、Snake 对比蛇头格子与长度、Maze 对比所在格与 MOVES）；**动画帧只由时间决定**（同一时间画 50 次仍是同一帧、8 帧 walk 真的在换帧）；暂停后角色动画时钟冻结且不再换帧；`yunyue` 绘制期间 `imageSmoothingEnabled = true`，且画完一定还原（smoothing 与 globalAlpha）；左右朝向镜像正确（Runner 不镜像、Token Fall / Snake / Maze 朝左镜像），`jump` 与步态同向；素材**懒加载**（classic 启动不下载任何图片、切换只请求当前皮肤那一套、切回来不重复 `new Image()`、hover 预热下一套）；全套 404 / 单张 404 / 加载中都回退经典小鲸鱼且不报错 |
 | 静态检查 | 所有 `src`/`href` 都能解析到真实文件、没有站点绝对路径、四款游戏的 localStorage key 互不冲突、角色注册表里的每张素材都真实存在（且目录里没有漏登记 / 多余的 WebP）、旧的第三方素材目录与 CC BY 4.0 全文已删除 |
 
 ## 关卡可解性验证（Attention Maze）
@@ -53,16 +53,13 @@ K5/K6 不能只是干扰项、KEY 数量单调递增、答案不会总是最右 
   里那条旧 localStorage 值到 `yunyue` 的迁移表，以及验证迁移的测试本身）；
 - `assets/whale-yunyue/ATTRIBUTION.md` 存在，写明作者 `YunYueSama`、上游仓库地址、
   上游 commit SHA、`modified`、以及所依据的许可文件名；
-- `assets/whale-pixel/ATTRIBUTION.md` 存在，写明 `chenthreegold/deepseek-whale-pet`、`MIT`、
-  上游 commit SHA 与派生处理说明；
-- `LICENSES/YUNYUE-WHALE-PET-LICENSE.txt` 是上游「大肥鱼项目署名许可 1.0」全文，
-  `LICENSES/CHENTHREEGOLD-WHALE-PET-MIT.txt` 是上游 MIT 全文；
-- `THIRD_PARTY_NOTICES.md` 同时列出两个新来源，并说明「代码 MIT / 两套素材各自的授权」，
+- `LICENSES/YUNYUE-WHALE-PET-LICENSE.txt` 是上游「大肥鱼项目署名许可 1.0」全文；
+- `THIRD_PARTY_NOTICES.md` 列出这个来源，并说明「代码 MIT / 素材自己的授权」，
   且**不再出现**旧皮肤；
-- 根 `LICENSE` 仍然是 MIT，并写清楚两套图片素材都不在 MIT 范围内；
-- 中英 README 都提到三套角色与 `arcade.characterSkin`，并给出两个新来源仓库；
-- 两套派生素材齐全、体积可控（动画鲸鱼娘 < 512KB、像素鲸鱼娘 < 128KB）、
-  运行时目录里没有混入上游原始 PNG。
+- 根 `LICENSE` 仍然是 MIT，并写清楚鲸鱼娘素材不在 MIT 范围内；
+- 中英 README 都提到两套角色与 `arcade.characterSkin`，并给出素材来源仓库；
+- 派生素材齐全、体积可控（鲸鱼娘 < 512KB）、运行时目录里没有混入上游原始 PNG；
+- 已经删掉的皮肤不会复活（旧素材目录、被移除的像素皮肤目录、以及没有素材使用的许可全文都不存在）。
 
 ## 加测试怎么入手
 

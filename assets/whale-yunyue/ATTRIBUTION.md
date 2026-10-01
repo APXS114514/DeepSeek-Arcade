@@ -37,7 +37,7 @@ row-major, exactly as `src/renderer/app.js` slices them.
 | --- | --- | --- | --- |
 | `idle-0..3.webp` | `motion-idle.png` (cell 512) | 0, 1, 2, 3 | 待机轻微换重心（上游 `clips.shift` / `clips.settle` 用的就是这几张） |
 | `walk-0..7.webp` | `inbetween-walk.png` (cell 512) | 0, 3, 4, 6, 8, 11, 12, 14 | 上游 `clips.right` 真正播放的整身步态；按上游 16 帧播放顺序等间隔取 8 帧，帧时长 ×2 后总时长仍是上游的 960ms |
-| `jump.webp` | `dense-jump.png` (cell 512) | 9 | `clips.jump` 腾空段的一帧（举臂屈膝） |
+| `jump.webp` | `dense-jump.png` (cell 512) | 7 | `clips.jump` 腾空段里**侧身朝右**的一帧。同段的 9 / 13 头发与尾鳍甩向另一侧，单独取出来会看起来「面朝左」，和步态朝向冲突，因此未采用 |
 | `dive.webp` | `dense-jump.png` (cell 512) | 21 | `clips.land` 的落地压缩帧，用作低姿态 / 下潜 |
 | `think.webp` | `story-token.png` (cell 384) | 0 | `clips.think` 第一帧（低头看 token 的工作姿势） |
 | `startle.webp` | `actions.png` (cell 512) | 14 | `clips.surprise` 用到的惊慌帧（带惊叹号） |
@@ -58,14 +58,14 @@ upstream material. Nothing was redrawn and no colour was changed. The pipeline w
 3. **Fixed crop window per pose group** — all frames of one state (e.g. the whole
    walk cycle) share a single crop rectangle and a single transform, so the
    character cannot jitter or drift between frames.
-4. **Uniform rescale** — the whole set is scaled by one factor (0.4638) into a
+4. **Uniform rescale** — the whole set is scaled by one factor (0.4595) into a
    shared **192×208** RGBA canvas; the original aspect ratio is preserved.
 5. **Bottom alignment** — each pose group's alpha bounding box is aligned to the
    same ground baseline, so the character's feet always land on the same line.
 6. **Alpha edge cleanup** — alpha values below 8/255 are zeroed to remove faint
    edge halos. RGB values are untouched.
 7. **Format change** — re-encoded from PNG to **WebP (quality 88)** to keep the
-   runtime payload small (≈215 KB for all 19 files).
+   runtime payload small (≈214 KB for all 19 files).
 
 ## Third-party rights boundary
 

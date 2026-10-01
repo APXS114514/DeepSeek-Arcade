@@ -66,9 +66,8 @@
       'ui.back': '← 返回游戏厅',
       'skin.label': '角色',
       'skin.classic': '🐳 经典鲸鱼',
-      'skin.yunyue': '🐳 动画鲸鱼娘',
-      'skin.pixel': '🐳 像素鲸鱼娘',
-      'skin.aria': '切换角色外观（经典鲸鱼 → 动画鲸鱼娘 → 像素鲸鱼娘）',
+      'skin.yunyue': '🐳 鲸鱼娘',
+      'skin.aria': '切换角色外观（经典鲸鱼 / 鲸鱼娘）',
 
       /* ---------- Context Snake ---------- */
       'snake.title': 'Context 贪吃蛇 · DeepSeek Arcade',
@@ -248,9 +247,8 @@
       'ui.back': '← Back to Arcade',
       'skin.label': 'Character',
       'skin.classic': '🐳 Classic Whale',
-      'skin.yunyue': '🐳 Animated Whale Girl',
-      'skin.pixel': '🐳 Pixel Whale Girl',
-      'skin.aria': 'Switch character skin (Classic Whale → Animated Whale Girl → Pixel Whale Girl)',
+      'skin.yunyue': '🐳 Whale Girl',
+      'skin.aria': 'Switch character skin (Classic Whale / Whale Girl)',
 
       'snake.title': 'Context Snake · DeepSeek Arcade',
       'snake.h1': '🐳 Context Snake',
