@@ -6,7 +6,7 @@
 帧序列。运行时不会调用本脚本，仓库里也不依赖 Python。
 
     python3 tools/derive-character-assets.py \
-        --yunyue-src ../_arcade-skin-src/codex-deepseek-pet
+        --yunyue-src ../Game-Miscellaneous/_arcade-skin-src/codex-deepseek-pet
 
 上游（获取时的 commit 见 assets/whale-yunyue/ATTRIBUTION.md）：
   YunYue : https://github.com/YunYueSama/codex-deepseek-pet (大肥鱼项目署名许可 1.0)
@@ -293,7 +293,7 @@ def print_registry(info):
 
 def main():
     ap = argparse.ArgumentParser(description="派生 DeepSeek Arcade 角色皮肤素材")
-    ap.add_argument("--yunyue-src", default="../_arcade-skin-src/codex-deepseek-pet")
+    ap.add_argument("--yunyue-src", default="../Game-Miscellaneous/_arcade-skin-src/codex-deepseek-pet")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))), "assets"))
     args = ap.parse_args()
