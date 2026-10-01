@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title data-i18n="breaker.title">Context Breaker · DeepSeek Arcade</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%234d6bfe'/%3E%3Cpath d='M7 18c2 4 8 6 12 3 3-2 3-5 6-7-2 0-3 1-4 0-1-4-6-6-9-4-3 1-6 5-5 8z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../../shared/arcade.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <p class="back-row"><a class="arcade-back" href="../../" data-i18n="ui.back">← 返回游戏厅</a></p>
+    <header class="head">
+      <h1 data-i18n="breaker.h1">🐳 CONTEXT BREAKER</h1>
+      <p class="sub" data-i18n="breaker.sub">← → / A D 移动　·　空格 发球　·　P 暂停</p>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" aria-label="CONTEXT BREAKER 游戏画面" data-i18n-aria="breaker.aria"></canvas>
+    </div>
+
+    <div class="pad">
+      <button id="left" class="btn" type="button" aria-label="向左" data-i18n-aria="breaker.ariaLeft">←</button>
+      <button id="right" class="btn" type="button" aria-label="向右" data-i18n-aria="breaker.ariaRight">→</button>
+    </div>
+    <div class="controls launchbar">
+      <button id="launch" class="btn primary" type="button" aria-label="发球" data-i18n-aria="breaker.ariaLaunch" data-i18n="breaker.launchBtn">发球</button>
+      <button id="pause" class="btn" type="button" data-i18n="breaker.pauseBtn">⏸ 暂停</button>
+      <button id="lang" class="btn ghost" type="button"
+              title="切换语言 / Switch language" aria-label="切换语言 / Switch language">🌐 English</button>
+      <button id="sound" class="btn ghost" type="button" aria-pressed="true">🔊 音效</button>
+    </div>
+
+    <footer class="tips" data-i18n-html="breaker.tips">
+      用底部的 TOKEN 弹球打碎 <b>CONTEXT</b> 方块，清空一层进入下一层。
+      <b>DENSE CONTEXT</b> 要打两次；<b>NOISE</b> 会让挡板变窄，<b>THINK</b> 会放慢球速，
+      <b>COMPRESS</b> 会压缩其它方块。最高分存在本地浏览器里。
+    </footer>
+  </main>
+
+  <script src="../../shared/i18n.js"></script>
+  <script src="../../shared/audio.js"></script>
+  <script src="../../shared/whale.js"></script>
+  <script src="../../shared/character.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

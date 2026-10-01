@@ -201,7 +201,41 @@
       'maze.tip.headTrap': '只看一个头会猜错，两个头都要记',
       'maze.tip.combineHint': '两个头都高的那个才是答案',
       'maze.tip.final': 'FINAL ATTENTION：把学过的全用上',
-      'maze.tips': '<b>ATTENTION SCAN</b> 时整张地图可见，之后进入 <b>FOCUS MODE</b>：只看得到身边一圈，走过的地方留下很暗的残影。走到 <b>QUERY</b> 会亮起它到各个 <b>KEY</b> 的注意力连线与权重数字，记住权重最高的 KEY，走过去即 <b>ATTENTION MATCHED</b>，接着 <b>VALUE</b> 与 <b>EXIT</b> 依次解锁。后期出现 <b>MULTI-HEAD ATTENTION</b>：两个头分别给权重，要综合判断。走错 KEY 只记 1 次 MISTAKE，不会 Game Over；<b>RESCAN</b> 每关 1~2 次，用过最多只能拿 2 星。进度与星级存在本地浏览器里。'
+      'maze.tips': '<b>ATTENTION SCAN</b> 时整张地图可见，之后进入 <b>FOCUS MODE</b>：只看得到身边一圈，走过的地方留下很暗的残影。走到 <b>QUERY</b> 会亮起它到各个 <b>KEY</b> 的注意力连线与权重数字，记住权重最高的 KEY，走过去即 <b>ATTENTION MATCHED</b>，接着 <b>VALUE</b> 与 <b>EXIT</b> 依次解锁。后期出现 <b>MULTI-HEAD ATTENTION</b>：两个头分别给权重，要综合判断。走错 KEY 只记 1 次 MISTAKE，不会 Game Over；<b>RESCAN</b> 每关 1~2 次，用过最多只能拿 2 星。进度与星级存在本地浏览器里。',
+      /* ---------- Context Breaker（第 5 款） ---------- */
+      'breaker.title': 'Context Breaker · DeepSeek Arcade',
+      'breaker.h1': '🐳 CONTEXT BREAKER',
+      'breaker.sub': '← → / A D 移动　·　空格 发球　·　P 暂停　·　M 静音',
+      'breaker.aria': 'CONTEXT BREAKER 游戏画面',
+      'breaker.ariaLeft': '向左',
+      'breaker.ariaRight': '向右',
+      'breaker.ariaLaunch': '发球',
+      'breaker.launchBtn': '发球',
+      'breaker.score': 'SCORE',
+      'breaker.hi': 'HIGH SCORE',
+      'breaker.lives': 'LIVES',
+      'breaker.level': 'LEVEL',
+      'breaker.serve': '准备发球',
+      'breaker.playing': '进行中',
+      'breaker.paused': '已暂停',
+      'breaker.pausedHint': '按 P 继续',
+      'breaker.over': 'G A M E   O V E R',
+      'breaker.clear': 'LEVEL CLEAR',
+      'breaker.think': 'DEEP THINK',
+      'breaker.noise': 'NOISE',
+      'breaker.ready': '按 空格 / 点击画面 发球',
+      'breaker.hint': '← → 或 A D 移动挡板',
+      'breaker.tapNext': '点击画面 / 空格 进入下一层',
+      'breaker.restart': '按 空格 / 点击画面 重新开始',
+      'breaker.pauseBtn': '⏸ 暂停',
+      'breaker.resumeBtn': '▶ 继续',
+      'breaker.tips': 'Token 弹射击碎上下文方块，闯过越来越复杂的层级。' +
+        '清空一层的 <b>CONTEXT</b> 方块就进入下一层，层数越高球越快、特殊砖越多。' +
+        ' <b>DENSE CONTEXT</b> 要打两次（第一次会变成受损状态）；<b>NOISE</b> 击碎后挡板会变窄六秒；' +
+        ' <b>THINK</b> 击碎后进入 5 秒 <b>DEEP THINK</b>、球速变慢；<b>COMPRESS</b> 击碎后会把它周围的方块一起压缩。' +
+        ' 球掉到底部扣一条命，初始 3 条命。挡板不同位置反弹角度不同 —— 越靠边越斜，但永远不会接近水平。最高分存在本地浏览器里。',
+      'lobby.breaker.name': 'CONTEXT BREAKER',
+      'lobby.breaker.desc': '打碎 CONTEXT · 利用 THINK · 避开 NOISE',
     },
     en: {
       'app.title': 'Whale Runner · DeepSeek Arcade',
@@ -380,7 +414,41 @@
         ' A <b>HEAVY TOKEN</b> is worth <b>+35 points</b> but costs <b>CONTEXT +96</b>: the mid/late-game high-score-vs-risk choice. It still counts as a real token, so your <b>CLEAN combo keeps going</b>.' +
         ' <b>NOISE</b> gives no points and adds <b>CONTEXT +128 to +224</b> — the higher the LOAD, the more lethal, so dodge it. Missing a TOKEN or COMPRESS never punishes you.' +
         ' The run moves through five <b>LOAD 1~5</b> stages (roughly 0 / 30 / 60 / 100 / 150 seconds): the higher the LOAD, the rarer COMPRESS gets, the harder NOISE hits and the shorter the overflow window (<b>2.0s → 1.2s</b>). Every value caps out after 150 seconds — late game is brutal, but never mathematically unwinnable.' +
-        ' The rare <b>THINK</b> grants 4 seconds of <b>DEEP THINK</b> (slower fall + blue glow). Hit 1024 CONTEXT and you enter a rescue window: catch a COMPRESS to push back under 1024 and cancel the overflow. Clean streaks stack up to <b>CLEAN x5</b>. Your best score is saved in this browser.'
+        ' The rare <b>THINK</b> grants 4 seconds of <b>DEEP THINK</b> (slower fall + blue glow). Hit 1024 CONTEXT and you enter a rescue window: catch a COMPRESS to push back under 1024 and cancel the overflow. Clean streaks stack up to <b>CLEAN x5</b>. Your best score is saved in this browser.',
+      /* ---------- Context Breaker (5th game) ---------- */
+      'breaker.title': 'Context Breaker · DeepSeek Arcade',
+      'breaker.h1': '🐳 CONTEXT BREAKER',
+      'breaker.sub': '← → / A D to move　·　Space to launch　·　P pause　·　M mute',
+      'breaker.aria': 'Context Breaker game canvas',
+      'breaker.ariaLeft': 'Left',
+      'breaker.ariaRight': 'Right',
+      'breaker.ariaLaunch': 'Launch',
+      'breaker.launchBtn': 'LAUNCH',
+      'breaker.score': 'SCORE',
+      'breaker.hi': 'HIGH SCORE',
+      'breaker.lives': 'LIVES',
+      'breaker.level': 'LEVEL',
+      'breaker.serve': 'READY',
+      'breaker.playing': 'IN PLAY',
+      'breaker.paused': 'PAUSED',
+      'breaker.pausedHint': 'Press P to resume',
+      'breaker.over': 'G A M E   O V E R',
+      'breaker.clear': 'LEVEL CLEAR',
+      'breaker.think': 'DEEP THINK',
+      'breaker.noise': 'NOISE',
+      'breaker.ready': 'Press Space / tap to launch',
+      'breaker.hint': 'Move with ← → or A D',
+      'breaker.tapNext': 'Tap / Space for the next stage',
+      'breaker.restart': 'Press Space / tap to restart',
+      'breaker.pauseBtn': '⏸ Pause',
+      'breaker.resumeBtn': '▶ Resume',
+      'breaker.tips': 'Bounce token balls, break context bricks, and clear layered stages.' +
+        ' Clear the <b>CONTEXT</b> blocks of a stage to reach the next one; higher stages bring a faster ball and more special bricks.' +
+        ' A <b>DENSE CONTEXT</b> brick takes two hits (it cracks after the first one); breaking a <b>NOISE</b> brick narrows your paddle for six seconds;' +
+        ' breaking a <b>THINK</b> brick grants five seconds of <b>DEEP THINK</b> and slows the ball down; breaking a <b>COMPRESS</b> brick compresses every other brick on the board.' +
+        ' Losing the ball costs one of your three lives. Where the ball lands on the paddle changes the bounce angle — edges are steeper, the middle is near vertical, and it never flattens out. Your best score is saved in this browser.',
+      'lobby.breaker.name': 'CONTEXT BREAKER',
+      'lobby.breaker.desc': 'Smash context · Trigger THINK · Survive the noise',
     }
   };
 

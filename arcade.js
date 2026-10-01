@@ -14,7 +14,8 @@
   var HIGH_KEYS = {
     runner: 'whaleRunner.high',          // Whale Runner 沿用原有 key，不动它的历史最高分
     snake: 'arcade.snake.high',          // Context Snake 独立 key
-    tokenFall: 'arcade.tokenFall.high'   // Token Fall 独立 key，四者互不覆盖
+    tokenFall: 'arcade.tokenFall.high',  // Token Fall 独立 key，五者互不覆盖
+    breaker: 'arcade.breakerHighScore'    // Context Breaker 独立 key
   };
   /* Attention Maze 没有传统高分，首页显示“最高解锁到第几层” */
   var MAZE_PROGRESS_KEY = 'arcade.attentionMaze.progress';
@@ -332,6 +333,57 @@
     }
   }
 
+
+  /* CONTEXT BREAKER 预览：自成一体的迷你打砖块（不依赖其它预览的小工具） */
+  function previewBreaker(ctx, w, h, time) {
+    var palette = [['#4d6bfe', '#9db4ff'], ['#22a5b8', '#7fe3f0'], ['#8b5cf6', '#c4b5fd'], ['#d99a1f', '#ffd77a']];
+    var bw = 17, bh = 7, gap = 3;
+    var cols = Math.floor((w - 12 + gap) / (bw + gap));
+    var x0 = (w - (cols * (bw + gap) - gap)) / 2;
+    for (var r = 0; r < palette.length; r++) {
+      var offset = (r % 2) ? (bw + gap) / 2 : 0;
+      for (var c = 0; c < cols; c++) {
+        var x = x0 + c * (bw + gap) + offset;
+        if (x + bw > w - 5) continue;
+        var y = 12 + r * (bh + gap);
+        ctx.fillStyle = palette[r][0];
+        ctx.fillRect(x, y, bw, bh);
+        ctx.fillStyle = palette[r][1];
+        ctx.fillRect(x, y, bw, 2);
+      }
+    }
+    var t = (typeof time === 'number' ? time : 0) / 1000;
+    var cx = w / 2, py = h - 18;
+    var bx = cx + Math.sin(t * 1.35) * (w * 0.3);
+    var by = 50 + Math.abs(Math.cos(t * 1.35)) * (h - 92);
+    ctx.fillStyle = '#ffd77a';
+    ctx.beginPath();
+    if (ctx.arc) ctx.arc(bx, by, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#4d6bfe';
+    ctx.fillRect(cx - 25, py, 50, 6);
+    ctx.fillStyle = '#9db4ff';
+    ctx.fillRect(cx - 25, py, 50, 2);
+
+    var drawn = false;
+    if (window.ArcadeCharacter && window.ArcadeCharacter.draw) {
+      var m = window.ArcadeCharacter.measure('idle', 24);
+      drawn = window.ArcadeCharacter.draw(ctx, 'idle', cx - m.w / 2, py - m.h - 1, m.w, m.h, { time: time });
+    }
+    if (!drawn && window.ArcadeWhale && window.ArcadeWhale.NORMAL_A) {
+      var rows = window.ArcadeWhale.NORMAL_A;
+      for (var rr = 0; rr < rows.length; rr++) {
+        for (var cc = 0; cc < rows[rr].length; cc++) {
+          var ch = rows[rr].charAt(cc);
+          if (ch === '.') continue;
+          ctx.fillStyle = ch === 'o' ? '#c9dcff' : '#4d6bfe';
+          ctx.fillRect(cx - 12 + cc, py - rows.length - 1 + rr, 1, 1);
+        }
+      }
+    }
+  }
+
   var PREVIEW_W = 224;
   var PREVIEW_H = 120;
   var previewCtx = {};
@@ -361,6 +413,7 @@
     setup('preview-snake', previewSnake, t);
     setup('preview-tokenfall', previewTokenFall, t);
     setup('preview-maze', previewMaze, t);
+    setup('preview-breaker', previewBreaker, t);
   }
 
   paintHighScores();

@@ -93,6 +93,23 @@ const PAGES = {
       { attrs: { 'data-i18n-html': 'maze.tips' } },
     ],
   },
+  contextbreaker: {
+    scripts: ['games/context-breaker/game.js'],
+    elements: [
+      { tag: 'title', attrs: { 'data-i18n': 'breaker.title' } },
+      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { attrs: { 'data-i18n': 'breaker.h1' } },
+      { attrs: { 'data-i18n': 'breaker.sub' } },
+      { id: 'game', attrs: { 'data-i18n-aria': 'breaker.aria' } },
+      { id: 'left', attrs: { 'data-i18n-aria': 'breaker.ariaLeft' } },
+      { id: 'right', attrs: { 'data-i18n-aria': 'breaker.ariaRight' } },
+      { id: 'launch', attrs: { 'data-i18n-aria': 'breaker.ariaLaunch' } },
+      { id: 'pause', attrs: { 'data-i18n': 'breaker.pauseBtn' } },
+      { id: 'lang' },
+      { id: 'sound' },
+      { attrs: { 'data-i18n-html': 'breaker.tips' } },
+    ],
+  },
   lobby: {
     scripts: ['arcade.js'],
     elements: [
@@ -110,8 +127,11 @@ const PAGES = {
       { attrs: { 'data-i18n': 'lobby.tokenfall.desc' } },
       { attrs: { 'data-i18n': 'lobby.maze.name' } },
       { attrs: { 'data-i18n': 'lobby.maze.desc' } },
+      { attrs: { 'data-i18n': 'lobby.breaker.name' } },
+      { attrs: { 'data-i18n': 'lobby.breaker.desc' } },
       { attrs: { 'data-i18n': 'lobby.bestLayer' } },
       { attrs: { 'data-i18n': 'lobby.more' } },
+      { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
@@ -121,10 +141,12 @@ const PAGES = {
       { attrs: { 'data-highscore': 'snake' } },
       { attrs: { 'data-highscore': 'tokenFall' } },
       { attrs: { 'data-highscore': 'maze' } },
+      { attrs: { 'data-highscore': 'breaker' } },
       { id: 'preview-runner', tag: 'canvas' },
       { id: 'preview-snake', tag: 'canvas' },
       { id: 'preview-tokenfall', tag: 'canvas' },
       { id: 'preview-maze', tag: 'canvas' },
+      { id: 'preview-breaker', tag: 'canvas' },
     ],
   },
 };
@@ -284,7 +306,7 @@ export function harness(opts) {
   for (const s of SHARED_PRELUDE) vm.runInContext(source(s), sandbox, { filename: s });
   for (const s of page.scripts) {
     let code = source(s);
-    if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall' || pageName === 'attentionmaze') code = patchGame(code);
+    if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall' || pageName === 'attentionmaze' || pageName === 'contextbreaker') code = patchGame(code);
     vm.runInContext(code, sandbox, { filename: s });
   }
 

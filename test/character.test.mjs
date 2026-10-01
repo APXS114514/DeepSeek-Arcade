@@ -1,7 +1,7 @@
 /* 角色皮肤系统：Classic Whale / Whale Girl
  *  - 全站共享 arcade.characterSkin（默认 classic；非法值回退 classic；
  *    旧值 whalechan 自动迁移到 yunyue 并写回）
- *  - 四款游戏换皮肤只换外观：判定盒 / 网格 / 难度 / 成绩全部不变
+ *  - 原有四款游戏换皮肤只换外观：判定盒 / 网格 / 难度 / 成绩全部不变
  *  - 素材懒加载，动画帧只由时间决定，加载失败自动回退经典小鲸鱼
  */
 import vm from 'node:vm';
@@ -143,7 +143,7 @@ export function run() {
       seen.join(' | '));
   }
 
-  /* ================= C. 四款游戏的视觉替换 + 判定不变 ================= */
+  /* ================= C. 原有四款游戏的视觉替换 + 判定不变 ================= */
   {
     const b = fresh({ images: 'ok' });
     b.window.ArcadeCharacter.setSkin('yunyue');
@@ -287,7 +287,7 @@ export function run() {
       String(A.frameIndex('walk', t)));
   }
   {
-    /* 语义状态必须齐全：四款游戏只用这些名字 */
+    /* 语义状态必须齐全：游戏只用这些名字 */
     const A = ready('yunyue').window.ArcadeCharacter;
     const states = ['idle', 'walk', 'jump', 'dive', 'think', 'startle', 'blocked', 'head', 'headThink'];
     ok('注册表的状态列表就是游戏认识的语义状态',

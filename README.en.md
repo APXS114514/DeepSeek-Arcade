@@ -1,7 +1,7 @@
 # DeepSeek Arcade
 
-**A collection of four DeepSeek-inspired pixel mini-games** (unofficial fan project):
-Whale Runner · Context Snake · Token Fall · Attention Maze.
+**A collection of five DeepSeek-inspired pixel mini-games** (unofficial fan project):
+Whale Runner · Context Snake · Token Fall · Attention Maze · Context Breaker.
 Pure HTML + CSS + vanilla JavaScript (Canvas 2D) — **no dependencies, no build step, no backend, no runtime external requests**.
 In classic mode every graphic (whale, mazes, drops, particles, UI) is drawn by Canvas code;
 an optional Whale Girl appearance uses third-party artwork shipped in this repo (source and licence at the end).
@@ -11,7 +11,7 @@ an optional Whale Girl appearance uses third-party artwork shipped in this repo 
 > **Play online: <https://apxs114514.github.io/DeepSeek-Arcade/>**
 > The homepage is the arcade lobby — pick a game. Every game page has **← Back to Arcade** in the top-left corner.
 
-## The four games
+## The five games
 
 | Game | Genre | One-liner |
 | --- | --- | --- |
@@ -19,8 +19,9 @@ an optional Whale Girl appearance uses third-party artwork shipped in this repo 
 | 🐳 **Context Snake** | Snake | Eat TOKENs to grow your CONTEXT; don't hit the walls or yourself |
 | 🐳 **Token Fall** | Catcher + resource management | Catch Token · Manage context: the higher the LOAD, the rarer COMPRESS gets and the deadlier NOISE becomes — plus the high-score, high-risk HEAVY TOKEN |
 | 🐳 **Attention Maze** | Memory puzzle | Remember · Attend · Escape (12 hand-made layers) |
+| 🐳 **Context Breaker** | Brick breaker | Smash CONTEXT blocks with a token ball, clear layered stages |
 
-All four share the same character skins (`arcade.characterSkin`: the code-drawn Classic Whale by default, swappable to
+All five share the same character skins (`arcade.characterSkin`: the code-drawn Classic Whale by default, swappable to
 Whale Girl), the same zh/en bilingual UI, the same sound switch and the same pixel style — **cosmetic only, no gameplay
 value changes**.
 
@@ -51,7 +52,7 @@ Either:
 bash test/run.sh          # same as node test/run.mjs
 ```
 
-All four games share one headless harness (stub DOM + stub Canvas, no browser needed), covering gameplay rules,
+All five games share one headless harness (stub DOM + stub Canvas, no browser needed), covering gameplay rules,
 a **BFS solvability check for all 12 Attention Maze layers**, i18n dictionary parity, relative paths and
 localStorage key collisions. CI runs exactly this command: if the tests fail, Pages is not deployed.
 

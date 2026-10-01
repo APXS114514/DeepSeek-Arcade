@@ -8,12 +8,13 @@ import { harness, source, ROOT } from './helpers.mjs';
 
 const SOUND_LABEL = '🔊 音效';
 const MUTED_LABEL = '🔇 静音';
-const GAME_PAGES = ['runner', 'snake', 'tokenfall', 'attentionmaze'];
+const GAME_PAGES = ['runner', 'snake', 'tokenfall', 'attentionmaze', 'contextbreaker'];
 const LEGACY = {
   runner: 'whaleRunner.sound',
   snake: 'arcade.snake.sound',
   tokenfall: 'arcade.tokenFall.sound',
-  attentionmaze: 'arcade.attentionMaze.sound'
+  attentionmaze: 'arcade.attentionMaze.sound',
+  contextbreaker: 'arcade.breaker.sound'
 };
 /* 关卡指纹：把 12 个 Layer 的地图 / 节点 / 权重 / 答案 / par 全部压成一个短哈希。
  * 关卡内容是数据驱动的，这条挂了说明**有人改了关卡数据**：
@@ -91,12 +92,12 @@ export function run() {
     }
   }
   {
-    /* 全站同步：在 Whale Runner 静音 → 另外四款（含大厅）读到 off */
+    /* 全站同步：在 Whale Runner 静音 → 另外五款（含大厅）读到 off */
     const a = soundPage('runner');
     a.els.sound.fire('click');
     const saved = { 'arcade.sound': a.store.get('arcade.sound') };
     ok('Whale Runner 里静音后写到 arcade.sound', saved['arcade.sound'] === 'off');
-    for (const page of ['snake', 'tokenfall', 'attentionmaze', 'lobby']) {
+    for (const page of ['snake', 'tokenfall', 'attentionmaze', 'contextbreaker', 'lobby']) {
       const b = soundPage(page, saved);
       ok('切到 ' + page + ' 仍然是静音（全站同步）', b.els.sound.textContent === MUTED_LABEL, b.els.sound.textContent);
     }
@@ -210,8 +211,8 @@ export function run() {
   /* ================= E. README / docs / LICENSE ================= */
   {
     const readme = source('README.md');
-    ok('README 第一屏就点到四款游戏',
-      ['Whale Runner', 'Context Snake', 'Token Fall', 'Attention Maze'].every((n) => readme.indexOf(n) !== -1));
+    ok('README 第一屏就点到五款游戏',
+      ['Whale Runner', 'Context Snake', 'Token Fall', 'Attention Maze', 'Context Breaker'].every((n) => readme.indexOf(n) !== -1));
     ok('README 在线试玩地址正确', readme.indexOf('https://apxs114514.github.io/DeepSeek-Arcade/') !== -1);
     ok('README 没有过时描述（coming soon / 三款 / 第三款 …）',
       !/coming soon|third game|only two games|三款游戏|第三款|敬请期待|暂未上线/i.test(readme));
@@ -222,8 +223,8 @@ export function run() {
     const readmeEnPath = path.join(ROOT, 'README.en.md');
     ok('README.en.md 存在', fs.existsSync(readmeEnPath));
     const readmeEn = source('README.en.md');
-    ok('英文 README 与中文版一一对应（四款游戏都在）',
-      ['Whale Runner', 'Context Snake', 'Token Fall', 'Attention Maze'].every((n) => readmeEn.indexOf(n) !== -1));
+    ok('英文 README 与中文版一一对应（五款游戏都在）',
+      ['Whale Runner', 'Context Snake', 'Token Fall', 'Attention Maze', 'Context Breaker'].every((n) => readmeEn.indexOf(n) !== -1));
     ok('英文 README 在线地址正确', readmeEn.indexOf('https://apxs114514.github.io/DeepSeek-Arcade/') !== -1);
     ok('英文 README 也说明 MIT 与非官方',
       readmeEn.indexOf('MIT License') !== -1 && /unofficial fan project/i.test(readmeEn) &&
@@ -407,20 +408,21 @@ export function run() {
   /* ================= G. 导航与 Pages 安全性 ================= */
   {
     const pages = ['index.html', 'games/runner/index.html', 'games/snake/index.html',
-      'games/token-fall/index.html', 'games/attention-maze/index.html'];
+      'games/token-fall/index.html', 'games/attention-maze/index.html', 'games/context-breaker/index.html'];
     for (const p of pages) {
       ok(p + '：没有站点绝对路径（GitHub Pages 子路径安全）', !/(?:src|href)="\//.test(source(p)), p);
     }
     for (const p of ['games/runner/index.html', 'games/snake/index.html',
-      'games/token-fall/index.html', 'games/attention-maze/index.html']) {
+      'games/token-fall/index.html', 'games/attention-maze/index.html',
+      'games/context-breaker/index.html']) {
       ok(p + '：返回游戏厅链接是相对的 ../../', /arcade-back[^>]*href="\.\.\/\.\.\/"/.test(source(p)), p);
     }
     const lobby = source('index.html');
-    for (const u of ['games/runner/', 'games/snake/', 'games/token-fall/', 'games/attention-maze/']) {
+    for (const u of ['games/runner/', 'games/snake/', 'games/token-fall/', 'games/attention-maze/', 'games/context-breaker/']) {
       ok('大厅链接到 ' + u, lobby.indexOf('href="' + u + '"') !== -1);
     }
-    ok('大厅没有多余的假卡片（COMING SOON 已清空）',
-      !/敬请期待|COMING SOON|class="game soon"/.test(lobby) && (lobby.match(/class="game"/g) || []).length === 4,
+    ok('大厅正好五张卡片，没有多余的假卡片（COMING SOON 已清空）',
+      !/敬请期待|COMING SOON|class="game soon"/.test(lobby) && (lobby.match(/class="game"/g) || []).length === 5,
       String((lobby.match(/class="game"/g) || []).length));
   }
 
@@ -432,7 +434,7 @@ export function run() {
      * 三款游戏都靠 width:100% 兜住，这里就地钉死，别再漏（Context Snake 漏过一次）。
      * 先剥掉 CSS 注释，否则注释里提到的 .pad{...} 会被当成规则本体。 */
     const pads = ['games/snake/style.css', 'games/attention-maze/style.css',
-      'games/token-fall/style.css'];
+      'games/token-fall/style.css', 'games/context-breaker/style.css'];
     for (const f of pads) {
       const css = source(f).replace(/\/\*[\s\S]*?\*\//g, '');
       const m = /\.pad\s*\{([^}]*)\}/.exec(css);

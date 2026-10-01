@@ -5,10 +5,11 @@ import path from 'node:path';
 import { ROOT, harness } from './helpers.mjs';
 
 const PAGES = ['index.html', 'games/runner/index.html', 'games/snake/index.html',
-  'games/token-fall/index.html', 'games/attention-maze/index.html'];
+  'games/token-fall/index.html', 'games/attention-maze/index.html',
+  'games/context-breaker/index.html'];
 const SCRIPTS = ['arcade.js', 'shared/i18n.js', 'shared/audio.js',
   'games/runner/game.js', 'games/snake/game.js', 'games/token-fall/game.js',
-  'games/attention-maze/game.js'];
+  'games/attention-maze/game.js', 'games/context-breaker/game.js'];
 
 export function run() {
   const out = [];
@@ -76,11 +77,20 @@ export function run() {
   ok('Attention Maze 用 arcade.* 命名空间', mazeKeys.size > 0 && [...mazeKeys].every((k) => k.indexOf('arcade.') === 0), [...mazeKeys].join(','));
   ok('Attention Maze 的进度 key 独立', maze.indexOf("'arcade.attentionMaze.progress'") >= 0);
   ok('Attention Maze 的静音 key 独立', maze.indexOf("'arcade.attentionMaze.sound'") >= 0);
-  ok('四款游戏没有任何 key 冲突',
-     [...mazeKeys].every((k) => !runnerKeys.has(k) && !snakeKeys.has(k) && !tfKeys.has(k)) &&
+  /* Context Breaker 也走 arcade.* 命名空间，高分 / 静音 key 必须独立 */
+  const breaker = fs.readFileSync(path.join(ROOT, 'games/context-breaker/game.js'), 'utf8');
+  const breakerKeys = new Set((breaker.match(/'(arcade\.[A-Za-z.]+)'/g) || []).map((s) => s.slice(1, -1)));
+  ok('Context Breaker 用 arcade.* 命名空间',
+     breakerKeys.size > 0 && [...breakerKeys].every((k) => k.indexOf('arcade.') === 0), [...breakerKeys].join(','));
+  ok('Context Breaker 的高分 key 是 arcade.breakerHighScore', breakerKeys.has('arcade.breakerHighScore'));
+  ok('Context Breaker 的静音 key 独立', breakerKeys.has('arcade.breaker.sound'));
+  ok('五款游戏没有任何 key 冲突',
+     [...mazeKeys].every((k) => !runnerKeys.has(k) && !snakeKeys.has(k) && !tfKeys.has(k) && !breakerKeys.has(k)) &&
+     [...breakerKeys].every((k) => !runnerKeys.has(k) && !snakeKeys.has(k) && !tfKeys.has(k) && !mazeKeys.has(k)) &&
      [...tfKeys].every((k) => !runnerKeys.has(k) && !snakeKeys.has(k)) &&
      [...snakeKeys].every((k) => !runnerKeys.has(k)),
-     'runner=' + [...runnerKeys].join(',') + ' snake=' + [...snakeKeys].join(',') + ' tf=' + [...tfKeys].join(',') + ' maze=' + [...mazeKeys].join(','));
+     'runner=' + [...runnerKeys].join(',') + ' snake=' + [...snakeKeys].join(',') + ' tf=' + [...tfKeys].join(',') +
+     ' maze=' + [...mazeKeys].join(',') + ' breaker=' + [...breakerKeys].join(','));
   ok('大厅读的正是 Attention Maze 的进度 key', fs.readFileSync(path.join(ROOT, 'arcade.js'), 'utf8').indexOf("arcade.attentionMaze.progress") >= 0);
 
   /* 角色皮肤：素材必须走相对/派生路径，且真的存在 */
