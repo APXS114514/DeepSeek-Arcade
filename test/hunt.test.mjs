@@ -1315,8 +1315,10 @@ export function run() {
       'games/runner/style.css', 'games/snake/style.css', 'games/token-fall/style.css',
       'games/attention-maze/style.css', 'games/context-breaker/style.css'];
     for (const f of files) {
-      const css = source(f).replace(/\/\*[\s\S]*?\*\//g, (m, off, whole) => m);  // 占位，下面逐段判断
-      /* 去掉字符串里的 { } 干扰后，逐段检查 selector 部分 */
+      /* 逐段扫描：取每个 rule「{ 之前」的选择器文本。
+         判据要精确 —— 只有在「剥掉注释后选择器仍有实际内容」时，
+         才说明注释插进了选择器列表。文件顶部/规则前的独立注释会被剥成空白，
+         因此不会误报。 */
       const bad = [];
       const src = source(f);
       let depth = 0, seg = '';
@@ -1324,9 +1326,8 @@ export function run() {
         const ch = src[i];
         if (ch === '{') {
           if (depth === 0) {
-            /* seg 是本段选择器（含可能存在的注释） */
-            const sel = seg;
-            if (sel.indexOf('/*') >= 0) bad.push(sel.trim().slice(0, 60));
+            const noComments = seg.replace(/\/\*[\s\S]*?\*\//g, ' ');
+            if (seg.indexOf('/*') >= 0 && noComments.trim() !== '') bad.push(seg.trim().replace(/\s+/g, ' ').slice(0, 70));
           }
           depth++; seg = '';
         } else if (ch === '}') { depth = Math.max(0, depth - 1); seg = ''; }
