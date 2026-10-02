@@ -455,14 +455,23 @@ export function run() {
     const src = source('arcade.js');
     const setupAt = src.indexOf('function setup(id, draw, time)');
     ok('arcade.js 有统一的 preview setup()', setupAt >= 0);
-    const drawAt = src.indexOf('draw(ctx, PREVIEW_W, PREVIEW_H, time);', setupAt);
+    const drawAt = src.indexOf('draw(c.ctx, PREVIEW_W, PREVIEW_H, time);', setupAt);
     const idClearAt = src.indexOf('setTransform(1, 0, 0, 1, 0, 0)', setupAt);
     const fullClearAt = src.indexOf('clearRect(0, 0, cv.width, cv.height)', setupAt);
-    ok('清屏发生在 draw() 之前', idClearAt > setupAt && idClearAt < drawAt && fullClearAt > setupAt && fullClearAt < drawAt,
-      idClearAt + '/' + drawAt);
+    ok('每帧先清屏再画（clearPreviewCanvas 在 draw 之前调用）',
+      src.indexOf('clearPreviewCanvas(c.ctx, c.cv, c.dpr);') > setupAt &&
+      src.indexOf('clearPreviewCanvas(c.ctx, c.cv, c.dpr);') < drawAt,
+      src.indexOf('clearPreviewCanvas(c.ctx, c.cv, c.dpr);') + '/' + drawAt);
     ok('用单位变换清整个 backing store（DPR 下不会漏清）',
       /setTransform\(1, 0, 0, 1, 0, 0\)/.test(src) && /clearRect\(0, 0, cv\.width, cv\.height\)/.test(src));
-    ok('清屏后恢复逻辑坐标 transform', /setTransform\(d, 0, 0, d, 0, 0\)/.test(src));
+    ok('清屏后显式恢复逻辑坐标 transform（不依赖 restore）',
+      /setTransform\(dpr, 0, 0, dpr, 0, 0\)/.test(src));
+    ok('DPR 计算在保存之前（var 提升回归）',
+      /var dpr = getPreviewDpr\(\);/.test(src) && src.indexOf('previewDpr[id] = dpr;') > src.indexOf('var dpr = getPreviewDpr();'));
+    ok('拆出了 getPreviewDpr / ensurePreviewCanvas / clearPreviewCanvas 三个 helper',
+      /function getPreviewDpr\(/.test(src) && /function ensurePreviewCanvas\(/.test(src) && /function clearPreviewCanvas\(/.test(src));
+    ok('DPR 变化时会重新 resize backing store',
+      /cv\.width !== w \|\| cv\.height !== h \|\| previewDpr\[id\] !== dpr/.test(src));
     ok('清屏后复位绘图状态（globalAlpha / smoothing / textAlign / textBaseline）',
       /globalAlpha = 1/.test(src) && /imageSmoothingEnabled = false/.test(src) &&
       /textAlign = 'left'/.test(src) && /textBaseline = 'alphabetic'/.test(src));
@@ -477,6 +486,40 @@ export function run() {
     ok('启动帧 6 张 preview 各清屏一次（clearRect 次数 = 画布数）',
       b.log.clears === 6, String(b.log.clears));
     ok('清屏发生在任何绘制之前（启动帧就有 6 次 clear，不是 0）', b.log.clears > 0, String(b.log.clears));
+  }
+
+  /* ================= preview Canvas DPR 生命周期 ================= */
+  {
+    const PREVIEW_W = 224, PREVIEW_H = 120;
+    for (const dpr of [1, 2, 3]) {
+      const b = harness({ page: 'lobby', navLang: 'zh-CN', dpr: dpr });
+      const six = ['preview-runner', 'preview-snake', 'preview-tokenfall', 'preview-maze', 'preview-breaker', 'preview-hunt'];
+      ok('DPR=' + dpr + '：六张 preview 的 backing store = ' + PREVIEW_W + '*' + dpr + ' x ' + PREVIEW_H + '*' + dpr,
+        six.every((id) => b.els[id].width === PREVIEW_W * dpr && b.els[id].height === PREVIEW_H * dpr),
+        six.map((id) => b.els[id].width + 'x' + b.els[id].height).join(' '));
+      /* 关键回归：每帧最后一次 setTransform 必须是 DPR，绝不能回落到 1 ——
+         否则 backing store 是 2 倍、绘制变换是 1，画面就只出现在左上角。 */
+      /* 每帧的 transform 必须是成对的：[identity 清屏] -> [DPR 恢复]。
+         identity 那一半是清屏用的，DPR 那一半才是 draw 的前置条件。
+         本次回归正是因为恢复成了 1，才导致内容只画在 backing store 左上角。 */
+      const t = b.log.transforms;
+      const isId = (m) => m[0] === 1 && m[3] === 1 && m[1] === 0 && m[2] === 0 && m[4] === 0 && m[5] === 0;
+      const isDpr = (m) => m[0] === dpr && m[3] === dpr && m[1] === 0 && m[2] === 0 && m[4] === 0 && m[5] === 0;
+      ok('DPR=' + dpr + '：每帧「identity 清屏 -> DPR 恢复」成对出现',
+        t.length > 0 && t.length % 2 === 0 && t.every((m, i) => i % 2 === 0 ? isId(m) : isDpr(m)),
+        JSON.stringify(t.slice(0, 4)));
+      ok('DPR=' + dpr + '：draw 之前最后一次 transform 就是 ' + dpr + '（不会回落成 1）',
+        t.length >= 2 && isDpr(t[t.length - 1]), JSON.stringify(t.slice(-2)));
+      ok('DPR=' + dpr + '：每帧都先清整个 backing store（清屏没被删掉）',
+        b.log.clears >= 6, String(b.log.clears));
+    }
+    /* 清屏与 transform 的顺序：每帧必须先 identity 清屏、再恢复 DPR */
+    const b = harness({ page: 'lobby', navLang: 'zh-CN', dpr: 2 });
+    const seq = b.log.transforms.map((m) => m[0]);
+    ok('清屏用的 identity transform 之后紧跟 DPR transform',
+      seq.length >= 12 && seq[0] === 1 && seq[1] === 2 && seq[2] === 1 && seq[3] === 2, JSON.stringify(seq.slice(0, 4)));
+    ok('DPR=2 时清屏区域覆盖整个 backing store（clearRect 次数 = 画布数）',
+      b.log.clears === 6, String(b.log.clears));
   }
 
   return out;

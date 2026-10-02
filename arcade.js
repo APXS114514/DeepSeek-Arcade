@@ -449,27 +449,42 @@
   var previewCtx = {};
   var previewDpr = {};
 
-  function setup(id, draw, time) {
+  /* 当前真实 DPR（夹在 1~3，避免超高分屏上 backing store 过大） */
+  function getPreviewDpr() {
+    return Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+  }
+
+  /* 确保某个 preview 的 ctx / backing store / 记录的 dpr 三者一致。
+     devicePixelRatio 会随浏览器缩放、或窗口被拖到不同 DPI 显示器而变化，
+     所以这里每次都核对 backing size，不一致就重新 resize 并更新 previewDpr。
+     注意：dpr 必须**先算出来再存**，否则 var 提升会让 previewDpr[id] 存进
+     undefined，后续 || 1 兜底成 1，而 backing store 仍是 2 倍 ——
+     画面就会只画在左上角。 */
+  function ensurePreviewCanvas(id) {
     var cv = document.getElementById(id);
-    if (!cv || !cv.getContext) return;
+    if (!cv || !cv.getContext) return null;
     var ctx = previewCtx[id];
     if (!ctx) {
       ctx = cv.getContext('2d');
-      if (!ctx) return;
+      if (!ctx) return null;
       previewCtx[id] = ctx;
-      previewDpr[id] = dpr;
-      var dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
-      cv.width = Math.round(PREVIEW_W * dpr);
-      cv.height = Math.round(PREVIEW_H * dpr);
-      if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      else if (ctx.scale) ctx.scale(dpr, dpr);
     }
-    /* 每帧都从完全干净的 Canvas 开始。
-       画布实际是 PREVIEW_W*dpr 大小，必须在**单位变换**下清整个 backing store；
-       若在 DPR 变换下只清 PREVIEW_W x PREVIEW_H，会漏掉边缘、留下上一帧残影
-       （previewBreaker 不画完整背景，所以第一帧的经典鲸鱼会一直留着）。
-       清完把 transform 与绘图状态复位，保证每帧 deterministic。 */
-    var d = previewDpr[id] || 1;
+    var dpr = getPreviewDpr();
+    var w = Math.round(PREVIEW_W * dpr);
+    var h = Math.round(PREVIEW_H * dpr);
+    if (cv.width !== w || cv.height !== h || previewDpr[id] !== dpr) {
+      cv.width = w;
+      cv.height = h;
+      previewDpr[id] = dpr;
+    }
+    return { cv: cv, ctx: ctx, dpr: dpr };
+  }
+
+  /* 每帧完整清屏：先在 identity transform 下清掉整个 backing store
+     （PREVIEW_W*dpr x PREVIEW_H*dpr），再恢复逻辑坐标。
+     ctx.restore() 只恢复到 save() 当时的状态，不能指望它恢复出想要的 DPR，
+     所以恢复后必须显式 setTransform(dpr, ...)，让 draw() 的前置条件确定。 */
+  function clearPreviewCanvas(ctx, cv, dpr) {
     if (ctx.save && ctx.restore) {
       ctx.save();
       if (ctx.setTransform) ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -478,14 +493,22 @@
     } else if (ctx.clearRect) {
       ctx.clearRect(0, 0, PREVIEW_W, PREVIEW_H);
     }
-    if (ctx.setTransform) ctx.setTransform(d, 0, 0, d, 0, 0);
+    if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     /* 复原可能被上一帧改掉的绘图状态（尤其 globalAlpha，否则角色会半透明） */
     if (ctx.globalAlpha !== undefined) ctx.globalAlpha = 1;
     if (ctx.textAlign !== undefined) ctx.textAlign = 'left';
     if (ctx.textBaseline !== undefined) ctx.textBaseline = 'alphabetic';
     /* 预览底色 / 经典像素画保持硬边；角色模块会临时改再改回来 */
     if (ctx.imageSmoothingEnabled !== undefined) ctx.imageSmoothingEnabled = false;
-    draw(ctx, PREVIEW_W, PREVIEW_H, time);
+  }
+
+  function setup(id, draw, time) {
+    var c = ensurePreviewCanvas(id);
+    if (!c) return;
+    /* 每帧：确保 DPR -> 清整个 backing store -> 恢复 DPR transform -> 复位状态 -> 画 */
+    clearPreviewCanvas(c.ctx, c.cv, c.dpr);
+    /* draw() 始终使用 224x120 逻辑坐标 */
+    draw(c.ctx, PREVIEW_W, PREVIEW_H, time);
   }
 
   function drawPreviews(time) {
