@@ -107,7 +107,12 @@ for (let i = 0; i < 120; i++) {
 if (!ver) {
   console.error('✗ Chrome 起来了但 CDP 端点连不上：' + (chromeExit || '超时'));
   console.error('  Chrome 路径: ' + CHROME + '  Node: ' + process.version);
-  try { console.error(fs.readFileSync(errlog, 'utf8').split('\n').slice(-20).join('\n')); } catch {}
+  ann('error', 'browser-smoke: Chrome 起不来/连不上 CDP（' + (chromeExit || '超时') + '） path=' + CHROME + ' node=' + process.version);
+  try {
+    const tail = fs.readFileSync(errlog, 'utf8').split('\n').slice(-20).join(' | ');
+    console.error(tail);
+    ann('error', 'chrome stderr: ' + tail);
+  } catch {}
   chrome.kill('SIGKILL'); server.close();
   process.exit(process.env.REQUIRE_BROWSER === '1' ? 1 : 0);
 }
@@ -147,11 +152,20 @@ const hook = await send('Page.addScriptToEvaluateOnNewDocument', { source: HOOK 
 /* ---------------- 4. 断言与诊断 ---------------- */
 let passN = 0; let failN = 0;
 const failures = [];
+/* GitHub Actions 的工作流命令：失败时把它变成 check-run 上的 annotation，
+ * 这样即使拿不到日志（例如没有 API token 的第三方复核），也能从
+ * /check-runs/<id>/annotations 读到「哪条断言挂了、实测值是多少」。 */
+const ann = (lvl, msg) => console.log('::' + lvl + '::' + String(msg).replace(/\r?\n/g, ' | ').slice(0, 900));
 function check(name, cond, detail) {
   if (cond) { passN++; console.log('PASS  ' + name); return true; }
-  failN++; failures.push({ name, detail }); console.log('FAIL  ' + name + (detail ? '\n        -> ' + detail : ''));
+  failN++; failures.push({ name, detail });
+  console.log('FAIL  ' + name + (detail ? '\n        -> ' + detail : ''));
+  ann('error', 'browser-smoke FAIL: ' + name + (detail ? ' -> ' + detail : ''));
   return false;
 }
+/* 脚本自己崩了也要留下可读的痕迹，而不是只有一个红色的 job */
+process.on('uncaughtException', (e) => { ann('error', 'browser-smoke 崩溃: ' + ((e && e.stack) || e)); process.exit(1); });
+process.on('unhandledRejection', (e) => { ann('error', 'browser-smoke 未处理的 rejection: ' + ((e && e.stack) || e)); process.exit(1); });
 const evalJs = async (expr) => {
   const r = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: false }, SID);
   if (r.exceptionDetails) throw new Error('页面内求值异常: ' + JSON.stringify(r.exceptionDetails.exception || r.exceptionDetails));
@@ -201,7 +215,8 @@ async function diagnose(page, vpName, sels) {
         errors: window.__smokeErrors || [], boxes: boxes });
     })()`);
     console.log('        诊断[' + page + ' ' + current.vp + ']: ' + info);
-  } catch (e) { console.log('        诊断失败: ' + e.message); }
+    ann('notice', 'browser-smoke 诊断[' + page + ' ' + current.vp + ']: ' + info);
+  } catch (e) { console.log('        诊断失败: ' + e.message); ann('warning', 'browser-smoke 诊断失败: ' + e.message); }
   try {
     fs.mkdirSync(ART, { recursive: true });
     const shot = await send('Page.captureScreenshot', { format: 'png' }, SID);

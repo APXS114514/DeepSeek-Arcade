@@ -47,22 +47,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: 确认有真实浏览器（不假定固定路径）
+      - name: 确认有真实浏览器（不假定固定路径，并且真的能起无头）
         run: |
-          for b in google-chrome google-chrome-stable chromium chromium-browser; do
-            if command -v "$b" >/dev/null 2>&1; then
-              echo "found: $b -> $(command -v "$b")"
-              "$b" --version || true
-              exit 0
-            fi
-          done
-          echo "runner 上没有现成浏览器，尝试装 chromium"
-          sudo apt-get update -qq && sudo apt-get install -y -qq chromium || sudo apt-get install -y -qq chromium-browser
-          for b in chromium chromium-browser google-chrome; do
-            if command -v "$b" >/dev/null 2>&1; then echo "installed: $b"; exit 0; fi
-          done
-          echo "::error::找不到任何 Chrome/Chromium，真实浏览器冒烟无法运行"
-          exit 1
+          find_browser() {
+            for b in google-chrome google-chrome-stable chromium chromium-browser; do
+              if command -v "$b" >/dev/null 2>&1; then command -v "$b"; return 0; fi
+            done
+            return 1
+          }
+          BIN="$(find_browser || true)"
+          if [ -z "$BIN" ]; then
+            echo "runner 上没有现成浏览器，尝试装 chromium"
+            sudo apt-get update -qq || true
+            sudo apt-get install -y -qq chromium || sudo apt-get install -y -qq chromium-browser || true
+            BIN="$(find_browser || true)"
+          fi
+          if [ -z "$BIN" ]; then
+            echo "::error::找不到任何 Chrome / Chromium，真实浏览器冒烟无法运行"
+            exit 1
+          fi
+          echo "browser: $BIN"
+          "$BIN" --version || true
+          # 有些发行版的 chromium 只是 snap 壳子，command -v 找得到但根本起不来。
+          # 这里真的起一次无头 Chrome，起不来就直接给出 annotation，而不是让冒烟
+          # 在后面报一个看不懂的「CDP 端点连不上」。
+          if ! timeout 60 "$BIN" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage                  --user-data-dir="$(mktemp -d)" --dump-dom about:blank >/dev/null 2>&1; then
+            echo "::error::$BIN 无法启动无头模式（可能是 snap 壳子 / 缺沙箱权限）"
+            timeout 60 "$BIN" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --dump-dom about:blank 2>&1 | tail -20 || true
+            exit 1
+          fi
+          echo "headless 启动检查通过"
+          echo "CHROME_BIN=$(readlink -f "$BIN")" >> "$GITHUB_ENV"
       - name: Run browser smoke
         env:
           REQUIRE_BROWSER: '1'

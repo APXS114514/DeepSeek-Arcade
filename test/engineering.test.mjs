@@ -92,6 +92,9 @@ export function run() {
       /node-version:\s*'22'/.test(smokeBlock));
     ok('冒烟脚本自己会守住 Node 版本前提（缺全局 WebSocket 时给明确提示）',
       /typeof WebSocket !== 'function'/.test(source('test/browser-smoke.mjs')));
+    ok('冒烟失败时会打 GitHub annotation（拿不到日志也能从 check-run 读到失败原因）',
+      /::' \+ lvl \+ '::/.test(source('test/browser-smoke.mjs')) &&
+      /uncaughtException/.test(source('test/browser-smoke.mjs')));
     ok('browser-smoke 自己不装 npm 包（只用 Node 原生 fetch / WebSocket + 真 Chrome）',
       /browser-smoke:[\s\S]*?\n  deploy:/.test(wf) && !/npm\s+(install|ci)/.test(wf));
     ok('Pages 三件套没被破坏',
