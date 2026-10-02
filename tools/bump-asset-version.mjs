@@ -26,7 +26,7 @@ const pages = ['index.html']
     .map((d) => 'games/' + d.name + '/index.html'));
 
 /* 只给本地 css/js 加版本参数；favicon 是 data: URI，绝不能加 */
-const REF = /(<(?:script|link)\b[^>]*?(?:src|href)=")([^"?]+?\.(?:css|js))(?:\?v=[^"]*)?(")/g;
+const REF = /(<(?:script|link)\b[^>]*?(?:src|href)=")(?!https?:|data:|\/\/)([^"?]+?\.(?:css|js|png|svg|webp|ico))(?:\?v=[^"]*)?(")/g;
 
 let changed = 0, stale = [];
 for (const page of pages) {

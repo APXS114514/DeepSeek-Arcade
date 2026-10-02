@@ -634,6 +634,7 @@ intro → streaming → scanning → verifying → result → (streaming | gameO
 │   ├── hunt.test.mjs                     Hallucination Hunt：知识库 / mutation 性质测试 / 千级 seed 不变量 / 难度
 │   ├── i18n.test.mjs                     七个页面的中英切换 + 词典完整性
 │   └── paths.test.mjs                    死链 / 绝对路径 / localStorage key 冲突
+├── assets/favicon.png                     全站 favicon（所有页面统一引用，带 ?v= 版本）
 ├── assets/whale-yunyue/                  鲸鱼娘运行时素材（19 张派生 WebP）+ ATTRIBUTION.md
 ├── tools/derive-character-assets.py      角色素材派生脚本（dev-only，运行时不用）
 ├── tools/bump-asset-version.mjs          同步所有 HTML 的 ?v= 版本参数（dev-only）

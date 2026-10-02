@@ -205,5 +205,68 @@ export function run() {
       tool.indexOf('</script>') >= 0 && tool.indexOf('需要匹配整条闭合标签<') < 0);
   }
 
+  /* ================= P. favicon 接入 ================= */
+  {
+    const source = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+    /* 真实尺寸直接从 PNG 头读，避免声明与实际不符 */
+    const png = fs.readFileSync(path.join(ROOT, 'assets/favicon.png'));
+    const pngW = png.readUInt32BE(16), pngH = png.readUInt32BE(20);
+    ok('assets/favicon.png 存在且是合法 PNG', png.slice(1, 4).toString() === 'PNG' && pngW > 0, pngW + 'x' + pngH);
+    const vSrc = source('shared/version.js');
+    const V = (/var VERSION = '([^']+)'/.exec(vSrc) || [])[1];
+    for (const page of PAGES) {
+      const html = source(page);
+      const icon = /<link rel="icon"[^>]*>/.exec(html);
+      ok(page + '：不再使用旧的内联 data: favicon',
+        !!icon && icon[0].indexOf('data:image/svg+xml') < 0, icon ? icon[0].slice(0, 60) : '无 icon');
+      ok(page + '：引用统一 favicon 文件（相对路径正确）',
+        !!icon && icon[0].indexOf('assets/favicon.png') >= 0 &&
+        icon[0].indexOf(page === 'index.html' ? 'href="assets/' : 'href="../../assets/') >= 0,
+        icon ? icon[0].slice(0, 90) : '无');
+      ok(page + '：favicon 带当前 asset version ?v=' + V,
+        !!icon && icon[0].indexOf('?v=' + V) >= 0, icon ? icon[0] : '');
+      ok(page + '：favicon 声明 type=image/png', !!icon && /type="image\/png"/.test(icon[0]));
+      const sizes = icon && /sizes="([^"]+)"/.exec(icon[0]);
+      ok(page + '：若声明 sizes 就必须与真实尺寸一致',
+        !sizes || sizes[1] === pngW + 'x' + pngH, sizes ? sizes[1] + ' vs ' + pngW + 'x' + pngH : '未声明（合法）');
+      ok(page + '：有且只有一个 theme-color',
+        (html.match(/name="theme-color"/g) || []).length === 1, 'theme-color');
+      ok(page + '：theme-color 是 Arcade 蓝 #4d6bfe',
+        /name="theme-color" content="#4d6bfe"/.test(html));
+    }
+    ok('bump 脚本覆盖图片资源且排除外部 / data:',
+      /png\|svg\|webp\|ico/.test(source('tools/bump-asset-version.mjs')) &&
+      /\?!https\?:\|data:/.test(source('tools/bump-asset-version.mjs')));
+  }
+
+  /* ================= Q. Hunt 移动端序号布局 ================= */
+  {
+    const source = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+    const css = source('games/hallucination-hunt/style.css');
+    /* 取 max-width:1023px 媒体查询里的 .claim 规则 */
+    const mq = /@media \(max-width: 1023px\)\s*\{([\s\S]*?)\n\}/.exec(css);
+    ok('存在 max-width:1023px 媒体查询', !!mq);
+    const body = mq ? mq[1] : '';
+    const claimPad = /\.claim\s*\{[^}]*padding:\s*([^;]+);/.exec(body);
+    ok('移动端 .claim 仍然声明了 padding', !!claimPad, claimPad ? claimPad[1] : '缺失');
+    const padLeft = claimPad ? Number((claimPad[1].match(/(\d+)px\s*$/) || [])[1] || 0) : 0;
+    const noLeft = Number((/\.claim-no\s*\{[^}]*left:\s*(\d+)px/.exec(body) || [])[1] || 14);
+    ok('移动端为序号保留了足够左侧空间（padding-left ' + padLeft + 'px > 序号 left ' + noLeft + 'px + 24px）',
+      padLeft >= noLeft + 24, padLeft + ' vs ' + noLeft);
+    ok('移动端 .claim-no 的 top 跟着竖排 padding 对齐',
+      /\.claim-no\s*\{[^}]*top:\s*11px/.test(body));
+    /* 更小的断点不得把序号区域冲掉 */
+    const mq560 = /@media \(max-width: 560px\)\s*\{([\s\S]*?)\n\}/.exec(css);
+    ok('560px 断点没有再覆盖 .claim 的 padding（否则 1023 修好、560 又坏）',
+      !mq560 || !/\.claim\s*\{[^}]*padding/.test(mq560[1]), mq560 ? mq560[1].slice(0, 60) : '无');
+    /* 桌面契约仍然保留 */
+    const desk = /\.claim\s*\{([^}]*)\}/.exec(css);
+    ok('桌面 .claim 仍为序号保留 40px 左侧区域',
+      !!desk && /padding:\s*12px 14px 12px 40px/.test(desk[1]));
+    ok('.claim-no 默认 left/top/line-height 三件套齐全',
+      /\.claim-no\s*\{[^}]*left:/.test(css) && /\.claim-no\s*\{[^}]*top:/.test(css) &&
+      /\.claim-no\s*\{[^}]*line-height:/.test(css));
+  }
+
   return out;
 }

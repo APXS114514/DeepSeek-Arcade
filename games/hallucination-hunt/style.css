@@ -336,8 +336,12 @@ body.hunt-body {
   .side-back { white-space: nowrap; }
   .hunt-main { grid-row: 2; }
   .chat-head { padding: 10px 14px; }
-  /* 触屏下限：claim 是主要交互目标，必须 >=44px 高 */
-  .claim { min-height: 44px; padding: 11px 10px; }
+  /* 触屏下限：claim 是主要交互目标，必须 >=44px 高。
+     注意：这里必须继续保留左侧序号区域（padding-left），
+     否则正文会从 10px 开始、而 .claim-no 仍在 left:14px，两者重叠。
+     竖排 padding 同步缩到 11px，序号 top 也要跟着对齐第一行。 */
+  .claim { min-height: 44px; padding: 11px 12px 11px 44px; }
+  .claim-no { left: 14px; top: 11px; }
   .icon-btn { min-height: 40px; }
   .chat-flow { padding: 18px 14px 8px; gap: 14px; }
   .composer { padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
@@ -346,6 +350,7 @@ body.hunt-body {
 }
 
 @media (max-width: 560px) {
+  /* 这里刻意不覆盖 .claim 的 padding-left：序号区域必须一路保留到最小屏 */
   .brand-text b { font-size: 12px; }
   .side-stats { gap: 9px; }
   .stat b { font-size: 12px; }
