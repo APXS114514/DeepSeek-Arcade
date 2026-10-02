@@ -136,6 +136,7 @@ const PAGES = {
       { id: 'btn-daily', attrs: { 'data-i18n': 'hunt.dailyBtn' } },
       { id: 'btn-again', attrs: { 'data-i18n': 'hunt.againBtn' } },
       { id: 'btn-copy', attrs: { 'data-i18n': 'hunt.copyBtn' } },
+      { id: 'btn-next', attrs: { 'data-final': 'false' } },
       { id: 'scan-bar' },
       { id: 'btn-pause', attrs: { 'data-i18n': 'hunt.pauseBtn' } },
       { id: 'lang' },

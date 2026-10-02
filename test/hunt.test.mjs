@@ -589,9 +589,11 @@ export function run() {
     ok('VERIFY 才进入 verifying', H.confirm() === true && b.G.state === 'verifying', b.G.state);
     b.tick(80);
     ok('verifying 能正常进入 result', b.G.state === 'result', b.G.state);
+    /* 新契约：result 必须无限停留，直到玩家自己点「下一题」 */
     b.tick(200);
-    ok('result 之后能进入下一轮（不会卡在 verifying）',
-      b.G.state === 'streaming' || b.G.state === 'scanning', b.G.state);
+    ok('result 不会自动推进（推进 200 帧后仍是 result）', b.G.state === 'result', b.G.state);
+    ok('点 btn-next 才进入下一轮',
+      (function () { b.els['btn-next'].fire('click'); b.tick(2); return b.G.state !== 'result'; })(), b.G.state);
   }
   {
     /* K3. NO HALLUCINATION 是独立语义：直接确认「整段没有幻觉」 */
@@ -897,6 +899,124 @@ export function run() {
     })(), b.I18N.lang);
     b.tick(3);
     ok('切换语言后游戏没有异常', b.errors.length === 0, b.errors[0]);
+  }
+
+  /* ================= R. result 生命周期：由玩家决定何时继续 ================= */
+  {
+    /* 普通题：停留任意久都还在 result，点 NEXT 才走 */
+    const b = fresh({});
+    const H = b.window.HuntGame;
+    H.start('endless', 20261001);
+    toScanning(b);
+    H.selectClaim(0); H.confirm();
+    b.tick(80);
+    ok('verifying -> result', b.G.state === 'result', b.G.state);
+    ok('result 时 overlay 显示 FACT CHECK', b.els.overlay.getAttribute('data-show') === 'true');
+    b.tick(300);   // ~5 秒
+    ok('停留 5 秒后仍是 result（不会自动 nextRound）', b.G.state === 'result', b.G.state);
+    b.tick(1500);  // ~25 秒，累计约 30 秒
+    ok('停留 30 秒后仍是 result', b.G.state === 'result', b.G.state);
+    ok('停留期间 overlay 一直显示', b.els.overlay.getAttribute('data-show') === 'true');
+    /* 非最后一题：按钮是「下一题」 */
+    ok('普通题 btn-next 显示「下一题」', b.els['btn-next'].getAttribute('data-final') === 'false',
+      b.els['btn-next'].getAttribute('data-final'));
+    /* 计时：result 阅读期间 SCAN timer 必须完全停住 */
+    ok('result 期间 scan timer 不再走动（scanLeft 不变）', (function () {
+      const s0 = b.G.scanLeft;
+      b.tick(600);
+      return b.G.scanLeft === s0 && b.G.state === 'result';
+    })(), 'scanLeft=' + b.G.scanLeft + ' state=' + b.G.state);
+
+    const idx = b.G.roundIndex;
+    b.els['btn-next'].fire('click');
+    b.tick(2);
+    ok('点 NEXT 进入下一轮', b.G.roundIndex === idx + 1 && b.G.state !== 'result', b.G.state);
+    ok('进入下一轮后 overlay 才隐藏', b.els.overlay.getAttribute('data-show') === 'false');
+  }
+  {
+    /* 生命耗尽：最后一题也必须先停在 result，点 View Results 才结算 */
+    const b = fresh({});
+    const H = b.window.HuntGame;
+    H.start('endless', 4242);
+    toScanning(b);
+    b.G.lives = 1;
+    /* 用 NO HALLUCINATION 作答、而本轮确实有幻觉 -> missed -> 扣掉最后一条命，
+       这样「最后一题」是确定性的，不依赖所选项是否恰好正确 */
+    ok('本轮确实存在幻觉（missed 可复现）', b.G.round.hallucinationIndexes.length > 0,
+      JSON.stringify(b.G.round.hallucinationIndexes));
+    H.markNone();
+    b.tick(80);
+    ok('生命归零前仍先进入 result（不立刻结束）', b.G.state === 'result' && b.G.lives === 0,
+      b.G.state + '/lives=' + b.G.lives);
+    ok('最后一题按钮变为「查看结果」', b.els['btn-next'].getAttribute('data-final') === 'true',
+      b.els['btn-next'].getAttribute('data-final'));
+    b.tick(900);
+    ok('最后一题的 FACT CHECK 不会被 Session Summary 覆盖',
+      b.G.state === 'result' && b.els.overlay.getAttribute('data-show') === 'true', b.G.state);
+    b.els['btn-next'].fire('click');
+    b.tick(2);
+    ok('点「查看结果」后才进入 gameOver', b.G.state === 'gameOver', b.G.state);
+  }
+  {
+    /* Daily 最后一题同样先看 FACT CHECK */
+    const b = fresh({});
+    const H = b.window.HuntGame;
+    H.start('daily', '2026-10-01');
+    toScanning(b);
+    b.G.roundIndex = b.G.__test.DAILY_ROUNDS;
+    b.G.lives = 3;
+    H.selectClaim(0); H.confirm();
+    b.tick(80);
+    ok('Daily 最后一题停在 result', b.G.state === 'result', b.G.state);
+    ok('Daily 最后一题按钮为「查看结果」', b.els['btn-next'].getAttribute('data-final') === 'true');
+    b.tick(600);
+    ok('Daily 最后一题不会被自动结算', b.G.state === 'result', b.G.state);
+    b.els['btn-next'].fire('click');
+    b.tick(2);
+    ok('Daily 点「查看结果」后进入 gameOver', b.G.state === 'gameOver', b.G.state);
+  }
+  {
+    /* result 不参与「失焦自动暂停」，也不会被 blur 打成 paused */
+    const b = fresh({});
+    const H = b.window.HuntGame;
+    H.start('endless', 20261002);
+    toScanning(b);
+    H.selectClaim(0); H.confirm();
+    b.tick(80);
+    ok('进入 result', b.G.state === 'result');
+    b.fireDoc('visibilitychange', { hidden: true });
+    b.tick(5);
+    ok('result 下 visibilitychange 不会暂停', b.G.state === 'result', b.G.state);
+    b.fireWin('blur', {});
+    b.tick(5);
+    ok('result 下 blur 不会暂停（点 Source 开新标签页后回来内容还在）', b.G.state === 'result', b.G.state);
+    ok('blur 之后 FACT CHECK 仍然显示', b.els.overlay.getAttribute('data-show') === 'true');
+    ok('blur 不会自动进入下一轮', b.G.state === 'result');
+  }
+  {
+    /* 键盘：Enter / Space 在 result 下等价于 NEXT；P 仍然只管 pause/resume */
+    const b = fresh({});
+    const H = b.window.HuntGame;
+    H.start('endless', 20261003);
+    toScanning(b);
+    H.selectClaim(0); H.confirm();
+    b.tick(80);
+    const i0 = b.G.roundIndex;
+    b.key('keydown', 'Enter', 'Enter');
+    b.tick(2);
+    ok('result 下 Enter 等价于 NEXT', b.G.roundIndex === i0 + 1, b.G.state);
+
+    /* P 键在 result 下仍然只 pause / resume */
+    toScanning(b);
+    H.selectClaim(0); H.confirm();
+    b.tick(80);
+    ok('（前置）已再次回到 result 再做 P 键验证', b.G.state === 'result', b.G.state);
+    b.key('keydown', 'p', 'KeyP');
+    b.tick(2);
+    ok('result 下 P 仍然是暂停', b.G.state === 'paused', b.G.state);
+    b.key('keydown', 'p', 'KeyP');
+    b.tick(2);
+    ok('再按 P 回到 result', b.G.state === 'result', b.G.state);
   }
 
   return out;

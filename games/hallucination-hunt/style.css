@@ -224,7 +224,7 @@ body.hunt-body {
 .factcard {
   display: none;
   border: 1px solid var(--hunt-line); border-radius: var(--hunt-radius);
-  background: #fbfcfe; padding: 14px 16px;
+  background: #fbfcfe; padding: 14px 16px 18px;
 }
 .factcard[data-show="true"] { display: block; }
 .factcard-k { margin: 0 0 6px; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--hunt-ink-3); }
@@ -252,6 +252,11 @@ body.hunt-body {
   max-width: var(--hunt-content); margin: 0 auto 8px;
   font-size: 12px; color: var(--hunt-ink-3);
 }
+/* 提示与 NEXT 文案由状态驱动；两个 span 都走 i18n，切换语言自动生效，
+   不需要在 JS 里手动重设 textContent */
+.hint-result, #btn-next[data-final="false"] .final-label, #btn-next[data-final="true"] .next-label { display: none; }
+.hunt-app[data-state="result"] .hint-scan { display: none; }
+.hunt-app[data-state="result"] .hint-result { display: inline; }
 .action-panel { max-width: var(--hunt-content); margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; }
 .action-panel .btn { min-width: 0; flex: 1 1 auto; }
 #btn-verify[disabled] { opacity: .45; cursor: default; }

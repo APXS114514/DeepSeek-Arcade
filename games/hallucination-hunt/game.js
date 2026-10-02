@@ -33,7 +33,6 @@
   var STATES = ['intro', 'streaming', 'scanning', 'verifying', 'result', 'paused', 'gameOver'];
   var CHARS_PER_SEC = 46;
   var VERIFY_MS = 720;
-  var RESULT_MS = 1600;
   var DAILY_ROUNDS = 10;
   var BASE_SCORE = 100;
   var MAX_MULT = 5.4;            // 上限，防止分数指数爆炸
@@ -234,6 +233,32 @@
     return round ? round.claims.map(function (c) { return c.text; }).join('\n') : '';
   }
 
+  /* ---------------- result 的推进（唯一入口） ---------------- */
+  /* 这一轮之后还有没有下一题：命数耗尽，或 Daily 已打完 */
+  function isFinalRound() {
+    return game.lives <= 0 || (game.mode === 'daily' && game.roundIndex >= DAILY_ROUNDS);
+  }
+  /* result 时按钮显示「下一题」还是「查看结果」：只改 data-final，
+     由 CSS 切换两个走 i18n 的 span，不新增任何状态。 */
+  function syncNextAction() {
+    var btn = el('btn-next');
+    if (btn && btn.setAttribute) btn.setAttribute('data-final', isFinalRound() ? 'true' : 'false');
+    return isFinalRound();
+  }
+  /* result -> 下一题，或 -> 结算。点击 btn-next 与 Enter/Space 都走这里，
+     判断不散落在各处 handler 里。 */
+  function advanceFromResult() {
+    if (game.state !== 'result') return false;
+    if (isFinalRound()) {
+      endGame();
+    } else {
+      var ov = el('overlay');
+      if (ov && ov.setAttribute) ov.setAttribute('data-show', 'false');
+      nextRound();
+    }
+    return true;
+  }
+
   /* ---------------- Round 生命周期 ---------------- */
   function nextRound() {
     if (game.mode === 'daily' && game.roundIndex >= DAILY_ROUNDS) { endGame(); return; }
@@ -308,11 +333,11 @@
     streaming: [],
     scanning: ['btn-none', 'btn-verify'],
     verifying: [],
-    result: [],
+    result: ['btn-next'],
     paused: [],
     gameOver: ['btn-again', 'btn-copy']
   };
-  var ALL_ACTIONS = ['btn-none', 'btn-verify', 'btn-start', 'btn-daily', 'btn-again', 'btn-copy'];
+  var ALL_ACTIONS = ['btn-none', 'btn-verify', 'btn-next', 'btn-start', 'btn-daily', 'btn-again', 'btn-copy'];
   function syncActions(state) {
     var show = ACTION_BY_STATE[state] || [];
     for (var i = 0; i < ALL_ACTIONS.length; i++) {
@@ -326,6 +351,7 @@
   function setState(s) {
     game.state = s;
     syncActions(s);
+    if (s === 'result') syncNextAction();
     syncVerify();
     /* 动作按钮显隐会改变布局 -> 画布尺寸必须跟着重算 */
     syncSize();
@@ -447,15 +473,16 @@
     }
 
     game.lastOutcome = { outcome: outcome, gained: gained, round: r };
-    game.resultLeft = RESULT_MS / 1000;
     setState('result');
     renderResponse(r, roundFullText(r).length, true);
     showResult(outcome, gained, r);
     updateHud();
 
     if (game.score > game.high) { game.high = game.score; writeNum(HIGH_KEY, game.high); }
-    if (game.lives <= 0) { game.lives = 0; endGame(); return; }
-    if (game.mode === 'daily' && game.roundIndex >= DAILY_ROUNDS) { endGame(); return; }
+    /* 刻意不在这里 endGame()：即使命数归零或 Daily 打完，也必须先停留在 result
+       让玩家读完最后一次 FACT CHECK。推进由 advanceFromResult() 负责。 */
+    game.resultSince = game.clock;
+    syncNextAction();
   }
 
   function showResult(outcome, gained, r) {
@@ -612,15 +639,8 @@
       if (game.verifyLeft <= 0) { resolveRound(false); updateHud(); }
       return;
     }
-    if (game.state === 'result') {
-      game.resultLeft -= dt;
-      if (game.resultLeft <= 0) {
-        var ov = el('overlay');
-        if (ov && ov.setAttribute) ov.setAttribute('data-show', 'false');
-        if (game.mode === 'daily' && game.roundIndex >= DAILY_ROUNDS) endGame();
-        else nextRound();
-      }
-    }
+    /* result 没有计时器：FACT CHECK 无限停留，直到玩家点「下一题 / 查看结果」。
+       SCAN 计时在 resolveRound 时就已停住，所以阅读时长不可能进入 reactionMs。 */
   }
 
   function render() {
@@ -630,7 +650,12 @@
     if (game.state === 'streaming') charState = 'think';
     else if (game.state === 'scanning') charState = 'idle';
     else if (game.state === 'result' && game.lastOutcome) {
-      charState = (game.lastOutcome.outcome === 'hit' || game.lastOutcome.outcome === 'clean') ? 'correct' : 'startle';
+      /* result 现在会停很久：先播 2.2s 反应，之后自然回到 idle，
+         避免玩家长时间阅读时角色一直重复跳跃 / 受惊。
+         只在 Hunt 自己的 scene 里处理，不动 shared/character.js。 */
+      var settled = game.resultSince >= 0 && (game.clock - game.resultSince) > 2200;
+      charState = settled ? 'idle'
+        : ((game.lastOutcome.outcome === 'hit' || game.lastOutcome.outcome === 'clean') ? 'correct' : 'startle');
     } else if (game.state === 'gameOver') charState = 'blocked';
     var v = characterBox();
     var scene = {
@@ -737,6 +762,15 @@
     if (k === 'Space' || k === ' ' || k === 'Enter') {
       if (game.state === 'intro') { if (e && e.preventDefault) e.preventDefault(); start('endless'); }
       else if (game.state === 'gameOver') { if (e && e.preventDefault) e.preventDefault(); start(game.mode); }
+      else if (game.state === 'result') {
+        /* 焦点落在链接 / 按钮 / 可编辑元素上时不拦截，
+           保留浏览器原生行为（例如用键盘打开 Source 链接）。 */
+        var ae = document.activeElement;
+        var tag = ae && ae.tagName ? String(ae.tagName).toLowerCase() : '';
+        if (tag === 'a' || tag === 'button' || (ae && ae.isContentEditable)) return;
+        if (e && e.preventDefault) e.preventDefault();
+        advanceFromResult();
+      }
     }
   }
   function wireClicks() {
@@ -760,8 +794,13 @@
     /* 主区暂停卡里的「继续」只是另一个入口，仍然调用同一个 togglePause(false) */
     var resumeMain = el('btn-resume-main');
     if (resumeMain && resumeMain.addEventListener) resumeMain.addEventListener('click', function () { togglePause(false); });
+    var nextBtn = el('btn-next');
+    if (nextBtn && nextBtn.addEventListener) nextBtn.addEventListener('click', function () { advanceFromResult(); });
     var snd = el('sound'); if (snd && snd.addEventListener) snd.addEventListener('click', function () { if (Audio && Audio.toggle) Audio.toggle(); syncSound(); });
   }
+  /* 这些状态不参与「失焦自动暂停」 */
+  var NO_AUTO_PAUSE = { paused: true, intro: true, gameOver: true, result: true };
+
   function syncSound() {
     var b = el('sound');
     if (!b) return;
@@ -791,11 +830,13 @@
       });
     }
     if (global.addEventListener) {
-      global.addEventListener('blur', function () { if (game.state !== 'paused' && game.state !== 'intro' && game.state !== 'gameOver') togglePause(true); });
+      /* result 绝不能因失焦暂停：玩家点 Source 会开新标签页、必然触发 blur，
+         回来后必须还看到同一张 FACT CHECK。 */
+      global.addEventListener('blur', function () { if (!NO_AUTO_PAUSE[game.state]) togglePause(true); });
     }
     if (document.addEventListener) {
       document.addEventListener('visibilitychange', function () {
-        if (document.hidden && game.state !== 'paused' && game.state !== 'intro' && game.state !== 'gameOver') togglePause(true);
+        if (document.hidden && !NO_AUTO_PAUSE[game.state]) togglePause(true);
       });
       document.addEventListener('keydown', onKeyDown);
     }
@@ -808,7 +849,7 @@
     multiplierFor: multiplierFor, visibleCharsFor: visibleCharsFor, charCost: charCost,
     shareText: shareText, accuracyPct: accuracyPct,
     CHARS_PER_SEC: CHARS_PER_SEC, BASE_SCORE: BASE_SCORE, MAX_MULT: MAX_MULT,
-    DAILY_ROUNDS: DAILY_ROUNDS, VERIFY_MS: VERIFY_MS, RESULT_MS: RESULT_MS
+    DAILY_ROUNDS: DAILY_ROUNDS, VERIFY_MS: VERIFY_MS
   };
   global.HuntGame = {
     game: game,
