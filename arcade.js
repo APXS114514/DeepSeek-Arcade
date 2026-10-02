@@ -15,7 +15,8 @@
     runner: 'whaleRunner.high',          // Whale Runner 沿用原有 key，不动它的历史最高分
     snake: 'arcade.snake.high',          // Context Snake 独立 key
     tokenFall: 'arcade.tokenFall.high',  // Token Fall 独立 key，五者互不覆盖
-    breaker: 'arcade.breakerHighScore'    // Context Breaker 独立 key
+    breaker: 'arcade.breakerHighScore',       // Context Breaker 独立 key
+    hallucinationHunt: 'arcade.hallucinationHunt.high'  // Hallucination Hunt 独立 key，六者互不覆盖
   };
   /* Attention Maze 没有传统高分，首页显示“最高解锁到第几层” */
   var MAZE_PROGRESS_KEY = 'arcade.attentionMaze.progress';
@@ -384,6 +385,65 @@
     }
   }
 
+
+  /* HALLUCINATION HUNT 预览：AI RESPONSE 面板 + 一条被标红的幻觉 + 扫描线 */
+  function previewHunt(ctx, w, h, time) {
+    var pad = 14, panelW = w - pad * 2;
+    ctx.fillStyle = '#0b1c38';
+    ctx.fillRect(pad, 10, panelW, h - 20);
+    ctx.fillStyle = '#16305c';
+    ctx.fillRect(pad, 10, panelW, 1);
+
+    /* QUERY 行 */
+    ctx.fillStyle = '#4d6bfe';
+    ctx.fillRect(pad + 8, 18, 40, 3);
+    ctx.fillStyle = '#1d3a68';
+    ctx.fillRect(pad + 8, 25, panelW - 40, 2);
+
+    /* 三条 claim：第二条是幻觉 */
+    var rows = [26, 40, 54];
+    var widths = [panelW - 30, panelW - 46, panelW - 38];
+    for (var i = 0; i < rows.length; i++) {
+      var y = rows[i] + 14;
+      var bad = (i === 1);
+      ctx.fillStyle = bad ? '#2a0f1a' : '#12274c';
+      ctx.fillRect(pad + 8, y, widths[i], 10);
+      ctx.fillStyle = bad ? '#ff5d7a' : '#3a6ab0';
+      ctx.fillRect(pad + 8, y, widths[i], 2);
+      if (bad) {
+        ctx.fillStyle = '#ff5d7a';
+        ctx.fillRect(pad + 10 + widths[i] + 4, y + 2, 14, 6);
+      }
+    }
+
+    /* 扫描线（时间驱动，刷新率无关） */
+    var t = (typeof time === 'number' ? time : 0) / 1000;
+    var sy = 16 + (Math.abs(Math.sin(t * 0.7)) * (h - 52));
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = '#7fe3f0';
+    ctx.fillRect(pad + 6, sy, panelW - 12, 1);
+    ctx.globalAlpha = 1;
+
+    /* verifier */
+    var px = w / 2, py = h - 12;
+    var drawn = false;
+    if (window.ArcadeCharacter && window.ArcadeCharacter.draw) {
+      var m = window.ArcadeCharacter.measure('idle', 22);
+      drawn = window.ArcadeCharacter.draw(ctx, 'idle', px - m.w / 2, py - m.h, m.w, m.h, { time: time });
+    }
+    if (!drawn && window.ArcadeWhale && window.ArcadeWhale.NORMAL_A) {
+      var rowsW = window.ArcadeWhale.NORMAL_A;
+      for (var rr = 0; rr < rowsW.length; rr++) {
+        for (var cc = 0; cc < rowsW[rr].length; cc++) {
+          var ch = rowsW[rr].charAt(cc);
+          if (ch === '.') continue;
+          ctx.fillStyle = ch === 'o' ? '#c9dcff' : '#4d6bfe';
+          ctx.fillRect(px - 12 + cc, py - rowsW.length + rr, 1, 1);
+        }
+      }
+    }
+  }
+
   var PREVIEW_W = 224;
   var PREVIEW_H = 120;
   var previewCtx = {};
@@ -414,6 +474,7 @@
     setup('preview-tokenfall', previewTokenFall, t);
     setup('preview-maze', previewMaze, t);
     setup('preview-breaker', previewBreaker, t);
+    setup('preview-hunt', previewHunt, t);
   }
 
   paintHighScores();

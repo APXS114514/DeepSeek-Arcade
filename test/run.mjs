@@ -9,6 +9,7 @@ import * as i18n from './i18n.test.mjs';
 import * as smoke from './smoke.test.mjs';
 import * as paths from './paths.test.mjs';
 import * as contextbreaker from './contextbreaker.test.mjs';
+import * as hunt from './hunt.test.mjs';
 
 const suites = [
   ['Whale Runner · 碰撞模型 / 缩放不变性', collision],
@@ -16,10 +17,11 @@ const suites = [
   ['Token Fall · 玩法与规则', tokenfall],
   ['角色皮肤 · Classic Whale / Whale-chan', character],
   ['Attention Maze · 玩法与规则', attentionmaze],
-  ['多语言（六个页面）', i18n],
+  ['多语言（七个页面）', i18n],
   ['Whale Runner · 冒烟 + 可玩性', smoke],
   ['静态检查 · 路径与存储键', paths],
   ['CONTEXT BREAKER · 玩法与规则', contextbreaker],
+  ['HALLUCINATION HUNT · 生成器 / 校验器 / 难度', hunt],
   ['v1.0 工程化 · CI / 统一音效 / 共享素材 / 关卡拆分', engineering],
 ];
 let total = 0, fail = 0;

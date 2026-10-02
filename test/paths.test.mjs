@@ -6,10 +6,11 @@ import { ROOT, harness } from './helpers.mjs';
 
 const PAGES = ['index.html', 'games/runner/index.html', 'games/snake/index.html',
   'games/token-fall/index.html', 'games/attention-maze/index.html',
-  'games/context-breaker/index.html'];
+  'games/context-breaker/index.html', 'games/hallucination-hunt/index.html'];
 const SCRIPTS = ['arcade.js', 'shared/i18n.js', 'shared/audio.js',
   'games/runner/game.js', 'games/snake/game.js', 'games/token-fall/game.js',
-  'games/attention-maze/game.js', 'games/context-breaker/game.js'];
+  'games/attention-maze/game.js', 'games/context-breaker/game.js',
+  'games/hallucination-hunt/game.js'];
 
 export function run() {
   const out = [];

@@ -1,0 +1,146 @@
+/* 动作区按状态显隐；.action-panel 是 flex，优先级高于 UA 的 [hidden]，必须显式声明 */
+[hidden] { display: none !important; }
+
+/* HALLUCINATION HUNT 专属样式（页面外壳见 ../../shared/arcade.css）
+ * DOM 负责文字与交互，Canvas 分两层：背景层在内容之下，特效层在内容之上。 */
+
+@media (min-width: 721px) { .card { max-width: 720px; } }
+
+.game-shell {
+  position: relative;
+  width: 100%;
+  min-height: 470px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #061024;
+  padding: 10px;
+}
+.layer-backdrop, .layer-fx {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block;
+}
+.layer-fx { pointer-events: none; z-index: 5; }
+.layer-backdrop { z-index: 0; }
+.game-shell > *:not(.layer-backdrop):not(.layer-fx) { position: relative; z-index: 2; }
+
+/* ---------------- HUD ---------------- */
+.hud {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px 8px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  background: rgba(11, 28, 56, 0.82);
+  border: 1px solid #1b3560;
+  border-radius: 8px;
+}
+.hud-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.hud-cell.wide { grid-column: span 4; }
+.hud-k { font-size: 9px; letter-spacing: 0.08em; color: #7f9dd6; font-family: ui-monospace, monospace; }
+.hud-cell b { font-size: 14px; color: #eaf2ff; font-family: ui-monospace, monospace; }
+#hud-lives { color: #ff9a9a; }
+
+/* ---------------- 面板 ---------------- */
+.panel-k {
+  margin: 0 0 4px; font-size: 9.5px; letter-spacing: 0.1em;
+  color: #7f9dd6; font-family: ui-monospace, monospace;
+}
+.query-panel, .response-panel {
+  background: rgba(8, 21, 44, 0.86);
+  border: 1px solid #16305c;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.query-text { margin: 0; color: #cfe0ff; font-size: 13.5px; }
+
+.confidence { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; }
+.confidence .panel-k { margin: 0; flex: 0 0 auto; }
+.conf-track { flex: 1 1 auto; height: 8px; background: #0d2144; border-radius: 4px; overflow: hidden; }
+.conf-fill { height: 100%; background: linear-gradient(90deg, #4d6bfe, #7fe3f0); transition: width .25s ease; }
+.conf-value { font-family: ui-monospace, monospace; font-size: 12px; color: #9db4ff; }
+
+/* ---------------- Claim ---------------- */
+.response { display: flex; flex-direction: column; gap: 6px; }
+.claim {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 10px; min-height: 44px;
+  font: inherit; font-size: 13.5px; line-height: 1.55;
+  color: #dbe7ff; background: #0b1c38;
+  border: 1px solid #1d3a68; border-radius: 8px;
+  cursor: pointer; transition: background .15s ease, border-color .15s ease;
+}
+.claim:hover:not(:disabled) { background: #12274c; border-color: #2f5798; }
+.claim:focus-visible { outline: 2px solid #7fe3f0; outline-offset: 2px; }
+.claim:disabled { cursor: default; opacity: .92; }
+.claim .tag {
+  display: inline-block; margin-left: 6px; padding: 1px 6px;
+  font-size: 10px; letter-spacing: .06em; border-radius: 4px;
+  font-family: ui-monospace, monospace;
+}
+.claim.hit { border-color: #7fe3f0; background: #0d2f42; }
+.claim.hit .tag { background: #7fe3f0; color: #04222c; }
+.claim.ok { border-color: #52d08a; }
+.claim.ok .tag { background: #52d08a; color: #04220f; }
+.claim.picked { border-color: #ff5d7a; background: #2a0f1a; }
+.claim.picked .tag { background: #ff5d7a; color: #2a0009; }
+
+/* ---------------- 动作区 ---------------- */
+.action-panel { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.action-panel .btn { min-width: 0; flex: 1 1 auto; }
+.action-panel[data-enabled="false"] .btn { opacity: .5; }
+#btn-none { flex: 0 1 100%; }
+
+.timer-track { height: 4px; margin-top: 8px; background: #0d2144; border-radius: 2px; overflow: hidden; }
+.timer-fill { height: 100%; background: #7fe3f0; transition: width .12s linear; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.controls .btn { min-width: 0; flex: 1 1 auto; }
+.controls .btn.ghost { margin-left: 0; }
+
+/* ---------------- 结果浮层 ---------------- */
+.overlay {
+  position: absolute; left: 10px; right: 10px; top: 46%;
+  transform: translateY(-50%);
+  z-index: 4;
+  padding: 14px 16px;
+  background: rgba(4, 12, 28, .92);
+  border: 1px solid #2f5798; border-radius: 12px;
+  display: none;
+}
+.overlay[data-show="true"] { display: block; }
+.ov-title { margin: 0 0 8px; font-size: 17px; letter-spacing: .04em; color: #eaf2ff; }
+.ov-body { font-size: 12.5px; color: #9db4ff; }
+.ov-line, .ov-truth, .ov-gain { margin: 4px 0; }
+.ov-truth { font-family: ui-monospace, monospace; color: #7fe3f0; }
+.ov-gain { color: #ffd77a; font-weight: 600; }
+
+/* 屏幕阅读器专用状态：不朗读每个 streaming 字符，只在关键时刻播报 */
+.sr-status {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+}
+.share-out {
+  position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0;
+}
+
+/* ---------------- 响应式 ---------------- */
+@media (max-width: 720px) {
+  .game-shell { min-height: 430px; padding: 8px; }
+  .hud { grid-template-columns: repeat(3, 1fr); }
+  .hud-cell.wide { grid-column: span 3; }
+  .claim { font-size: 13px; padding: 8px; min-height: 48px; }
+  .action-panel .btn, .controls .btn { min-height: 48px; font-size: 13px; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .game-shell { min-height: 0; }
+  .query-panel, .response-panel { padding: 6px 8px; margin-bottom: 6px; }
+  .claim { font-size: 12px; padding: 6px 8px; min-height: 36px; }
+}
+
+/* 减少动态效果：关掉过渡与动画，只保留必要的信息 */
+@media (prefers-reduced-motion: reduce) {
+  .claim, .conf-fill, .timer-fill { transition: none; }
+  .overlay { transform: none; top: 40%; }
+}

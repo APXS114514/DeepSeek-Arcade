@@ -59,12 +59,12 @@ export function run() {
     const b = harness({ page: 'lobby', navLang: 'zh-CN',
       saved: { 'whaleRunner.high': '321', 'arcade.snake.high': '48', 'arcade.tokenFall.high': '77',
         'arcade.attentionMaze.progress': JSON.stringify({ v: 1, unlocked: 8, stars: { 1: 3 }, best: {} }),
-        'arcade.breakerHighScore': '512' } });
+        'arcade.breakerHighScore': '512', 'arcade.hallucinationHunt.high': '990' } });
     const title = b.byI18n('data-i18n', 'lobby.title');
     ok('大厅标题', title.textContent === 'DEEPSEEK ARCADE', title.textContent);
     ok('大厅副标题中文', b.byI18n('data-i18n', 'lobby.sub').textContent.indexOf('同人') >= 0);
     ok('大厅 document.title', b.doc.title === 'DEEPSEEK ARCADE', b.doc.title);
-    ok('大厅显示五处进度（四处最高分 + 一处最高 Layer）', b.all.filter((e) => e.getAttribute('data-highscore')).every((e) => /\d/.test(e.textContent)),
+    ok('大厅显示六处进度（五处最高分 + 一处最高 Layer）', b.all.filter((e) => e.getAttribute('data-highscore')).every((e) => /\d/.test(e.textContent)),
        b.all.filter((e) => e.getAttribute('data-highscore')).map((e) => e.textContent).join('|'));
     ok('大厅读到 Whale Runner 的最高分', b.byI18n('data-highscore', 'runner').textContent === '321',
        b.byI18n('data-highscore', 'runner').textContent);
@@ -74,8 +74,10 @@ export function run() {
        b.byI18n('data-highscore', 'tokenFall').textContent);
     ok('大厅读到 Attention Maze 的最高 Layer', b.byI18n('data-highscore', 'maze').textContent === '08 / 12',
        b.byI18n('data-highscore', 'maze').textContent);
-    ok('大厅有 5 个 PLAY 按钮文案（五款游戏都可玩）',
-       b.all.filter((e) => e.getAttribute('data-i18n') === 'lobby.play').length === 5);
+    ok('大厅有 6 个 PLAY 按钮文案（六款游戏都可玩）',
+       b.all.filter((e) => e.getAttribute('data-i18n') === 'lobby.play').length === 6);
+    ok('大厅读到 Hallucination Hunt 的最高分', b.byI18n('data-highscore', 'hallucinationHunt').textContent === '990',
+       b.byI18n('data-highscore', 'hallucinationHunt').textContent);
     ok('大厅读到 Context Breaker 的最高分', b.byI18n('data-highscore', 'breaker').textContent === '512',
        b.byI18n('data-highscore', 'breaker').textContent);
     ok('Attention Maze 卡片描述（中文）', b.byI18n('data-i18n', 'lobby.maze.desc').textContent === '记住路径 · 聚焦关键 · 找到出口',
@@ -203,10 +205,11 @@ export function run() {
       addFrom(source('games/token-fall/game.js'), /T\('([^']+)'\)/g);
       addFrom(source('games/attention-maze/game.js'), /T\('([^']+)'\)/g);
       addFrom(source('games/context-breaker/game.js'), /T\('([^']+)'\)/g);
+      addFrom(source('games/hallucination-hunt/game.js'), /T\('([^']+)'\)/g);
       const reA = /data-i18n(?:-html|-aria)?="([^"]+)"/g;
       for (const f of ['index.html', 'games/runner/index.html', 'games/snake/index.html',
         'games/token-fall/index.html', 'games/attention-maze/index.html',
-        'games/context-breaker/index.html']) {
+        'games/context-breaker/index.html', 'games/hallucination-hunt/index.html']) {
         addFrom(source(f), reA);
       }
       /* 画布里有些 key 是动态取的（目标/星级/提示），单独列出来一起校验 */
@@ -251,6 +254,18 @@ export function run() {
         'lobby.breaker.name', 'lobby.breaker.desc', 'ui.back', 'lobby.hi', 'lobby.play'];
       const missBreaker = breakerNeed.filter((k) => !zh.has(k) || !en.has(k));
       ok('CONTEXT BREAKER 要求的 ' + breakerNeed.length + ' 个 i18n key 中英齐全', missBreaker.length === 0, '缺=' + missBreaker.join(','));
+      /* HALLUCINATION HUNT 规格里点名要求的文案，中英都必须有 */
+      const huntNeed = ['hunt.title', 'hunt.h1', 'hunt.sub', 'hunt.score', 'hunt.hi', 'hunt.accuracy',
+        'hunt.streak', 'hunt.load', 'hunt.lives', 'hunt.round', 'hunt.query', 'hunt.response',
+        'hunt.responseAria', 'hunt.confidence', 'hunt.noHallucination', 'hunt.verify', 'hunt.startBtn',
+        'hunt.dailyBtn', 'hunt.againBtn', 'hunt.copyBtn', 'hunt.pauseBtn', 'hunt.resumeBtn',
+        'hunt.detected', 'hunt.cleanRound', 'hunt.falseAlarm', 'hunt.missed', 'hunt.gameOver',
+        'hunt.finalScore', 'hunt.bestStreak', 'hunt.paused', 'hunt.liveScanning', 'hunt.liveDetected',
+        'hunt.liveClean', 'hunt.liveFalseAlarm', 'hunt.liveMissed', 'hunt.lifeLost', 'hunt.copied',
+        'hunt.copyFailed', 'hunt.tips', 'lobby.hunt.name', 'lobby.hunt.desc'];
+      const missHunt = huntNeed.filter((k) => !zh.has(k) || !en.has(k));
+      ok('HALLUCINATION HUNT 要求的 ' + huntNeed.length + ' 个 i18n key 中英齐全', missHunt.length === 0, '缺=' + missHunt.join(','));
+
 
     }
   }

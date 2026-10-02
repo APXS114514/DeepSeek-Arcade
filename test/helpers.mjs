@@ -110,6 +110,43 @@ const PAGES = {
       { attrs: { 'data-i18n-html': 'breaker.tips' } },
     ],
   },
+  hunt: {
+    scripts: ['games/hallucination-hunt/rng.js', 'games/hallucination-hunt/content.js',
+      'games/hallucination-hunt/mutators.js', 'games/hallucination-hunt/generator.js',
+      'games/hallucination-hunt/difficulty.js', 'games/hallucination-hunt/effects.js',
+      'games/hallucination-hunt/renderer.js', 'games/hallucination-hunt/game.js'],
+    elements: [
+      { tag: 'title', attrs: { 'data-i18n': 'hunt.title' } },
+      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { attrs: { 'data-i18n': 'hunt.h1' } },
+      { attrs: { 'data-i18n': 'hunt.sub' } },
+      { id: 'game-shell' },
+      { id: 'game', tag: 'canvas' },
+      { id: 'fx', tag: 'canvas' },
+      { id: 'hud' },
+      { id: 'hud-score' }, { id: 'hud-high' }, { id: 'hud-accuracy' }, { id: 'hud-streak' },
+      { id: 'hud-load' }, { id: 'hud-lives' }, { id: 'hud-round' },
+      { id: 'query-text' },
+      { id: 'confidence-bar' }, { id: 'confidence-value' },
+      { id: 'response', attrs: { 'data-i18n-aria': 'hunt.responseAria' } },
+      { id: 'action-panel' },
+      { id: 'btn-none', attrs: { 'data-i18n': 'hunt.noHallucination' } },
+      { id: 'btn-verify', attrs: { 'data-i18n': 'hunt.verify' } },
+      { id: 'btn-start', attrs: { 'data-i18n': 'hunt.startBtn' } },
+      { id: 'btn-daily', attrs: { 'data-i18n': 'hunt.dailyBtn' } },
+      { id: 'btn-again', attrs: { 'data-i18n': 'hunt.againBtn' } },
+      { id: 'btn-copy', attrs: { 'data-i18n': 'hunt.copyBtn' } },
+      { id: 'scan-bar' },
+      { id: 'btn-pause', attrs: { 'data-i18n': 'hunt.pauseBtn' } },
+      { id: 'lang' },
+      { id: 'sound' },
+      { id: 'overlay', attrs: { 'data-show': 'false' } },
+      { id: 'overlay-title' }, { id: 'overlay-body' },
+      { id: 'status' },
+      { id: 'share-out', tag: 'textarea' },
+      { attrs: { 'data-i18n-html': 'hunt.tips' } },
+    ],
+  },
   lobby: {
     scripts: ['arcade.js'],
     elements: [
@@ -129,8 +166,11 @@ const PAGES = {
       { attrs: { 'data-i18n': 'lobby.maze.desc' } },
       { attrs: { 'data-i18n': 'lobby.breaker.name' } },
       { attrs: { 'data-i18n': 'lobby.breaker.desc' } },
+      { attrs: { 'data-i18n': 'lobby.hunt.name' } },
+      { attrs: { 'data-i18n': 'lobby.hunt.desc' } },
       { attrs: { 'data-i18n': 'lobby.bestLayer' } },
       { attrs: { 'data-i18n': 'lobby.more' } },
+      { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
       { attrs: { 'data-i18n': 'lobby.play' } },
@@ -142,11 +182,13 @@ const PAGES = {
       { attrs: { 'data-highscore': 'tokenFall' } },
       { attrs: { 'data-highscore': 'maze' } },
       { attrs: { 'data-highscore': 'breaker' } },
+      { attrs: { 'data-highscore': 'hallucinationHunt' } },
       { id: 'preview-runner', tag: 'canvas' },
       { id: 'preview-snake', tag: 'canvas' },
       { id: 'preview-tokenfall', tag: 'canvas' },
       { id: 'preview-maze', tag: 'canvas' },
       { id: 'preview-breaker', tag: 'canvas' },
+      { id: 'preview-hunt', tag: 'canvas' },
     ],
   },
 };
@@ -306,7 +348,7 @@ export function harness(opts) {
   for (const s of SHARED_PRELUDE) vm.runInContext(source(s), sandbox, { filename: s });
   for (const s of page.scripts) {
     let code = source(s);
-    if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall' || pageName === 'attentionmaze' || pageName === 'contextbreaker') code = patchGame(code);
+    if (pageName === 'runner' || pageName === 'snake' || pageName === 'tokenfall' || pageName === 'attentionmaze' || pageName === 'contextbreaker' || pageName === 'hunt') code = patchGame(code);
     vm.runInContext(code, sandbox, { filename: s });
   }
 
