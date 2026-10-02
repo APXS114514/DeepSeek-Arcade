@@ -136,9 +136,24 @@ await send('Page.enable', {}, SID);
 await send('Runtime.enable', {}, SID);
 
 /* 每次新文档都先装好「未捕获错误」收集器 —— 这是 Node 桩永远证明不了的一条 */
-const HOOK = `window.__smokeErrors = [];
-window.addEventListener('error', function (e) { window.__smokeErrors.push('error: ' + (e.message || (e.error && e.error.message) || 'unknown')); });
-window.addEventListener('unhandledrejection', function (e) { window.__smokeErrors.push('unhandledrejection: ' + String(e.reason)); });
+const HOOK = `/* ResizeObserver 回调在同一帧里又引发了布局变化时，Chrome 会往 window 上派发一个
+ * error 事件："ResizeObserver loop completed with undelivered notifications."
+ * 这是规范要求的**通知**，不是未捕获异常（Chrome 自己也只当 warning）。
+ * Hunt 的 syncSize 用 ResizeObserver 量画布，在 CI runner 的字体/布局下会触发它，
+ * 本机 macOS 复现不了 —— 这正是 CI 才抓得到的差异。
+ * 这里只放行这一条已知无害的消息，其它一律照旧算失败：不是「retry 到绿」，
+ * 也不是放宽断言。
+ */
+var SMOKE_BENIGN = [
+  /^ResizeObserver loop (completed with undelivered notifications|limit exceeded)/
+];
+window.__smokeErrors = [];
+function __smokeRecord(msg) {
+  for (var i = 0; i < SMOKE_BENIGN.length; i++) { if (SMOKE_BENIGN[i].test(msg)) return; }
+  window.__smokeErrors.push(msg);
+}
+window.addEventListener('error', function (e) { __smokeRecord('error: ' + (e.message || (e.error && e.error.message) || 'unknown')); });
+window.addEventListener('unhandledrejection', function (e) { __smokeRecord('unhandledrejection: ' + String(e.reason)); });
 window.__lastKey = null;
 document.addEventListener('keydown', function (e) {
   var t = e.target || {};
