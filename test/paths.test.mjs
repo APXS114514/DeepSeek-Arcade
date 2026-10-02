@@ -212,6 +212,17 @@ export function run() {
     const png = fs.readFileSync(path.join(ROOT, 'assets/favicon.png'));
     const pngW = png.readUInt32BE(16), pngH = png.readUInt32BE(20);
     ok('assets/favicon.png 存在且是合法 PNG', png.slice(1, 4).toString() === 'PNG' && pngW > 0, pngW + 'x' + pngH);
+    /* 体积 regression guard：这张图曾经是 1.03 MB / 1254x1254，而浏览器实际只用 16~32px，
+     * 它一度是全仓库最大的单文件。阈值故意给得宽松（256 KB）——目的只是防止它再次无意
+     * 膨胀回 ~1MB，不是要求极限压缩。想换图请走 tools/make-favicon.py。 */
+    const FAVICON_MAX_BYTES = 256 * 1024;
+    ok('assets/favicon.png 没有再次膨胀到 ~1MB（≤ 256 KB）',
+      png.length <= FAVICON_MAX_BYTES,
+      (png.length / 1024).toFixed(1) + ' KB / 上限 ' + (FAVICON_MAX_BYTES / 1024) + ' KB');
+    ok('assets/favicon.png 是正方形且边长合理（32~512）',
+      pngW === pngH && pngW >= 32 && pngW <= 512, pngW + 'x' + pngH);
+    ok('favicon 派生脚本随仓库提供（缩图可复现，且不参与运行时）',
+      fs.existsSync(path.join(ROOT, 'tools/make-favicon.py')));
     const vSrc = source('shared/version.js');
     const V = (/var VERSION = '([^']+)'/.exec(vSrc) || [])[1];
     for (const page of PAGES) {
