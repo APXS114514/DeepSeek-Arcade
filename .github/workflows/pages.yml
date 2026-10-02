@@ -41,10 +41,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      # 逻辑测试固定在 Node 20（那是兼容目标）；这一层单独用 Node 22，
+      # 因为直连 CDP 需要内置的全局 WebSocket（Node 21+，22 起稳定）。
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: 确认有真实浏览器（不假定固定路径）
         run: |
           for b in google-chrome google-chrome-stable chromium chromium-browser; do
@@ -64,7 +66,9 @@ jobs:
       - name: Run browser smoke
         env:
           REQUIRE_BROWSER: '1'
-        run: node test/browser-smoke.mjs
+        run: |
+          node --version
+          node test/browser-smoke.mjs
       - name: 冒烟失败时保留截图与诊断
         if: failure()
         uses: actions/upload-artifact@v4

@@ -73,10 +73,11 @@ export function run() {
     /* ---- 真实浏览器冒烟门禁（test/browser-smoke.mjs）----
      * 逻辑测试和真实浏览器测试是两件事：前者跑在自制 DOM 桩上，后者必须真的开 Chrome。
      * 这条链必须是 test -> browser-smoke -> deploy，任何一环断了都不能上线。 */
+    const smokeBlock = (/^  browser-smoke:([\s\S]*?)\n  deploy:/m.exec(wf) || ['', ''])[1];
     ok('有独立的 browser-smoke job（真实 Chrome 门禁）', /^  browser-smoke:/m.test(wf));
-    ok('browser-smoke 跑的是 test/browser-smoke.mjs', /run:\s*node test\/browser-smoke\.mjs/.test(wf));
+    ok('browser-smoke 跑的是 test/browser-smoke.mjs', /node test\/browser-smoke\.mjs/.test(smokeBlock));
     ok('browser-smoke 排在 test 之后（先跑完 1800+ 逻辑断言再开浏览器）',
-      wf.indexOf('  test:') < wf.indexOf('  browser-smoke:') && /^  browser-smoke:[\s\S]*?needs:\s*test\b/m.test(wf));
+      wf.indexOf('  test:') < wf.indexOf('  browser-smoke:') && /needs:\s*test\b/.test(smokeBlock));
     ok('deploy 依赖 browser-smoke（真实浏览器冒烟不过就不部署）',
       /^  deploy:[\s\S]*?needs:\s*browser-smoke/m.test(wf));
     ok('CI 里浏览器冒烟不允许静默跳过（REQUIRE_BROWSER=1）', /REQUIRE_BROWSER:\s*'1'/.test(wf));
@@ -84,6 +85,13 @@ export function run() {
       /actions\/upload-artifact@v4/.test(wf) && /if:\s*failure\(\)/.test(wf));
     ok('零依赖：冒烟没有引入 Playwright / Puppeteer / Selenium / chromedriver',
       !/playwright|puppeteer|selenium|chromedriver/i.test(wf));
+    /* 冒烟直连 CDP 需要内置全局 WebSocket（Node 21+，22 起稳定），而逻辑测试
+     * 固定在 Node 20 —— 两个 job 各用各的 Node，别把 20 悄悄带给冒烟。 */
+    ok('browser-smoke job 用 Node 22（全局 WebSocket），test job 仍是 Node 20',
+      /^  test:[\s\S]*?node-version:\s*'20'/m.test(wf) &&
+      /node-version:\s*'22'/.test(smokeBlock));
+    ok('冒烟脚本自己会守住 Node 版本前提（缺全局 WebSocket 时给明确提示）',
+      /typeof WebSocket !== 'function'/.test(source('test/browser-smoke.mjs')));
     ok('browser-smoke 自己不装 npm 包（只用 Node 原生 fetch / WebSocket + 真 Chrome）',
       /browser-smoke:[\s\S]*?\n  deploy:/.test(wf) && !/npm\s+(install|ci)/.test(wf));
     ok('Pages 三件套没被破坏',

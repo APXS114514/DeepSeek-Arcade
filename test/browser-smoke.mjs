@@ -28,6 +28,17 @@ const ROOT = path.dirname(fileURLToPath(new URL('.', import.meta.url)));   // �
 const ART = path.join(ROOT, 'browser-smoke-artifacts');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* Node >= 21 才有内置的全局 WebSocket（Node 22 起稳定）。CI 的 test job 固定在
+ * Node 20（那是逻辑测试的兼容目标），所以 browser-smoke job 单独用 Node 22 —— 
+ * 与其手搓一个 WebSocket 帧解析器，不如把这条要求说清楚。 */
+if (typeof WebSocket !== 'function') {
+  const msg = '浏览器冒烟需要 Node >= 21（内置全局 WebSocket），当前是 ' + process.version + '。' +
+    'CI 里 browser-smoke job 用的是 Node 22；本地请换 Node 22+ 或只跑 node test/run.mjs。';
+  if (process.env.REQUIRE_BROWSER === '1') { console.error('✗ ' + msg); process.exit(1); }
+  console.log('SKIP 浏览器冒烟：' + msg);
+  process.exit(0);
+}
+
 /* ---------------- 1. 找浏览器（不假定固定路径） ---------------- */
 function findChrome() {
   if (process.env.CHROME_BIN && fs.existsSync(process.env.CHROME_BIN)) return process.env.CHROME_BIN;
@@ -75,7 +86,9 @@ const ORIGIN = 'http://127.0.0.1:' + server.address().port + '/';
 /* ---------------- 3. 拉起 Chrome + 连 CDP ---------------- */
 const CDP_PORT = 9611;
 const PROFILE = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-smoke-profile-'));
-const errlog = path.join(os.tmpdir(), 'dsh-smoke-chrome.log');
+/* Chrome 的 stderr 直接落在 artifact 目录里：CI 上失败时能一起上传，不用猜 */
+fs.mkdirSync(ART, { recursive: true });
+const errlog = path.join(ART, 'chrome-stderr.log');
 const errfd = fs.openSync(errlog, 'w');
 const chrome = spawn(CHROME, ['--headless=new', '--remote-debugging-port=' + CDP_PORT, '--user-data-dir=' + PROFILE,
   '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--hide-scrollbars', '--remote-allow-origins=*',
@@ -93,7 +106,8 @@ for (let i = 0; i < 120; i++) {
 }
 if (!ver) {
   console.error('✗ Chrome 起来了但 CDP 端点连不上：' + (chromeExit || '超时'));
-  try { console.error(fs.readFileSync(errlog, 'utf8').split('\n').slice(-15).join('\n')); } catch {}
+  console.error('  Chrome 路径: ' + CHROME + '  Node: ' + process.version);
+  try { console.error(fs.readFileSync(errlog, 'utf8').split('\n').slice(-20).join('\n')); } catch {}
   chrome.kill('SIGKILL'); server.close();
   process.exit(process.env.REQUIRE_BROWSER === '1' ? 1 : 0);
 }
