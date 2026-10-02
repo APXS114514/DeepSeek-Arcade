@@ -567,5 +567,31 @@ export function run() {
       redefine.length === 0, redefine.join(', '));
   }
 
+  /* ================= S. 公共舞台外壳（.stage） =================
+   * 五款稳定游戏共用 <div class="stage"><canvas id="game">。
+   * 这层守护两件事：
+   *   1) 舞台的定位 / 描边 / 圆角 / 画布基样式只在公共层维护一份；
+   *   2) 公共层**绝不用 #game 选择器** —— Hunt 的整屏背景画布正好是
+   *      <canvas id="game">，共享层用 id 选择器会以 id 优先级压掉它的
+   *      .layer-backdrop 布局（id > class，与先后顺序无关）。 */
+  {
+    /* 先剥掉注释：公共层注释里就写着「刻意不写 #game」，不剥会误报（.pad 那条也踩过同样的坑）。 */
+    const stripCss = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '');
+    const shared = stripCss(source('shared/arcade.css'));
+    ok('shared/arcade.css 提供公共 .stage 底框（定位 / 圆角走变量）',
+      /\.stage\s*\{[^}]*border-radius:\s*var\(--radius-lg\)/.test(shared));
+    ok('shared/arcade.css 提供公共 .stage > canvas 基样式',
+      /\.stage\s*>\s*canvas\s*\{[^}]*image-rendering:\s*pixelated/.test(shared));
+    ok('公共层不用 #game 选择器（Hunt 的整屏背景画布就是 canvas#game）',
+      !/#game/.test(shared));
+    const GAME_CSS = ['games/runner/style.css', 'games/snake/style.css',
+      'games/token-fall/style.css', 'games/attention-maze/style.css',
+      'games/context-breaker/style.css'];
+    const dupStage = GAME_CSS.filter((f) => /\.stage\s*\{[^}]*position:\s*relative/.test(stripCss(source(f))));
+    ok('五款游戏不再各自重复 .stage 的定位 / 描边 / 圆角', dupStage.length === 0, dupStage.join(', '));
+    const dupCanvas = GAME_CSS.filter((f) => /#game\s*\{[^}]*image-rendering/.test(stripCss(source(f))));
+    ok('五款游戏不再各自重复 #game 的基样式（画布基样式只在公共层）', dupCanvas.length === 0, dupCanvas.join(', '));
+  }
+
   return out;
 }

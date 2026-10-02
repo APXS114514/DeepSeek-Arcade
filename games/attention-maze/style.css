@@ -1,4 +1,4 @@
-/* ATTENTION MAZE 专属样式（页面外壳见 ../../shared/arcade.css）
+/* ATTENTION MAZE 专属样式（页面外壳与舞台底框见 ../../shared/arcade.css）
  * 420×354 的逻辑画布 / 15×11 的迷宫，桌面上不放大过头，手机上整屏放得下。 */
 
 /* 菜单里要藏起方向键与游玩按钮。
@@ -10,36 +10,18 @@
   .card { max-width: 560px; }
 }
 
-.stage {
-  position: relative;
-  width: 100%;
-  max-width: 460px;
-  margin: 0 auto;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--deep);
-}
-
-#game {
-  display: block;
-  width: 100%;
-  height: auto;
-  image-rendering: pixelated;          /* 被 CSS 放大时保持像素硬边 */
-  touch-action: none;                  /* 走格子时不要滚动页面 / 触发手势 */
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-}
+/* 竖向舞台：只限宽，其余（居中 / 描边 / 圆角 / 深色底）走 shared 的 .stage */
+.stage { max-width: 460px; }
 
 /* 十字方向键：上行居中，下行左/下/右。
  * width:100% 不能省：竖屏下 .card 是 column flex，auto 左右外边距会让按钮缩成小方块。 */
 .pad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: var(--space-3);
   width: 100%;
   max-width: 300px;
-  margin: 12px auto 0;
+  margin: var(--space-5) auto 0;
 }
 
 #up { grid-column: 2; grid-row: 1; }
@@ -50,7 +32,7 @@
 .pad .btn {
   min-width: 0;
   min-height: 54px;
-  padding: 6px;
+  padding: var(--space-2);
   font-size: 22px;
   line-height: 1;
   touch-action: none;                  /* 长按不触发滚动 / 双击缩放 */
@@ -58,8 +40,8 @@
   -webkit-user-select: none;
 }
 
-.controls { max-width: 460px; margin: 14px auto 0; }
-.playbar { gap: 8px; }
+.controls { max-width: 460px; margin: var(--space-6) auto 0; }
+.playbar { gap: var(--space-3); }
 .playbar .btn { min-width: 0; flex: 1 1 auto; }
 
 #rescan { font-size: 14px; }
@@ -67,7 +49,7 @@
 
 @media (max-width: 720px) {
   .pad .btn { min-height: 56px; font-size: 24px; }
-  .playbar .btn { font-size: 14px; padding: 10px 8px; }
+  .playbar .btn { font-size: 14px; padding: var(--space-4) var(--space-3); }
 }
 
 /* 竖屏手机：画布高度留个上限，保证「画布 + 十字键 + 按钮」一屏放得下 */
@@ -78,17 +60,11 @@
 
 /* 手机横屏：高度紧张，按高度缩放画布，十字键压成一行 */
 @media (max-height: 560px) and (orientation: landscape) {
-  body { align-items: stretch; padding: 8px 12px; }
-  .card { max-width: 100%; padding: 8px 12px; }
-  .stage {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: -moz-fit-content;
-    width: fit-content;
-    max-width: 100%;
-    margin: 0 auto;
-  }
+  body { align-items: stretch; padding: var(--space-3) var(--space-5); }
+  /* 舞台与 .card 的横屏公共行为在 shared/arcade.css；
+   * 这里只把宽屏的 560px 限宽在横屏放开（游戏本地 base 规则比公共层更靠后，必须自己撤回）。 */
+  .card { max-width: 100%; }
+  .stage { max-width: 100%; }
   #game {
     height: calc(100vh - 150px);
     height: calc(100dvh - 150px);
@@ -99,11 +75,11 @@
   .pad {
     display: flex;
     grid-template-columns: none;
-    gap: 6px;
+    gap: var(--space-2);
     max-width: none;
-    margin: 8px auto 0;
+    margin: var(--space-3) auto 0;
   }
   .pad .btn { flex: 1 1 0; min-height: 40px; font-size: 18px; }
-  .controls { margin-top: 8px; }
-  .playbar .btn, .controls .btn { min-height: 34px; font-size: 13px; padding: 4px 10px; }
+  .controls { margin-top: var(--space-3); }
+  .playbar .btn, .controls .btn { min-height: 34px; font-size: var(--font-md); padding: var(--space-1) var(--space-4); }
 }

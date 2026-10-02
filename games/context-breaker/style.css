@@ -1,30 +1,12 @@
-/* CONTEXT BREAKER 专属样式（页面外壳见 ../../shared/arcade.css）
+/* CONTEXT BREAKER 专属样式（页面外壳与舞台底框见 ../../shared/arcade.css）
  * 竖向打砖块：画布保持 400×540 的逻辑比例，手机上整屏放得下。 */
 
 @media (min-width: 721px) {
   .card { max-width: 520px; }
 }
 
-.stage {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--deep);
-}
-
-#game {
-  display: block;
-  width: 100%;
-  height: auto;
-  image-rendering: pixelated;
-  touch-action: none;                    /* 拖动挡板时不要滚动页面 */
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-}
+/* 竖向舞台：只限宽，其余（居中 / 描边 / 圆角 / 深色底）走 shared 的 .stage */
+.stage { max-width: 420px; }
 
 /* 触屏左右两个大按钮：按住持续移动。
  * width:100% 不能省：竖屏时 .card 是 column flex，
@@ -32,16 +14,16 @@
 .pad {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: var(--space-4);
   width: 100%;
   max-width: 420px;
-  margin: 12px auto 0;
+  margin: var(--space-5) auto 0;
 }
 
 .pad .btn {
   min-width: 0;
   min-height: 56px;
-  padding: 6px;
+  padding: var(--space-2);
   font-size: 24px;
   line-height: 1;
   touch-action: none;
@@ -49,12 +31,12 @@
   -webkit-user-select: none;
 }
 
-.launchbar { max-width: 420px; margin: 10px auto 0; }
+.launchbar { max-width: 420px; margin: var(--space-4) auto 0; }
 .launchbar .btn { min-width: 0; flex: 1 1 auto; }
 
 @media (max-width: 720px) {
   .pad .btn { min-height: 62px; font-size: 28px; }
-  .launchbar { margin-top: 8px; }
+  .launchbar { margin-top: var(--space-3); }
 }
 
 /* 竖屏手机：给画布留出高度上限，保证「画布 + 方向键 + 按钮」一屏放得下 */
@@ -65,25 +47,19 @@
 
 /* 手机横屏：屏幕矮，按高度缩放画布，左右键压成一行 */
 @media (max-height: 560px) and (orientation: landscape) {
-  body { align-items: stretch; padding: 8px 12px; }
-  .card { max-width: 100%; padding: 8px 12px; }
-  .stage {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: -moz-fit-content;
-    width: fit-content;
-    max-width: 100%;
-    margin: 0 auto;
-  }
+  body { align-items: stretch; padding: var(--space-3) var(--space-5); }
+  /* 舞台与 .card 的横屏公共行为在 shared/arcade.css；
+   * 这里只把宽屏的 520px 限宽在横屏放开（游戏本地 base 规则比公共层更靠后，必须自己撤回）。 */
+  .card { max-width: 100%; }
+  .stage { max-width: 100%; }
   #game {
     height: calc(100vh - 170px);
     height: calc(100dvh - 170px);
     width: auto;
     max-width: 100%;
   }
-  .pad { display: flex; gap: 8px; max-width: none; margin: 8px auto 0; }
+  .pad { display: flex; gap: var(--space-3); max-width: none; margin: var(--space-3) auto 0; }
   .pad .btn { flex: 1 1 0; min-height: 42px; font-size: 20px; }
-  .launchbar { margin-top: 8px; }
-  .launchbar .btn { min-height: 36px; font-size: 13px; padding: 4px 10px; }
+  .launchbar { margin-top: var(--space-3); }
+  .launchbar .btn { min-height: 36px; font-size: var(--font-md); padding: var(--space-1) var(--space-4); }
 }

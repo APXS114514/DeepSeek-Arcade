@@ -1,27 +1,16 @@
 /* Whale Runner 专属样式。
- * 设计变量与页面外壳（body/卡片/按钮/提示/返回入口）都在 ../../shared/arcade.css。 */
+ * 页面外壳、设计变量、舞台底框（.stage / .stage > canvas）都在 ../../shared/arcade.css。
+ * 这里只留 Runner 自己的：浅海天光底色、画布自己的触摸策略、横屏提示与横屏画布高度。 */
 
-.stage {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  overflow: hidden;
-  background: #e2f3ff;
-}
+/* 五款里只有 Runner 用亮底舞台（其余走 shared 的深色默认） */
+.stage { background: #e2f3ff; }
 
-#game {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* 画布被 CSS 放大时保住像素硬边（改 PX 做整体缩放时尤其明显） */
-  image-rendering: pixelated;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-}
+/* 画面本身可点（点一下跳），触摸策略与其他玩法不同：
+ * 先给 manipulation，窄屏才收紧成 none。 */
+.stage > canvas { touch-action: manipulation; }
 
 /* 触屏竖屏时提示横屏（横屏画布宽度是竖屏的 2 倍多） */
-.rotate-hint { display: none; margin: 10px 2px 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+.rotate-hint { display: none; margin: var(--space-4) 2px 0; font-size: 12.5px; color: var(--muted); text-align: center; }
 
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
   .rotate-hint { display: block; }

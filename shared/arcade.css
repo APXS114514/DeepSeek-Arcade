@@ -35,6 +35,7 @@
   /* ---------- 圆角 ---------- */
   --radius-sm: 8px;
   --radius: 10px;
+  --radius-lg: 12px;
   --radius-xl: 14px;
   --radius-2xl: 18px;
   --radius-pill: 999px;
@@ -175,6 +176,35 @@ h1 { margin: 0; font-size: var(--font-2xl); letter-spacing: 0.03em; }
 .arcade-back:focus-visible { color: var(--accent); border-color: var(--accent); background: var(--accent-ghost); }
 .arcade-back:active { transform: translateY(1px); }
 
+/* ============================================================
+ * 游戏页公共舞台外壳
+ *
+ * 只作用于 .stage —— 五款稳定游戏都用 <div class="stage"><canvas id="game">。
+ * 刻意**不写 #game**：Hallucination Hunt 的整屏背景画布正好就是
+ * <canvas id="game">，而它没有 .stage；共享层一旦用 id 选择器，就会以
+ * id 优先级压掉 Hunt 的 .layer-backdrop 布局（id > class，跟先后顺序无关）。
+ * 各玩法自己的舞台底色 / 限宽 / 横屏画布高度仍留在游戏本地。
+ * ============================================================ */
+.stage {
+  position: relative;
+  width: 100%;
+  margin: 0 auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--deep);          /* 深色舞台是五款游戏的共同默认；Runner 本地覆盖成浅海蓝 */
+}
+
+.stage > canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;       /* 被 CSS 放大时保持像素硬边 */
+  touch-action: none;               /* 操作时不要滚动页面 / 触发下拉刷新 */
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
 /* 只在触屏上出现的控件（全屏按钮等） */
 .touch-only { display: none; }
 
@@ -214,7 +244,19 @@ h1 { margin: 0; font-size: var(--font-2xl); letter-spacing: 0.03em; }
 /* ---------------- 手机横屏：把纵向空间尽量让给舞台 ---------------- */
 @media (max-height: 560px) and (orientation: landscape) {
   .head, .tips { display: none; }
+  /* body 的横屏收紧刻意**不**进公共层：Lobby 是滚动浏览页、Runner 的舞台本来
+   * 就够宽，它们的 landscape body 内边距跟四款「方向键游戏」不同，硬统一会改版。 */
   .card { justify-content: center; padding: var(--space-3) var(--space-5); }
+  /* 屏幕矮：让舞台按可用高度自己定宽度，居中放着 */
+  .stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: -moz-fit-content;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+  }
   .controls { margin-top: var(--space-3); }
   .btn { min-height: 40px; font-size: var(--font-lg); }
   .back-row { margin-bottom: var(--space-2); }
