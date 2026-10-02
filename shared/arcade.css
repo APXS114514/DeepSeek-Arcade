@@ -21,7 +21,7 @@
   --surface-hover: #e8f0f8;      /* 次级面 hover */
   --surface-soft: #fbfdff;       /* 更靠近白的面：大厅卡片底 */
   --text: #16324f;               /* 主文字 */
-  --muted: #6b8299;              /* 次要文字 */
+  --muted: #5a7183;              /* 次要文字（对比度：白底 5.09:1 / #f2f7fc 底 4.72:1，都过 WCAG AA） */
   --text-accent: #46618a;        /* 强调文字：比 muted 深、比 text 浅 */
   --line: #d8e4ef;               /* 描边 / 分隔线 */
   --accent: #4d6bfe;             /* 品牌主色（= theme-color） */
@@ -174,6 +174,8 @@ h1 { margin: 0; font-size: var(--font-2xl); letter-spacing: 0.03em; }
 
 .arcade-back:hover,
 .arcade-back:focus-visible { color: var(--accent); border-color: var(--accent); background: var(--accent-ghost); }
+/* 焦点环与 .btn 保持一致（否则只剩 UA 那条 1px auto，和按钮上的 2px ring 不统一） */
+.arcade-back:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .arcade-back:active { transform: translateY(1px); }
 
 /* ============================================================

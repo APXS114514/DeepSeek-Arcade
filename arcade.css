@@ -104,6 +104,11 @@
   .games { grid-template-columns: 1fr 1fr; gap: var(--space-7); }
 }
 
+/* 大厅卡片的 hover 过渡同样尊重「减少动态效果」 */
+@media (prefers-reduced-motion: reduce) {
+  .game { transition: none; }
+}
+
 @media (max-width: 720px) {
   .brand { font-size: 24px; letter-spacing: 3px; }
   .brand-underline { width: 56px; margin-top: var(--space-3); }

@@ -593,5 +593,36 @@ export function run() {
     ok('五款游戏不再各自重复 #game 的基样式（画布基样式只在公共层）', dupCanvas.length === 0, dupCanvas.join(', '));
   }
 
+  /* ================= T. 公共文字的对比度（WCAG AA） =================
+   * --muted 曾经是 #6b8299：白底 3.98:1、.btn.ghost 的 #f2f7fc 底 3.69:1，
+   * 都低于 AA 对正文要求的 4.5:1（真实测过所有页面的可见文字节点，见
+   * Game-Miscellaneous/_ui-revalidate/a11y-probe.mjs）。
+   * 把「次级文字在两种公共底色上都过 AA」固化成测试，免得以后随手调色又调回去。
+   * 只算不依赖浏览器的纯量，不需要 DOM。 */
+  {
+    const css = source('shared/arcade.css');
+    const tok = (name) => {
+      const m = new RegExp('--' + name + ':\\s*(#[0-9a-fA-F]{6})').exec(css);
+      return m ? m[1].toLowerCase() : null;
+    };
+    const lum = (hex) => {
+      const parts = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+        .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+      return 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2];
+    };
+    const ratio = (a, b) => {
+      const l1 = lum(a), l2 = lum(b);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    };
+    const muted = tok('muted'), cardBg = tok('card-bg'), surface = tok('surface');
+    ok('公共文字色都是可计算的 6 位 hex', !!(muted && cardBg && surface), [muted, cardBg, surface].join(', '));
+    if (muted && cardBg && surface) {
+      const onCard = ratio(muted, cardBg);
+      const onSurface = ratio(muted, surface);
+      ok('次级文字 --muted 在卡片底上过 WCAG AA（>= 4.5:1）', onCard >= 4.5, onCard.toFixed(2) + ':1');
+      ok('次级文字 --muted 在次级面上过 WCAG AA（>= 4.5:1）', onSurface >= 4.5, onSurface.toFixed(2) + ':1');
+    }
+  }
+
   return out;
 }
