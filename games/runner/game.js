@@ -482,9 +482,15 @@
     btn.setAttribute('aria-pressed', soundOn ? 'true' : 'false');
   }
 
+  /* 键盘归属判断（shared/input.js）：焦点在按钮 / 链接 / 输入框里时不抢键。
+     脚本没加载时退化成「从不拦截」，玩法照常可玩。 */
+  var ArcadeInput = window.ArcadeInput || { yieldsToControl: function () { return false; } };
+
   document.addEventListener('keydown', function (e) {
     var k = e.key;
     var c = e.code;
+    /* Escape 之外，焦点在交互控件上就整体让路（见 shared/input.js） */
+    if (ArcadeInput.yieldsToControl(e, k)) return;
     if (c === 'Space' || c === 'ArrowUp' || c === 'KeyW' || k === ' ' || k === 'Spacebar' || k === 'ArrowUp' || k === 'w' || k === 'W') {
       if (e.preventDefault) e.preventDefault();
       if (!e.repeat) doJump();
@@ -509,6 +515,8 @@
   document.addEventListener('keyup', function (e) {
     var k = e.key;
     var c = e.code;
+    /* 焦点在按钮 / 链接 / 输入框里时不抢键（shared/input.js）；Escape 仍留给游戏 */
+    if (ArcadeInput.yieldsToControl(e, k)) return;
     if (c === 'ArrowDown' || c === 'KeyS' || k === 'ArrowDown' || k === 's' || k === 'S') {
       doDuck(false);
     }

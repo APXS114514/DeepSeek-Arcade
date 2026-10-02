@@ -690,11 +690,15 @@
   bindPad('left', 'left');
   bindPad('right', 'right');
 
+  /* 键盘归属判断（shared/input.js）：焦点在按钮 / 链接 / 输入框里时不抢键。
+     脚本没加载时退化成「从不拦截」，玩法照常可玩。 */
+  var ArcadeInput = window.ArcadeInput || { yieldsToControl: function () { return false; } };
+
   document.addEventListener('keydown', function (e) {
-    var t = e.target;
-    var onControl = !!(t && (t.tagName === 'BUTTON' || t.tagName === 'A' ||
-      t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'));
     var k = e.key, c = e.code;
+    /* 焦点在按钮 / 链接 / 输入框里时不抢键 —— 含方向键与字母；Escape 仍留给游戏。
+       以前这里只挡了 Space，而且只判 e.target 自己（按钮里的 <span> 就漏了）。 */
+    if (ArcadeInput.yieldsToControl(e, k)) return;
     var dir = null;
     if (c === 'ArrowUp' || c === 'KeyW' || k === 'ArrowUp' || k === 'w' || k === 'W') dir = 'up';
     else if (c === 'ArrowDown' || c === 'KeyS' || k === 'ArrowDown' || k === 's' || k === 'S') dir = 'down';
@@ -714,7 +718,6 @@
     if (c === 'KeyM' || k === 'm' || k === 'M') { stopEv(e); toggleSound(); return; }
     if (c === 'KeyR' || k === 'r' || k === 'R') { stopEv(e); doRescan(); return; }
     if (c === 'Space' || k === ' ') {
-      if (onControl) return;                 // 焦点在按钮上时交给按钮
       stopEv(e);
       if (game.state === 'menu') { selectLayer(game.selected); return; }
       if (game.state === 'clear') { nextAfterClear(); return; }
@@ -724,6 +727,7 @@
   });
   document.addEventListener('keyup', function (e) {
     var k = e.key, c = e.code;
+    if (ArcadeInput.yieldsToControl(e, k)) return;
     var dir = null;
     if (c === 'ArrowUp' || c === 'KeyW' || k === 'ArrowUp' || k === 'w' || k === 'W') dir = 'up';
     else if (c === 'ArrowDown' || c === 'KeyS' || k === 'ArrowDown' || k === 's' || k === 'S') dir = 'down';

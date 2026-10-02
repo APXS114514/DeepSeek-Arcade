@@ -10,6 +10,7 @@ import * as smoke from './smoke.test.mjs';
 import * as paths from './paths.test.mjs';
 import * as contextbreaker from './contextbreaker.test.mjs';
 import * as hunt from './hunt.test.mjs';
+import * as input from './input.test.mjs';
 
 const suites = [
   ['Whale Runner · 碰撞模型 / 缩放不变性', collision],
@@ -22,6 +23,7 @@ const suites = [
   ['静态检查 · 路径与存储键', paths],
   ['CONTEXT BREAKER · 玩法与规则', contextbreaker],
   ['HALLUCINATION HUNT · 生成器 / 校验器 / 难度', hunt],
+  ['键盘归属 · 焦点在控件上时不抢键', input],
   ['v1.0 工程化 · CI / 统一音效 / 共享素材 / 关卡拆分', engineering],
 ];
 let total = 0, fail = 0;

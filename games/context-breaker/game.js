@@ -691,9 +691,16 @@
   }
 
   /* ---------------- 输入 ---------------- */
+  /* 键盘归属判断（shared/input.js）：焦点在按钮 / 链接 / 输入框里时不抢键。
+     脚本没加载时退化成「从不拦截」，玩法照常可玩。 */
+  var ArcadeInput = window.ArcadeInput || { yieldsToControl: function () { return false; } };
+
   function keyOf(e) { return e && (e.code || e.key) || ''; }
   function onKeyDown(e) {
     var k = keyOf(e);
+    /* 焦点在按钮 / 链接 / 输入框上（例如「返回游戏厅」）时交给控件自己，
+       不能 preventDefault 掉导航、更不能顺手 launchBall()。 */
+    if (ArcadeInput.yieldsToControl(e, k)) return;
     if (k === 'ArrowLeft' || k === 'KeyA' || k === 'a' || k === 'A') { game.input.left = true; if (e && e.preventDefault) e.preventDefault(); return; }
     if (k === 'ArrowRight' || k === 'KeyD' || k === 'd' || k === 'D') { game.input.right = true; if (e && e.preventDefault) e.preventDefault(); return; }
     if (k === 'Space' || k === ' ' || k === 'Enter') {
@@ -708,6 +715,7 @@
   }
   function onKeyUp(e) {
     var k = keyOf(e);
+    if (ArcadeInput.yieldsToControl(e, k)) return;
     if (k === 'ArrowLeft' || k === 'KeyA' || k === 'a' || k === 'A') game.input.left = false;
     if (k === 'ArrowRight' || k === 'KeyD' || k === 'd' || k === 'D') game.input.right = false;
   }

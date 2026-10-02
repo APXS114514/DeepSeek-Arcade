@@ -818,9 +818,17 @@
   }
 
   /* ---------------- 输入 ---------------- */
+  /* 键盘归属判断（shared/input.js）：焦点在按钮 / 链接 / 输入框里时不抢键。
+     脚本没加载时退化成「从不拦截」，玩法照常可玩。 */
+  var ArcadeInput = window.ArcadeInput || { yieldsToControl: function () { return false; } };
+
   function keyOf(e) { return (e && (e.code || e.key)) || ''; }
   function onKeyDown(e) {
     var k = keyOf(e);
+    /* 焦点在按钮 / 链接 / 输入框里时一律让路：intro 的 Daily Challenge、
+       result 的 Source 链接、菜单里的按钮、离屏 share-out 文本框都算。
+       （以前只保护了 result 状态，而且只判 activeElement 自己。） */
+    if (ArcadeInput.yieldsToControl(e, k)) return;
     if (k === 'KeyP' || k === 'p' || k === 'P') { if (e && e.preventDefault) e.preventDefault(); togglePause(); updateHud(); return; }
     if (k === 'KeyM' || k === 'm' || k === 'M') { if (Audio && Audio.toggle) { Audio.toggle(); syncSound(); } return; }
     if (k === 'KeyN' || k === 'n' || k === 'N') { markNone(); return; }
@@ -828,11 +836,8 @@
       if (game.state === 'intro') { if (e && e.preventDefault) e.preventDefault(); start('endless'); }
       else if (game.state === 'gameOver') { if (e && e.preventDefault) e.preventDefault(); start(game.mode); }
       else if (game.state === 'result') {
-        /* 焦点落在链接 / 按钮 / 可编辑元素上时不拦截，
-           保留浏览器原生行为（例如用键盘打开 Source 链接）。 */
-        var ae = document.activeElement;
-        var tag = ae && ae.tagName ? String(ae.tagName).toLowerCase() : '';
-        if (tag === 'a' || tag === 'button' || (ae && ae.isContentEditable)) return;
+        /* 焦点落在交互控件上时上面的 yieldsToControl() 已经让路，
+           走到这里说明焦点在游戏本身上，可以安全进入下一题。 */
         if (e && e.preventDefault) e.preventDefault();
         advanceFromResult();
       }

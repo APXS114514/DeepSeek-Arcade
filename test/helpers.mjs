@@ -15,7 +15,8 @@ export function source(name) {
 
 export const SHARED_I18N = 'shared/i18n.js';
 /* 每个页面都会先加载的共享脚本（顺序与真实 HTML 一致） */
-export const SHARED_PRELUDE = ['shared/i18n.js', 'shared/audio.js', 'shared/whale.js', 'shared/character.js'];
+export const SHARED_PRELUDE = ['shared/i18n.js', 'shared/audio.js', 'shared/whale.js', 'shared/character.js',
+  'shared/input.js'];
 
 /* 每个页面真正存在的元素（与各自的 index.html 对应） */
 const PAGES = {
@@ -23,14 +24,14 @@ const PAGES = {
     scripts: ['games/runner/game.js'],
     elements: [
       { tag: 'title', attrs: { 'data-i18n': 'app.title' } },
-      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { id: 'back', tag: 'a', attrs: { 'data-i18n': 'ui.back' } },
       { attrs: { 'data-i18n': 'h1' } },
       { attrs: { 'data-i18n': 'sub' } },
       { id: 'game', attrs: { 'data-i18n-aria': 'canvas.aria' } },
-      { id: 'jump', attrs: { 'data-i18n': 'btn.jump' } },
-      { id: 'duck', attrs: { 'data-i18n': 'btn.dive' } },
+      { id: 'jump', tag: 'button', attrs: { 'data-i18n': 'btn.jump' } },
+      { id: 'duck', tag: 'button', attrs: { 'data-i18n': 'btn.dive' } },
       { id: 'lang' },
-      { id: 'sound' },
+      { id: 'sound', tag: 'button' },
       { id: 'fullscreen' },
       { attrs: { 'data-i18n-html': 'tips' } },
       { attrs: { 'data-i18n': 'canvas.rotateHint' } },
@@ -40,13 +41,13 @@ const PAGES = {
     scripts: ['games/snake/game.js'],
     elements: [
       { tag: 'title', attrs: { 'data-i18n': 'snake.title' } },
-      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { id: 'back', tag: 'a', attrs: { 'data-i18n': 'ui.back' } },
       { attrs: { 'data-i18n': 'snake.h1' } },
       { attrs: { 'data-i18n': 'snake.sub' } },
       { id: 'game', attrs: { 'data-i18n-aria': 'snake.aria' } },
       { id: 'lang' },
-      { id: 'sound' },
-      { id: 'up', attrs: { 'data-i18n-aria': 'snake.ariaUp' } },
+      { id: 'sound', tag: 'button' },
+      { id: 'up', tag: 'button', attrs: { 'data-i18n-aria': 'snake.ariaUp' } },
       { id: 'down', attrs: { 'data-i18n-aria': 'snake.ariaDown' } },
       { id: 'left', attrs: { 'data-i18n-aria': 'snake.ariaLeft' } },
       { id: 'right', attrs: { 'data-i18n-aria': 'snake.ariaRight' } },
@@ -57,15 +58,15 @@ const PAGES = {
     scripts: ['games/token-fall/game.js'],
     elements: [
       { tag: 'title', attrs: { 'data-i18n': 'tokenfall.title' } },
-      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { id: 'back', tag: 'a', attrs: { 'data-i18n': 'ui.back' } },
       { attrs: { 'data-i18n': 'tokenfall.h1' } },
       { attrs: { 'data-i18n': 'tokenfall.sub' } },
       { id: 'game', attrs: { 'data-i18n-aria': 'tokenfall.aria' } },
       { id: 'left', attrs: { 'data-i18n-aria': 'tokenfall.ariaLeft' } },
       { id: 'right', attrs: { 'data-i18n-aria': 'tokenfall.ariaRight' } },
-      { id: 'pause' },
+      { id: 'pause', tag: 'button' },
       { id: 'lang' },
-      { id: 'sound' },
+      { id: 'sound', tag: 'button' },
       { attrs: { 'data-i18n-html': 'tokenfall.tips' } },
     ],
   },
@@ -73,23 +74,23 @@ const PAGES = {
     scripts: ['games/attention-maze/levels.js', 'games/attention-maze/game.js'],
     elements: [
       { tag: 'title', attrs: { 'data-i18n': 'maze.title' } },
-      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { id: 'back', tag: 'a', attrs: { 'data-i18n': 'ui.back' } },
       { attrs: { 'data-i18n': 'maze.h1' } },
       { attrs: { 'data-i18n': 'maze.sub' } },
       { id: 'game', attrs: { 'data-i18n-aria': 'maze.aria' } },
       { id: 'pad' },
-      { id: 'up', attrs: { 'data-i18n-aria': 'maze.ariaUp' } },
-      { id: 'down', attrs: { 'data-i18n-aria': 'maze.ariaDown' } },
-      { id: 'left', attrs: { 'data-i18n-aria': 'maze.ariaLeft' } },
-      { id: 'right', attrs: { 'data-i18n-aria': 'maze.ariaRight' } },
+      { id: 'up', tag: 'button', attrs: { 'data-i18n-aria': 'maze.ariaUp' } },
+      { id: 'down', tag: 'button', attrs: { 'data-i18n-aria': 'maze.ariaDown' } },
+      { id: 'left', tag: 'button', attrs: { 'data-i18n-aria': 'maze.ariaLeft' } },
+      { id: 'right', tag: 'button', attrs: { 'data-i18n-aria': 'maze.ariaRight' } },
       { id: 'playbar' },
-      { id: 'pause' },
-      { id: 'rescan' },
-      { id: 'restart', attrs: { 'data-i18n': 'maze.restartBtn' } },
-      { id: 'menu', attrs: { 'data-i18n': 'maze.menuBtn' } },
-      { id: 'reset' },
+      { id: 'pause', tag: 'button' },
+      { id: 'rescan', tag: 'button' },
+      { id: 'restart', tag: 'button', attrs: { 'data-i18n': 'maze.restartBtn' } },
+      { id: 'menu', tag: 'button', attrs: { 'data-i18n': 'maze.menuBtn' } },
+      { id: 'reset', tag: 'button' },
       { id: 'lang' },
-      { id: 'sound' },
+      { id: 'sound', tag: 'button' },
       { attrs: { 'data-i18n-html': 'maze.tips' } },
     ],
   },
@@ -97,16 +98,16 @@ const PAGES = {
     scripts: ['games/context-breaker/game.js'],
     elements: [
       { tag: 'title', attrs: { 'data-i18n': 'breaker.title' } },
-      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { id: 'back', tag: 'a', attrs: { 'data-i18n': 'ui.back' } },
       { attrs: { 'data-i18n': 'breaker.h1' } },
       { attrs: { 'data-i18n': 'breaker.sub' } },
       { id: 'game', attrs: { 'data-i18n-aria': 'breaker.aria' } },
-      { id: 'left', attrs: { 'data-i18n-aria': 'breaker.ariaLeft' } },
-      { id: 'right', attrs: { 'data-i18n-aria': 'breaker.ariaRight' } },
-      { id: 'launch', attrs: { 'data-i18n-aria': 'breaker.ariaLaunch' } },
+      { id: 'left', tag: 'button', attrs: { 'data-i18n-aria': 'breaker.ariaLeft' } },
+      { id: 'right', tag: 'button', attrs: { 'data-i18n-aria': 'breaker.ariaRight' } },
+      { id: 'launch', tag: 'button', attrs: { 'data-i18n-aria': 'breaker.ariaLaunch' } },
       { id: 'pause', attrs: { 'data-i18n': 'breaker.pauseBtn' } },
       { id: 'lang' },
-      { id: 'sound' },
+      { id: 'sound', tag: 'button' },
       { attrs: { 'data-i18n-html': 'breaker.tips' } },
     ],
   },
@@ -117,7 +118,7 @@ const PAGES = {
       'games/hallucination-hunt/renderer.js', 'games/hallucination-hunt/game.js'],
     elements: [
       { tag: 'title', attrs: { 'data-i18n': 'hunt.title' } },
-      { id: 'back', attrs: { 'data-i18n': 'ui.back' } },
+      { id: 'back', tag: 'a', attrs: { 'data-i18n': 'ui.back' } },
       { attrs: { 'data-i18n': 'hunt.h1' } },
       { attrs: { 'data-i18n': 'hunt.sub' } },
       { id: 'game-shell' },
@@ -133,15 +134,15 @@ const PAGES = {
       { id: 'action-panel' },
       { id: 'btn-none', attrs: { 'data-i18n': 'hunt.noHallucination' } },
       { id: 'btn-verify', attrs: { 'data-i18n': 'hunt.verify' } },
-      { id: 'btn-start', attrs: { 'data-i18n': 'hunt.startBtn' } },
-      { id: 'btn-daily', attrs: { 'data-i18n': 'hunt.dailyBtn' } },
+      { id: 'btn-start', tag: 'button', attrs: { 'data-i18n': 'hunt.startBtn' } },
+      { id: 'btn-daily', tag: 'button', attrs: { 'data-i18n': 'hunt.dailyBtn' } },
       { id: 'btn-again', attrs: { 'data-i18n': 'hunt.againBtn' } },
       { id: 'btn-copy', attrs: { 'data-i18n': 'hunt.copyBtn' } },
       { id: 'btn-next', attrs: { 'data-final': 'false' } },
       { id: 'scan-bar' },
       { id: 'btn-pause', attrs: { 'data-i18n': 'hunt.pauseBtn' } },
       { id: 'lang' },
-      { id: 'sound' },
+      { id: 'sound', tag: 'button' },
       { id: 'overlay', attrs: { 'data-show': 'false' } },
       { id: 'overlay-title' }, { id: 'overlay-body' },
       { id: 'status' },
@@ -164,7 +165,7 @@ const PAGES = {
       { attrs: { 'data-i18n': 'lobby.title' } },
       { attrs: { 'data-i18n': 'lobby.sub' } },
       { id: 'lang' },
-      { id: 'sound' },
+      { id: 'sound', tag: 'button' },
       { id: 'skin' },
       { attrs: { 'data-i18n': 'lobby.whale.name' } },
       { attrs: { 'data-i18n': 'lobby.whale.desc' } },
@@ -264,13 +265,21 @@ export function harness(opts) {
   });
 
   const els = {}; const all = []; const docH = {};
-  function makeEl(spec) {
+  /* 焦点状态：document.activeElement 的真实来源（默认 <body>） */
+  let activeEl = null;
+  const rootRef = { body: null };
+
+  function makeEl(spec, parent) {
     const attrs = Object.assign({}, spec.attrs || {});
     const handlers = {};
     const e = {
       id: spec.id || '', tagName: (spec.tag || 'div').toUpperCase(),
       textContent: spec.text || '', innerHTML: spec.html || '',
       style: {}, width: 0, height: 0, dataset: {},
+      /* 父链 + 焦点 + contenteditable：判断「键盘目标是不是交互控件」要用这三样 */
+      parentNode: parent !== undefined ? parent : rootRef.body,
+      isContentEditable: spec.contentEditable === true,
+      __handlers: handlers,
       getAttribute: (n) => (attrs[n] !== undefined ? attrs[n] : null),
       setAttribute: (n, v) => { attrs[n] = String(v); },
       removeAttribute: (n) => { delete attrs[n]; },
@@ -279,7 +288,8 @@ export function harness(opts) {
       fire: (t, ev) => { (handlers[t] || []).forEach((f) => f(ev || { preventDefault() {} })); },
       getContext: makeCtx,
       getBoundingClientRect: () => ({ left: 0, top: 0, width: 360, height: 200, right: 360, bottom: 200 }),
-      focus() {},
+      focus() { activeEl = e; },
+      blur() { if (activeEl === e) activeEl = null; },
       classList: {
         _s: new Set(),
         add(c) { this._s.add(c); }, remove(c) { this._s.delete(c); },
@@ -288,13 +298,18 @@ export function harness(opts) {
       },
     };
     if (e.id) els[e.id] = e;
-    all.push(e);
+    /* <body> 刻意不进 all：现有测试大量按 all 过滤，别改变它们的输入 */
+    if (!spec.standalone) all.push(e);
     return e;
   }
-  page.elements.forEach(makeEl);
+  const bodyEl = makeEl({ tag: 'body', standalone: true }, null);
+  rootRef.body = bodyEl;
+  page.elements.forEach((spec) => makeEl(spec));
 
   const doc = {
     readyState: 'complete', title: '', hidden: false,
+    body: bodyEl,
+    get activeElement() { return activeEl || bodyEl; },
     documentElement: {
       _a: {},
       setAttribute: function (n, v) { this._a[n] = v; },
@@ -372,7 +387,32 @@ export function harness(opts) {
       try { cb(clock); } catch (e) { errors.push(String((e && e.stack) || e)); return; }
     }
   };
-  const key = (type, k, code) => (docH[type] || []).forEach((f) => f({ key: k, code: code, repeat: false, preventDefault() {} }));
+  /* 与浏览器一致：按键从当前焦点（target）沿 parentNode 冒泡到 document。
+   * 事件对象带 target / defaultPrevented —— preventDefault 是真的会置位，
+   * 所以测试既能验证「谁处理了这次按键」，也能验证「有没有被抢掉原生行为」。
+   * 不指定 target 时按 document.activeElement 派发（默认 <body>），
+   * 与改造前「直接喂给 document 监听器」的行为完全一致。 */
+  function dispatchKey(type, k, code, target) {
+    const t = target || activeEl || bodyEl;
+    const ev = {
+      type, key: k, code, repeat: false, target: t, currentTarget: null,
+      defaultPrevented: false,
+      preventDefault() { this.defaultPrevented = true; },
+      stopPropagation() {},
+    };
+    const chain = [];
+    for (let n = t; n; n = n.parentNode) { chain.push(n); if (n === bodyEl) break; }
+    for (const node of chain) {
+      const hs = node.__handlers && node.__handlers[type];
+      if (!hs) continue;
+      ev.currentTarget = node;
+      for (const f of hs.slice()) f(ev);
+    }
+    ev.currentTarget = doc;
+    (docH[type] || []).forEach((f) => f(ev));
+    return ev;
+  }
+  const key = (type, k, code, target) => dispatchKey(type, k, code, target);
   const clearLog = () => { log.texts = []; };
   const byI18n = (attr, key2) => all.find((e) => e.getAttribute(attr) === key2);
   const fireDoc = (type, ev) => (docH[type] || []).forEach((f) => f(ev || {}));
@@ -381,8 +421,8 @@ export function harness(opts) {
   const hasPendingRaf = () => !!rafCb;
 
   return {
-    S: px / 3, px, page: pageName, log, errors, els, all, doc, store, sandbox, window: win, images: imageList,
+    S: px / 3, px, page: pageName, log, errors, els, all, doc, body: bodyEl, store, sandbox, window: win, images: imageList,
     I18N: win.I18N, G: win.__game,
-    key, tick, jump, clearLog, byI18n, fireDoc, fireWin, rafIsAlive, hasPendingRaf,
+    key, dispatchKey, tick, jump, clearLog, byI18n, fireDoc, fireWin, rafIsAlive, hasPendingRaf,
   };
 }

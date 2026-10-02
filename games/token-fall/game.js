@@ -663,14 +663,22 @@
     return false;
   }
 
+  /* 键盘归属判断（shared/input.js）：焦点在按钮 / 链接 / 输入框里时不抢键。
+     脚本没加载时退化成「从不拦截」，玩法照常可玩。 */
+  var ArcadeInput = window.ArcadeInput || { yieldsToControl: function () { return false; } };
+
   document.addEventListener('keydown', function (e) {
+    if (ArcadeInput.yieldsToControl(e, e.key)) return;
     if (keyAxis(e, true)) { stopEv(e); pressStart(); return; }
     var k = e.key, c = e.code;
     if (c === 'KeyP' || k === 'p' || k === 'P' || k === 'Escape') { stopEv(e); togglePause(); return; }
     if (c === 'KeyM' || k === 'm' || k === 'M') { stopEv(e); toggleSound(); return; }
     if (c === 'Space' || k === ' ') { stopEv(e); tapAction(); }
   });
-  document.addEventListener('keyup', function (e) { if (keyAxis(e, false)) stopEv(e); });
+  document.addEventListener('keyup', function (e) {
+    if (ArcadeInput.yieldsToControl(e, e.key)) return;
+    if (keyAxis(e, false)) stopEv(e);
+  });
 
   /* 触屏方向键：按住持续移动，pointerup / pointercancel / pointerleave 都会松手 */
   function bindPad(id, dir) {
