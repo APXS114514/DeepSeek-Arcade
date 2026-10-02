@@ -447,6 +447,7 @@
   var PREVIEW_W = 224;
   var PREVIEW_H = 120;
   var previewCtx = {};
+  var previewDpr = {};
 
   function setup(id, draw, time) {
     var cv = document.getElementById(id);
@@ -456,14 +457,34 @@
       ctx = cv.getContext('2d');
       if (!ctx) return;
       previewCtx[id] = ctx;
+      previewDpr[id] = dpr;
       var dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
       cv.width = Math.round(PREVIEW_W * dpr);
       cv.height = Math.round(PREVIEW_H * dpr);
       if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       else if (ctx.scale) ctx.scale(dpr, dpr);
     }
+    /* 每帧都从完全干净的 Canvas 开始。
+       画布实际是 PREVIEW_W*dpr 大小，必须在**单位变换**下清整个 backing store；
+       若在 DPR 变换下只清 PREVIEW_W x PREVIEW_H，会漏掉边缘、留下上一帧残影
+       （previewBreaker 不画完整背景，所以第一帧的经典鲸鱼会一直留着）。
+       清完把 transform 与绘图状态复位，保证每帧 deterministic。 */
+    var d = previewDpr[id] || 1;
+    if (ctx.save && ctx.restore) {
+      ctx.save();
+      if (ctx.setTransform) ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (ctx.clearRect) ctx.clearRect(0, 0, cv.width, cv.height);
+      ctx.restore();
+    } else if (ctx.clearRect) {
+      ctx.clearRect(0, 0, PREVIEW_W, PREVIEW_H);
+    }
+    if (ctx.setTransform) ctx.setTransform(d, 0, 0, d, 0, 0);
+    /* 复原可能被上一帧改掉的绘图状态（尤其 globalAlpha，否则角色会半透明） */
+    if (ctx.globalAlpha !== undefined) ctx.globalAlpha = 1;
+    if (ctx.textAlign !== undefined) ctx.textAlign = 'left';
+    if (ctx.textBaseline !== undefined) ctx.textBaseline = 'alphabetic';
     /* 预览底色 / 经典像素画保持硬边；角色模块会临时改再改回来 */
-    ctx.imageSmoothingEnabled = false;
+    if (ctx.imageSmoothingEnabled !== undefined) ctx.imageSmoothingEnabled = false;
     draw(ctx, PREVIEW_W, PREVIEW_H, time);
   }
 

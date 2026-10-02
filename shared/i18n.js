@@ -21,8 +21,8 @@
 
   var DICT = {
     zh: {
-      'app.title': '小鲸鱼跑酷 · DeepSeek Whale Runner',
-      'h1': '🐳 小鲸鱼跑酷',
+      'app.title': '小鲸逐浪 · DeepSeek Arcade',
+      'h1': '🐳 小鲸逐浪',
       'sub': '空格 / ↑ 上浮跳跃　·　↓ 下潜　·　P 暂停　·　M 静音',
       'btn.jump': '跳跃',
       'btn.dive': '下潜',
@@ -49,14 +49,14 @@
       'lobby.hi': '最高分',
       'lobby.play': '开始游戏',
 
-      'lobby.whale.name': 'WHALE RUNNER',
-      'lobby.whale.desc': '上浮 · 下潜 · 活下来',
-      'lobby.snake.name': 'CONTEXT SNAKE',
-      'lobby.snake.desc': '吃 TOKEN · 增长 Context',
-      'lobby.tokenfall.name': 'TOKEN FALL',
-      'lobby.tokenfall.desc': '接住 Token · 管理上下文',
-      'lobby.maze.name': 'ATTENTION MAZE',
-      'lobby.maze.desc': '记住路径 · 聚焦关键 · 找到出口',
+      'lobby.whale.name': '小鲸逐浪',
+      'lobby.whale.desc': '上浮 · 下潜 · 穿越深海',
+      'lobby.snake.name': '上下文吞噬者',
+      'lobby.snake.desc': '吞下词元 · 延展上下文',
+      'lobby.tokenfall.name': '词元雨',
+      'lobby.tokenfall.desc': '接住词元 · 压缩上下文 · 躲避噪声',
+      'lobby.maze.name': '注意力迷航',
+      'lobby.maze.desc': '记住线索 · 聚焦关键 · 找到出口',
       'lobby.bestLayer': '最高 LAYER',
       'lobby.more': '更多小游戏，以后再说。',
       'lobby.footer': '非官方同人作品，与 DeepSeek 官方无关联。',
@@ -70,9 +70,9 @@
       'skin.aria': '切换角色外观（经典鲸鱼 / 鲸鱼娘）',
 
       /* ---------- Context Snake ---------- */
-      'snake.title': 'Context 贪吃蛇 · DeepSeek Arcade',
-      'snake.h1': '🐳 Context 贪吃蛇',
-      'snake.sub': '方向键 / WASD 控制　·　吃 TOKEN 增长 Context　·　P 暂停',
+      'snake.title': '上下文吞噬者 · DeepSeek Arcade',
+      'snake.h1': '🐳 上下文吞噬者',
+      'snake.sub': '方向键 / WASD 控制　·　吞下词元延展上下文　·　P 暂停',
       'snake.aria': 'Context Snake 游戏画面',
       'snake.ctx': 'CONTEXT',
       'snake.think': 'DEEP THINK',
@@ -89,9 +89,9 @@
       'snake.tips': '经典贪吃蛇玩法：吃 <b>TOKEN</b> 让 Context 变长，别撞墙也别咬到自己。低概率出现的 <b>THINK</b> 会进入 4 秒 <b>DEEP THINK</b> —— 速度变慢并泛蓝光。最高分存在本地浏览器里。',
 
       /* ---------- Token Fall ---------- */
-      'tokenfall.title': 'TOKEN FALL · DeepSeek Arcade',
-      'tokenfall.h1': '🐳 TOKEN FALL',
-      'tokenfall.sub': '← → / A D 移动　·　接 TOKEN / HEAVY，躲 NOISE，抢 COMPRESS　·　P 暂停　·　M 静音',
+      'tokenfall.title': '词元雨 · DeepSeek Arcade',
+      'tokenfall.h1': '🐳 词元雨',
+      'tokenfall.sub': '← → / A D 移动　·　接住词元 / HEAVY，躲 NOISE，抢 COMPRESS　·　P 暂停　·　M 静音',
       'tokenfall.aria': 'TOKEN FALL 游戏画面',
       'tokenfall.ariaLeft': '向左',
       'tokenfall.ariaRight': '向右',
@@ -131,8 +131,8 @@
         ' 低概率的 <b>THINK</b> 吃到进入 4 秒 <b>DEEP THINK</b>（下落变慢 + 泛蓝光）。CONTEXT 满 1024 后进入抢救期，吃到 COMPRESS 把 Context 压回 1024 以下即可取消溢出；连续干净接取可以叠到 <b>CLEAN x5</b>。最高分存在本地浏览器里。',
 
       /* ---------- Attention Maze ---------- */
-      'maze.title': 'Attention Maze · DeepSeek Arcade',
-      'maze.h1': '🐳 ATTENTION MAZE',
+      'maze.title': '注意力迷航 · DeepSeek Arcade',
+      'maze.h1': '🐳 注意力迷航',
       'maze.titleShort': 'ATTENTION MAZE',
       'maze.sub': '方向键 / WASD 走格子　·　SCAN 记住地图，FOCUS 只看身边一圈　·　P 暂停　·　R 重扫',
       'maze.desc': '记住路径 · 聚焦关键 · 找到出口',
@@ -203,8 +203,8 @@
       'maze.tip.final': 'FINAL ATTENTION：把学过的全用上',
       'maze.tips': '<b>ATTENTION SCAN</b> 时整张地图可见，之后进入 <b>FOCUS MODE</b>：只看得到身边一圈，走过的地方留下很暗的残影。走到 <b>QUERY</b> 会亮起它到各个 <b>KEY</b> 的注意力连线与权重数字，记住权重最高的 KEY，走过去即 <b>ATTENTION MATCHED</b>，接着 <b>VALUE</b> 与 <b>EXIT</b> 依次解锁。后期出现 <b>MULTI-HEAD ATTENTION</b>：两个头分别给权重，要综合判断。走错 KEY 只记 1 次 MISTAKE，不会 Game Over；<b>RESCAN</b> 每关 1~2 次，用过最多只能拿 2 星。进度与星级存在本地浏览器里。',
       /* ---------- Context Breaker（第 5 款） ---------- */
-      'breaker.title': 'Context Breaker · DeepSeek Arcade',
-      'breaker.h1': '🐳 CONTEXT BREAKER',
+      'breaker.title': '上下文破壁 · DeepSeek Arcade',
+      'breaker.h1': '🐳 上下文破壁',
       'breaker.sub': '← → / A D 移动　·　空格 发球　·　P 暂停　·　M 静音',
       'breaker.aria': 'CONTEXT BREAKER 游戏画面',
       'breaker.ariaLeft': '向左',
@@ -234,11 +234,11 @@
         ' <b>DENSE CONTEXT</b> 要打两次（第一次会变成受损状态）；<b>NOISE</b> 击碎后挡板会变窄六秒；' +
         ' <b>THINK</b> 击碎后进入 5 秒 <b>DEEP THINK</b>、球速变慢；<b>COMPRESS</b> 击碎后会把它周围的方块一起压缩。' +
         ' 球掉到底部扣一条命，初始 3 条命。挡板不同位置反弹角度不同 —— 越靠边越斜，但永远不会接近水平。最高分存在本地浏览器里。',
-      'lobby.breaker.name': 'CONTEXT BREAKER',
-      'lobby.breaker.desc': '打碎 CONTEXT · 利用 THINK · 避开 NOISE',
+      'lobby.breaker.name': '上下文破壁',
+      'lobby.breaker.desc': '击碎上下文 · 借助思考 · 避开噪声',
       /* ---------- Hallucination Hunt（第 6 款） ---------- */
-      'hunt.title': 'Hallucination Hunt · DeepSeek Arcade',
-      'hunt.h1': '🐳 HALLUCINATION HUNT',
+      'hunt.title': '幻觉猎手 · DeepSeek Arcade',
+      'hunt.h1': '🐳 幻觉猎手',
       'hunt.sub': '读懂回答 · 找出幻觉 · 验证事实',
       'hunt.score': 'SCORE',
       'hunt.hi': 'HIGH SCORE',
@@ -276,8 +276,8 @@
       'hunt.copied': '结果已复制',
       'hunt.copyFailed': '无法自动复制，请手动选择下方文本',
       'hunt.tips': '模型会生成一段回答，其中可能藏着一条或多条 <b>HALLUCINATION</b>，也可能完全正确。点出你认为错误的那一条，或者选择 <b>NO HALLUCINATION</b>。每轮的 <b>MODEL CONFIDENCE</b> 只是气氛，<b>高置信度也可能是错的</b>。回答是流式生成的，生成期间无法作答 —— 只有 <b>SCAN</b> 阶段才计时。难度（<b>LOAD 1~5</b>）按你的命中率与反应速度动态调整，但单轮最多变化一档。判断正确会累积 <b>STREAK</b>；误报或漏判会清空连击并扣一条命。同一个 seed 永远生成同一道题，<b>DAILY HUNT</b> 用当天日期做 seed，每天同一套 10 题。最高分存在本地浏览器里。',
-      'lobby.hunt.name': 'HALLUCINATION HUNT',
-      'lobby.hunt.desc': '读懂回答 · 找出幻觉 · 验证事实',
+      'lobby.hunt.name': '幻觉猎手',
+      'lobby.hunt.desc': '审查回答 · 捕捉幻觉 · 核验事实',
       'hunt.pauseTitle': '已暂停',
       'hunt.pauseBody': '为了避免倒计时继续，游戏已暂停。',
       'hunt.pauseHint': '按 P 键或点击「继续」恢复',

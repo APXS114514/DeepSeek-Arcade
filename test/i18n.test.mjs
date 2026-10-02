@@ -11,10 +11,10 @@ export function run() {
     const b = harness({ page: 'runner', navLang: 'zh-CN' });
     const h1 = b.byI18n('data-i18n', 'h1');
     const tips = b.byI18n('data-i18n-html', 'tips');
-    ok('runner 默认中文 h1', h1.textContent === '🐳 小鲸鱼跑酷', h1.textContent);
+    ok('runner 默认中文 h1', h1.textContent === '🐳 小鲸逐浪', h1.textContent);
     ok('runner tips 保留 <b> 标签', tips.innerHTML.indexOf('<b>海胆') > 0, tips.innerHTML.slice(0, 20));
     ok('runner canvas aria-label', b.els.game.getAttribute('aria-label') === '小鲸鱼跑酷游戏画面');
-    ok('runner document.title', b.doc.title === '小鲸鱼跑酷 · DeepSeek Whale Runner', b.doc.title);
+    ok('runner document.title', b.doc.title === '小鲸逐浪 · DeepSeek Arcade', b.doc.title);
     ok('runner 返回按钮文案', b.els.back.textContent === '← 返回游戏厅', b.els.back.textContent);
     ok('html lang=zh-CN', b.doc.documentElement.getAttribute('lang') === 'zh-CN');
     ok('语言按钮显示目标语言', b.els.lang.textContent === '🌐 English', b.els.lang.textContent);
@@ -38,7 +38,7 @@ export function run() {
     ok('runner 画布英文开场提示', b.log.texts.some((s) => s.indexOf('Press Space / tap to start') >= 0));
 
     b.els.lang.fire('click');
-    ok('再点切回中文', b.I18N.lang === 'zh' && h1.textContent === '🐳 小鲸鱼跑酷', b.I18N.lang);
+    ok('再点切回中文', b.I18N.lang === 'zh' && h1.textContent === '🐳 小鲸逐浪', b.I18N.lang);
     ok('切回后写入 zh', b.store.get('arcade.lang') === 'zh');
   }
 
@@ -80,12 +80,12 @@ export function run() {
        b.byI18n('data-highscore', 'hallucinationHunt').textContent);
     ok('大厅读到 Context Breaker 的最高分', b.byI18n('data-highscore', 'breaker').textContent === '512',
        b.byI18n('data-highscore', 'breaker').textContent);
-    ok('Attention Maze 卡片描述（中文）', b.byI18n('data-i18n', 'lobby.maze.desc').textContent === '记住路径 · 聚焦关键 · 找到出口',
+    ok('Attention Maze 卡片描述（中文）', b.byI18n('data-i18n', 'lobby.maze.desc').textContent === '记住线索 · 聚焦关键 · 找到出口',
        b.byI18n('data-i18n', 'lobby.maze.desc').textContent);
     ok('首页只有一句“以后再说”，没有多余的假卡片',
        b.byI18n('data-i18n', 'lobby.more').textContent.indexOf('更多') >= 0 &&
        b.all.filter((e) => e.getAttribute('data-i18n') === 'lobby.more').length === 1);
-    ok('Token Fall 卡片描述（中文）', b.byI18n('data-i18n', 'lobby.tokenfall.desc').textContent === '接住 Token · 管理上下文',
+    ok('Token Fall 卡片描述（中文）', b.byI18n('data-i18n', 'lobby.tokenfall.desc').textContent === '接住词元 · 压缩上下文 · 躲避噪声',
        b.byI18n('data-i18n', 'lobby.tokenfall.desc').textContent);
     b.els.lang.fire('click');
     ok('大厅切英文', b.byI18n('data-i18n', 'lobby.sub').textContent.indexOf('DeepSeek-inspired') >= 0);
@@ -105,8 +105,8 @@ export function run() {
   /* ---------- Context Snake 页面 ---------- */
   {
     const b = harness({ page: 'snake', navLang: 'zh-CN' });
-    ok('snake 中文标题', b.doc.title === 'Context 贪吃蛇 · DeepSeek Arcade', b.doc.title);
-    ok('snake 中文 h1', b.byI18n('data-i18n', 'snake.h1').textContent === '🐳 Context 贪吃蛇');
+    ok('snake 中文标题', b.doc.title === '上下文吞噬者 · DeepSeek Arcade', b.doc.title);
+    ok('snake 中文 h1', b.byI18n('data-i18n', 'snake.h1').textContent === '🐳 上下文吞噬者');
     ok('snake canvas aria-label', b.els.game.getAttribute('aria-label') === 'Context Snake 游戏画面');
     ok('snake 十字键中文 aria', b.els.up.getAttribute('aria-label') === '向上', b.els.up.getAttribute('aria-label'));
     b.els.lang.fire('click');
@@ -118,8 +118,8 @@ export function run() {
   /* ---------- Token Fall 页面 ---------- */
   {
     const b = harness({ page: 'tokenfall', navLang: 'zh-CN' });
-    ok('tokenfall 中文标题', b.doc.title === 'TOKEN FALL · DeepSeek Arcade', b.doc.title);
-    ok('tokenfall 中文 h1', b.byI18n('data-i18n', 'tokenfall.h1').textContent === '🐳 TOKEN FALL');
+    ok('tokenfall 中文标题', b.doc.title === '词元雨 · DeepSeek Arcade', b.doc.title);
+    ok('tokenfall 中文 h1', b.byI18n('data-i18n', 'tokenfall.h1').textContent === '🐳 词元雨');
     ok('tokenfall canvas aria-label', b.els.game.getAttribute('aria-label') === 'TOKEN FALL 游戏画面');
     ok('tokenfall 方向键中文 aria', b.els.left.getAttribute('aria-label') === '向左', b.els.left.getAttribute('aria-label'));
     ok('tokenfall 返回按钮文案', b.els.back.textContent === '← 返回游戏厅', b.els.back.textContent);
@@ -142,8 +142,8 @@ export function run() {
   /* ---------- Attention Maze 页面 ---------- */
   {
     const b = harness({ page: 'attentionmaze', navLang: 'zh-CN' });
-    ok('maze 中文标题', b.doc.title === 'Attention Maze · DeepSeek Arcade', b.doc.title);
-    ok('maze 中文 h1', b.byI18n('data-i18n', 'maze.h1').textContent === '🐳 ATTENTION MAZE');
+    ok('maze 中文标题', b.doc.title === '注意力迷航 · DeepSeek Arcade', b.doc.title);
+    ok('maze 中文 h1', b.byI18n('data-i18n', 'maze.h1').textContent === '🐳 注意力迷航');
     ok('maze canvas aria-label', b.els.game.getAttribute('aria-label') === 'ATTENTION MAZE 游戏画面');
     ok('maze 返回按钮文案', b.els.back.textContent === '← 返回游戏厅', b.els.back.textContent);
     ok('maze 方向键中文 aria', b.els.left.getAttribute('aria-label') === '向左', b.els.left.getAttribute('aria-label'));
@@ -268,6 +268,69 @@ export function run() {
 
 
     }
+  }
+
+  /* ================= 中文正式游戏名（本地化，不是英文标题 + 中文说明） ================= */
+  {
+    const ZH = {
+      whale: ['小鲸逐浪', '上浮 · 下潜 · 穿越深海'],
+      snake: ['上下文吞噬者', '吞下词元 · 延展上下文'],
+      tokenfall: ['词元雨', '接住词元 · 压缩上下文 · 躲避噪声'],
+      maze: ['注意力迷航', '记住线索 · 聚焦关键 · 找到出口'],
+      breaker: ['上下文破壁', '击碎上下文 · 借助思考 · 避开噪声'],
+      hunt: ['幻觉猎手', '审查回答 · 捕捉幻觉 · 核验事实'],
+    };
+    const EN = {
+      whale: ['WHALE RUNNER', 'Jump · Dive · Survive'],
+      snake: ['CONTEXT SNAKE', 'Eat tokens · Grow context'],
+      tokenfall: ['TOKEN FALL', 'Catch tokens · Manage context'],
+      maze: ['ATTENTION MAZE', 'Remember · Attend · Escape'],
+      breaker: ['CONTEXT BREAKER', 'Smash context · Trigger THINK · Survive the noise'],
+      hunt: ['HALLUCINATION HUNT', 'Read the response · Find the lie · Verify the claim'],
+    };
+    const b = harness({ page: 'lobby', navLang: 'zh-CN' });
+    for (const id of Object.keys(ZH)) {
+      ok('中文 lobby.' + id + '.name = ' + ZH[id][0],
+        b.I18N.t('lobby.' + id + '.name') === ZH[id][0], b.I18N.t('lobby.' + id + '.name'));
+      ok('中文 lobby.' + id + '.desc 已本地化',
+        b.I18N.t('lobby.' + id + '.desc') === ZH[id][1], b.I18N.t('lobby.' + id + '.desc'));
+      /* 真实 DOM：卡片标题确实渲染成中文名 */
+      ok('中文大厅卡片 DOM 显示 ' + ZH[id][0],
+        b.byI18n('data-i18n', 'lobby.' + id + '.name').textContent === ZH[id][0],
+        b.byI18n('data-i18n', 'lobby.' + id + '.name').textContent);
+    }
+    ok('中文模式不再残留任何英文游戏名（本地化彻底）',
+      ['whale', 'snake', 'tokenfall', 'maze', 'breaker', 'hunt']
+        .every((id) => b.byI18n('data-i18n', 'lobby.' + id + '.name').textContent.indexOf('WHALE') < 0 &&
+          b.byI18n('data-i18n', 'lobby.' + id + '.name').textContent === ZH[id][0]));
+    ok('中文玩家说明优先使用「词元」而不是 Token',
+      b.I18N.t('lobby.snake.desc').indexOf('词元') >= 0 &&
+      b.I18N.t('lobby.tokenfall.desc').indexOf('词元') >= 0 &&
+      b.I18N.t('lobby.snake.desc').indexOf('Token') < 0);
+
+    b.els.lang.fire('click');
+    ok('切到英文：六个名字全部回到英文原名',
+      Object.keys(EN).every((id) => b.I18N.t('lobby.' + id + '.name') === EN[id][0]),
+      Object.keys(EN).map((id) => b.I18N.t('lobby.' + id + '.name')).join(' / '));
+    ok('英文 lobby.desc 未被中文化',
+      Object.keys(EN).every((id) => b.I18N.t('lobby.' + id + '.desc') === EN[id][1]));
+    ok('英文模式大厅卡片全部显示英文原名',
+      Object.keys(EN).every((id) => b.byI18n('data-i18n', 'lobby.' + id + '.name').textContent === EN[id][0]));
+    b.els.lang.fire('click');
+    ok('再切回中文：六个名字恢复中文（不会半中半英）',
+      Object.keys(ZH).every((id) => b.I18N.t('lobby.' + id + '.name') === ZH[id][0]));
+    ok('中文浏览器标题使用中文名',
+      b.I18N.t('app.title') === '小鲸逐浪 · DeepSeek Arcade' &&
+      b.I18N.t('hunt.title') === '幻觉猎手 · DeepSeek Arcade' &&
+      b.I18N.t('breaker.title') === '上下文破壁 · DeepSeek Arcade' &&
+      b.I18N.t('tokenfall.title') === '词元雨 · DeepSeek Arcade' &&
+      b.I18N.t('snake.title') === '上下文吞噬者 · DeepSeek Arcade' &&
+      b.I18N.t('maze.title') === '注意力迷航 · DeepSeek Arcade',
+      b.I18N.t('hunt.title'));
+    ok('中文各游戏 h1 使用中文名',
+      b.I18N.t('snake.h1') === '🐳 上下文吞噬者' && b.I18N.t('tokenfall.h1') === '🐳 词元雨' &&
+      b.I18N.t('maze.h1') === '🐳 注意力迷航' && b.I18N.t('breaker.h1') === '🐳 上下文破壁' &&
+      b.I18N.t('hunt.h1') === '🐳 幻觉猎手' && b.I18N.t('h1') === '🐳 小鲸逐浪');
   }
 
   return out;

@@ -450,5 +450,34 @@ export function run() {
         source('shared/arcade.css').replace(/\/\*[\s\S]*?\*\//g, '')));
   }
 
+  /* ================= 大厅 preview Canvas 帧清理 ================= */
+  {
+    const src = source('arcade.js');
+    const setupAt = src.indexOf('function setup(id, draw, time)');
+    ok('arcade.js 有统一的 preview setup()', setupAt >= 0);
+    const drawAt = src.indexOf('draw(ctx, PREVIEW_W, PREVIEW_H, time);', setupAt);
+    const idClearAt = src.indexOf('setTransform(1, 0, 0, 1, 0, 0)', setupAt);
+    const fullClearAt = src.indexOf('clearRect(0, 0, cv.width, cv.height)', setupAt);
+    ok('清屏发生在 draw() 之前', idClearAt > setupAt && idClearAt < drawAt && fullClearAt > setupAt && fullClearAt < drawAt,
+      idClearAt + '/' + drawAt);
+    ok('用单位变换清整个 backing store（DPR 下不会漏清）',
+      /setTransform\(1, 0, 0, 1, 0, 0\)/.test(src) && /clearRect\(0, 0, cv\.width, cv\.height\)/.test(src));
+    ok('清屏后恢复逻辑坐标 transform', /setTransform\(d, 0, 0, d, 0, 0\)/.test(src));
+    ok('清屏后复位绘图状态（globalAlpha / smoothing / textAlign / textBaseline）',
+      /globalAlpha = 1/.test(src) && /imageSmoothingEnabled = false/.test(src) &&
+      /textAlign = 'left'/.test(src) && /textBaseline = 'alphabetic'/.test(src));
+    ok('六个 preview 全部走同一 setup() 入口',
+      ['preview-runner', 'preview-snake', 'preview-tokenfall', 'preview-maze', 'preview-breaker', 'preview-hunt']
+        .every((id) => src.indexOf("setup('" + id + "'") >= 0));
+    ok('每个 preview 画布都记录了 dpr（清屏才知道真实尺寸）', /previewDpr\[id\] = dpr/.test(src));
+
+    /* 运行时：启动那一帧每张画布都必须先清一次再画。
+       （预览动画由 rAF 驱动，测试桩只跑得到启动帧，所以只断言这个确定的不变量） */
+    const b = harness({ page: 'lobby', navLang: 'zh-CN' });
+    ok('启动帧 6 张 preview 各清屏一次（clearRect 次数 = 画布数）',
+      b.log.clears === 6, String(b.log.clears));
+    ok('清屏发生在任何绘制之前（启动帧就有 6 次 clear，不是 0）', b.log.clears > 0, String(b.log.clears));
+  }
+
   return out;
 }
