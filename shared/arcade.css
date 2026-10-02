@@ -1,20 +1,66 @@
 /* ============================================================
- * DeepSeek Arcade — 全站共享样式
- * 设计变量 + 页面外壳（body / 卡片 / 按钮 / 提示）+「返回游戏厅」入口。
- * 各页面只写自己特有的部分（舞台、画布、操作盘…）。
+ * DeepSeek Arcade — 全站共享样式（公共 UI 基础设施的单一来源）
+ *
+ * 三层：
+ *   1) 设计变量（:root）—— 颜色 / 圆角 / 间距 / 排版 / 阴影 / 过渡
+ *   2) 页面外壳 —— body / .card / .head / h1 / .sub / .controls / .btn / .tips / 返回入口
+ *   3) 公共交互与响应式 —— :focus-visible / safe-area / 窄屏 / 手机横屏 / reduced-motion
+ *
+ * 各游戏只写自己特有的部分（舞台、画布、操作盘、玩法反馈）。
+ * 判断标准：只有「语义一致 + 视觉一致」的规则才放这里；只是长得像、
+ * 但属于不同玩法语义的（HUD 内部、玩法反馈、特殊配色）留在游戏本地。
+ *
+ * 变量卫生由 test/engineering.test.mjs 守卫：:root 里不允许留下没人引用的 token。
  * ============================================================ */
 
 :root {
-  --page-bg: #e8f2fb;
-  --card-bg: #ffffff;
-  --text: #16324f;
-  --muted: #6b8299;
-  --line: #d8e4ef;
-  --accent: #4d6bfe;
-  --accent-dark: #3d5be8;
-  --deep: #08152c;          /* 深海蓝：贪吃蛇场地与大厅深色块 */
-  --deep-2: #0e2148;
+  /* ---------- 颜色：公共产品 UI ---------- */
+  --page-bg: #e8f2fb;            /* 页面底色 */
+  --card-bg: #ffffff;            /* 卡片 / 面板 / 浮起的白色面 */
+  --surface: #f2f7fc;            /* 次级面：按钮默认底 */
+  --surface-hover: #e8f0f8;      /* 次级面 hover */
+  --text: #16324f;               /* 主文字 */
+  --muted: #6b8299;              /* 次要文字 */
+  --text-accent: #46618a;        /* 强调文字：比 muted 深、比 text 浅 */
+  --line: #d8e4ef;               /* 描边 / 分隔线 */
+  --accent: #4d6bfe;             /* 品牌主色（= theme-color） */
+  --accent-dark: #3d5be8;        /* 主色 hover */
+  --accent-ghost: #f4f8ff;       /* hover 时的极淡蓝面 */
+  --deep: #08152c;               /* 深海蓝：贪吃蛇场地、缩略图底、大厅深色块 */
+  --focus-ring: var(--accent);   /* 键盘焦点环颜色 */
+
+  /* ---------- 圆角 ---------- */
+  --radius-sm: 8px;
+  --radius: 10px;
+  --radius-2xl: 18px;
+  --radius-pill: 999px;
+
+  /* ---------- 间距 ----------
+   * 公共外壳在用的阶梯，不是通用设计标尺；
+   * 玩法专属的怪值（7px / 9px / 3px…）就留在游戏本地，不硬塞进来。 */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-7: 16px;
+  --space-8: 18px;
+  --space-9: 22px;
+  --space-10: 24px;
+
+  /* ---------- 排版 ---------- */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-sm: 12px;
+  --font-md: 13px;
+  --font-lg: 15px;
+  --font-xl: 17px;
+  --font-2xl: 20px;
+
+  /* ---------- 阴影 / 过渡 ---------- */
   --shadow: 0 12px 34px rgba(20, 55, 100, 0.13);
+  --transition: .15s ease;
 }
 
 * { box-sizing: border-box; }
@@ -28,11 +74,10 @@ html, body {
 body {
   display: flex;
   justify-content: center;      /* 纵向靠 .card 的 margin:auto 安全居中（内容超高时不裁顶部） */
-  padding: 24px 16px 40px;
+  padding: var(--space-10) var(--space-7) 40px;
   background: radial-gradient(1200px 620px at 50% -10%, #ffffff 0%, var(--page-bg) 62%);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
-               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .card {
@@ -41,67 +86,87 @@ body {
   margin: auto;
   background: var(--card-bg);
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--radius-2xl);
   box-shadow: var(--shadow);
-  padding: 22px 22px 18px;
+  padding: var(--space-9) var(--space-9) var(--space-8);
 }
 
-.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; margin-bottom: 14px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-4) var(--space-7); margin-bottom: var(--space-6); }
 
-h1 { margin: 0; font-size: 20px; letter-spacing: 0.03em; }
+h1 { margin: 0; font-size: var(--font-2xl); letter-spacing: 0.03em; }
 
-.sub { margin: 0; font-size: 13px; color: var(--muted); }
+.sub { margin: 0; font-size: var(--font-md); color: var(--muted); }
 
-.controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.controls { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-6); }
 
 .btn {
   flex: 0 1 auto;
   min-width: 92px;
-  padding: 10px 18px;
-  font-size: 15px;
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-lg);
   font-family: inherit;
   color: var(--text);
-  background: #f2f7fc;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
   text-align: center;
   text-decoration: none;
-  transition: transform .06s ease, background .15s ease, border-color .15s ease;
+  transition: transform .06s ease, background var(--transition), border-color var(--transition);
   user-select: none;
   -webkit-user-select: none;
 }
 
-.btn:hover { background: #e8f0f8; }
+.btn:hover { background: var(--surface-hover); }
 .btn:active { transform: translateY(1px); }
+
+/* 键盘焦点必须在公共层就有明确、统一的指示器。
+ * offset 2px 让焦点环落在按钮外的卡片底上，.btn.primary（蓝底白字）也看得清。 */
+.btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* aria-disabled 是 Attention Maze 等页面实际在用的「不可用」表达
+ * （不是原生 disabled，点击仍由页面自己拦），视觉上必须跟着变灰，
+ * 否则它看起来能按、按了没反应。 */
+.btn[aria-disabled="true"],
+.btn:disabled {
+  opacity: .55;
+  cursor: default;
+}
+.btn[aria-disabled="true"]:hover,
+.btn:disabled:hover { background: var(--surface); }
+.btn[aria-disabled="true"]:active,
+.btn:disabled:active { transform: none; }
 
 .btn.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
 .btn.primary:hover { background: var(--accent-dark); }
 
 .btn.ghost { margin-left: auto; color: var(--muted); }
 
-.tips { margin: 14px 2px 0; font-size: 12.5px; line-height: 1.75; color: var(--muted); }
-.tips b { color: #46618a; font-weight: 600; }
+.tips { margin: var(--space-6) 2px 0; font-size: 12.5px; line-height: 1.75; color: var(--muted); }
+.tips b { color: var(--text-accent); font-weight: 600; }
 
 /* 「← 返回游戏厅」：明显但不抢戏 */
-.back-row { margin: 0 0 12px; }
+.back-row { margin: 0 0 var(--space-5); }
 
 .arcade-back {
   display: inline-block;
-  padding: 6px 12px;
-  font-size: 13px;
+  padding: var(--space-2) var(--space-5);
+  font-size: var(--font-md);
   line-height: 1.4;
   color: var(--muted);
   text-decoration: none;
-  background: #ffffff;
+  background: var(--card-bg);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  transition: color .15s ease, border-color .15s ease, background .15s ease;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition), border-color var(--transition), background var(--transition);
   -webkit-tap-highlight-color: transparent;
 }
 
 .arcade-back:hover,
-.arcade-back:focus-visible { color: var(--accent); border-color: var(--accent); background: #f4f8ff; }
+.arcade-back:focus-visible { color: var(--accent); border-color: var(--accent); background: var(--accent-ghost); }
 .arcade-back:active { transform: translateY(1px); }
 
 /* 只在触屏上出现的控件（全屏按钮等） */
@@ -128,37 +193,45 @@ h1 { margin: 0; font-size: 20px; letter-spacing: 0.03em; }
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: var(--space-5) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
   }
-  .head { gap: 4px 12px; margin-bottom: 10px; }
-  h1 { font-size: 17px; }
-  .sub { font-size: 12px; }
-  .controls { gap: 8px; margin-top: 12px; }
-  .btn { min-height: 48px; font-size: 16px; padding: 10px 14px; min-width: 0; }
+  .head { gap: var(--space-1) var(--space-5); margin-bottom: var(--space-4); }
+  h1 { font-size: var(--font-xl); }
+  .sub { font-size: var(--font-sm); }
+  .controls { gap: var(--space-3); margin-top: var(--space-5); }
+  .btn { min-height: 48px; font-size: 16px; padding: var(--space-4) var(--space-6); min-width: 0; }
   .btn.ghost { margin-left: 0; }
-  .back-row { margin-bottom: 10px; }
-  .tips { font-size: 12px; line-height: 1.6; }
+  .back-row { margin-bottom: var(--space-4); }
+  .tips { font-size: var(--font-sm); line-height: 1.6; }
 }
 
 /* ---------------- 手机横屏：把纵向空间尽量让给舞台 ---------------- */
 @media (max-height: 560px) and (orientation: landscape) {
   .head, .tips { display: none; }
-  .card { justify-content: center; padding: 8px 12px; }
-  .controls { margin-top: 8px; }
-  .btn { min-height: 40px; font-size: 15px; }
-  .back-row { margin-bottom: 6px; }
-  .arcade-back { padding: 4px 10px; font-size: 12px; }
+  .card { justify-content: center; padding: var(--space-3) var(--space-5); }
+  .controls { margin-top: var(--space-3); }
+  .btn { min-height: 40px; font-size: var(--font-lg); }
+  .back-row { margin-bottom: var(--space-2); }
+  .arcade-back { padding: var(--space-1) var(--space-4); font-size: var(--font-sm); }
 }
+
+/* ---------------- 尊重系统的「减少动态效果」 ----------------
+ * 公共层只有按钮/返回入口这一点轻量反馈；关掉它不影响任何玩法表现。 */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .arcade-back { transition: none; }
+  .btn:active, .arcade-back:active { transform: none; }
+}
+
 /* ---------------- 右下角版本角标 ----------------
  * 纯静态站没有构建产物信息，用它一眼确认线上跑的是哪一版（cache-busting 的可见证据）。
  * 由 shared/version.js 注入；pointer-events:none 保证它永远不会挡住任何交互。 */
 .arcade-version {
   position: fixed;
-  right: 10px;
-  bottom: 10px;
+  right: var(--space-4);
+  bottom: var(--space-4);
   z-index: 60;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--muted);

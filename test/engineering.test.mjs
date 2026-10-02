@@ -522,5 +522,48 @@ export function run() {
       b.log.clears === 6, String(b.log.clears));
   }
 
+  /* ================= R. 公共 CSS 的设计变量卫生 =================
+   * shared/arcade.css 的 :root 是全站设计变量的唯一来源。
+   * 这套守卫防两件已经真实发生过的事：
+   *   1) 定义了却没人引用的 token（--deep-2 就是被这样发现的）；
+   *   2) 同一个语义在多个文件里各定义一套（改一处漏一处）。
+   * 只做静态引用检查，不判断「值该不该统一」——那是设计问题，不是测试能替的。 */
+  {
+    const CSS_FILES = ['shared/arcade.css', 'arcade.css',
+      'games/runner/style.css', 'games/snake/style.css', 'games/token-fall/style.css',
+      'games/attention-maze/style.css', 'games/context-breaker/style.css',
+      'games/hallucination-hunt/style.css'];
+    const cssOf = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+    const flat = (s) => s.replace(/\s+/g, '');            /* 去掉空白后 var() 一定连写 */
+
+    const sharedCss = cssOf('shared/arcade.css');
+    const rootBlock = /:root\s*\{([\s\S]*?)\n\}/.exec(sharedCss);
+    ok('shared/arcade.css 里有 :root 设计变量块', !!rootBlock);
+    const defined = rootBlock
+      ? [...rootBlock[1].matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)].map((m) => m[1])
+      : [];
+    ok('shared/arcade.css :root 是一套完整的设计变量（' + defined.length + ' 个）',
+      defined.length >= 10, defined.join(' '));
+
+    const usedAnywhere = (t) => CSS_FILES.some((f) => {
+      const s = flat(cssOf(f));
+      return s.indexOf('var(' + t + ')') !== -1 || s.indexOf('var(' + t + ',') !== -1;
+    });
+    const unused = defined.filter((t) => !usedAnywhere(t));
+    ok('没有「定义了却没人引用」的设计变量', unused.length === 0, unused.join(', '));
+    ok('已经删掉的未引用变量 --deep-2 没有回来', sharedCss.indexOf('--deep-2') < 0);
+
+    const owners = new Map();
+    for (const f of CSS_FILES) {
+      for (const m of cssOf(f).matchAll(/(--[a-zA-Z0-9-]+)\s*:/g)) {
+        if (!owners.has(m[1])) owners.set(m[1], []);
+        if (!owners.get(m[1]).includes(f)) owners.get(m[1]).push(f);
+      }
+    }
+    const dupes = [...owners.entries()].filter(([, files]) => files.length > 1);
+    ok('同一个设计变量不在多个文件里重复定义', dupes.length === 0,
+      dupes.map(([t, files]) => t + '@' + files.join('|')).join(', '));
+  }
+
   return out;
 }
