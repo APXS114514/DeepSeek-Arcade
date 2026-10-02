@@ -630,8 +630,11 @@ export function run() {
     const js = source(DIR + 'game.js');
     ok('game.js 没有写死的 charX:320 / charY:400',
       !/charX:\s*320/.test(js) && !/charY:\s*400/.test(js));
-    ok('game.js 没有写死的 fx.scan(0, 60, 640 …) / fx.burst(320 …)',
-      js.indexOf('640, 240') < 0 && js.indexOf('fx.burst(320') < 0 && js.indexOf('fx.float(') < 0 || js.indexOf('gb.cx') >= 0);
+    ok('game.js 没有写死的视觉魔法坐标（640 / 320 / 400）',
+      !/fx\.scan\(0,\s*60,\s*640/.test(js) && !/fx\.burst\(320/.test(js) &&
+      !/fx\.float\([^)]*,\s*320/.test(js) && !/charX:\s*320/.test(js) && !/charY:\s*400/.test(js));
+    ok('特效与角色坐标一律由 claimBox() / fxBox() / verifierBox() 推导',
+      js.indexOf('fxBox()') >= 0 && js.indexOf('verifierBox()') >= 0 && js.indexOf('claimBox(') >= 0);
     ok('特效坐标一律由 fxBox() 推导', js.indexOf('fxBox()') >= 0);
     ok('角色坐标一律由 verifierBox() 推导', js.indexOf('verifierBox()') >= 0);
     ok('页面为 verifier 留了专属视觉空间', source(DIR + 'index.html').indexOf('verifier-stage') >= 0);
