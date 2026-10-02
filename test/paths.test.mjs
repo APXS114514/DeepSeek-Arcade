@@ -185,5 +185,25 @@ export function run() {
     const bumpSrc = fs.readFileSync(path.join(ROOT, 'tools/bump-asset-version.mjs'), 'utf8');
     ok('同步脚本是幂等的（会吃掉已有的 ?v= 再写回）', /\?v=[^"]*/.test(bumpSrc) && /--check/.test(bumpSrc));
   }
+  /* ---------------- HTML 结构：script 标签必须完整闭合 ---------------- */
+  {
+    for (const page of PAGES) {
+      const html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+      const open = (html.match(/<script/g) || []).length;
+      const close = (html.match(/<\/script>/g) || []).length;
+      ok(page + '：<script> 与 </script> 数量一致（' + open + ' 个）', open === close, open + ' vs ' + close);
+      const bad = html.split('\n').filter(function (l) {
+        const at = l.indexOf('<script');
+        return at >= 0 && l.indexOf('>', at) < 0;
+      });
+      ok(page + '：没有未闭合的 script 开标签', bad.length === 0, bad.join(' | ').slice(0, 90));
+    }
+    const tool = fs.readFileSync(path.join(ROOT, 'tools/bump-asset-version.mjs'), 'utf8');
+    ok('同步脚本写盘前会校验 script 标签成对（防止再产出坏结构）',
+      tool.indexOf('数量不一致') >= 0 && tool.indexOf('process.exit(1)') >= 0);
+    ok('同步脚本插入 version.js 时匹配整条闭合标签',
+      tool.indexOf('</script>') >= 0 && tool.indexOf('需要匹配整条闭合标签<') < 0);
+  }
+
   return out;
 }

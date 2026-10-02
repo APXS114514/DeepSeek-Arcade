@@ -851,5 +851,53 @@ export function run() {
     ok('恢复后仍是 verifier 锚点', H.characterAnchor() === 'verifier-stage');
   }
 
+  /* ================= O. 语言切换（Hunt，防止回归） ================= */
+  {
+    const b = fresh({ navLang: 'zh-CN' });
+    const H = b.window.HuntGame;
+    const h1 = b.byI18n('data-i18n', 'hunt.h1');
+    ok('shared/i18n.js 已加载（I18N 存在且初始为 zh）', !!b.I18N && b.I18N.lang === 'zh', String(b.I18N && b.I18N.lang));
+    const before = h1.textContent;
+    const subBefore = b.byI18n('data-i18n', 'hunt.sub').textContent;
+    b.els.lang.fire('click');
+    ok('点一次 #lang：zh -> en', b.I18N.lang === 'en', b.I18N.lang);
+    const sub1 = b.byI18n('data-i18n', 'hunt.sub');
+    ok('点了以后有差异的文案真的变了', sub1.textContent !== subBefore, sub1.textContent);
+    ok('localStorage arcade.lang = en', b.store.get('arcade.lang') === 'en', String(b.store.get('arcade.lang')));
+    ok('data-i18n 跟随更新', h1.textContent.indexOf('HALLUCINATION') >= 0, h1.textContent);
+    ok('data-i18n-html 跟随更新',
+      b.byI18n('data-i18n-html', 'hunt.tips').innerHTML.indexOf('HALLUCINATION') >= 0);
+    ok('data-i18n-aria 跟随更新',
+      (b.els.response.getAttribute('aria-label') || '').indexOf('claim') >= 0,
+      b.els.response.getAttribute('aria-label'));
+    b.els.lang.fire('click');
+    ok('再点一次：en -> zh（不是一次切两下）', b.I18N.lang === 'zh' && b.byI18n('data-i18n', 'hunt.sub').textContent === subBefore,
+      b.I18N.lang + '/' + h1.textContent);
+    ok('localStorage arcade.lang = zh', b.store.get('arcade.lang') === 'zh');
+
+    /* intro / streaming / scanning / paused / gameOver 都能切 */
+    ok('intro 状态能切换', (function () { b.els.lang.fire('click'); return b.I18N.lang === 'en'; })(), b.I18N.lang);
+    H.start('endless', 20261001); b.tick(2);
+    b.els.lang.fire('click'); b.tick(1);
+    ok('streaming 状态能切换', b.I18N.lang === 'zh', b.I18N.lang);
+    toScanning(b);
+    b.els.lang.fire('click'); b.tick(1);
+    ok('scanning 状态能切换', b.I18N.lang === 'en', b.I18N.lang);
+    H.pause(); b.tick(1);
+    b.els.lang.fire('click'); b.tick(1);
+    ok('paused 状态能切换', b.I18N.lang === 'zh', b.I18N.lang);
+    H.resume(); b.tick(1);
+    H.setState('gameOver');
+    b.els.lang.fire('click'); b.tick(1);
+    ok('gameOver 状态能切换', b.I18N.lang === 'en', b.I18N.lang);
+    ok('一次点击只切换一次（没有双重 listener）', (function () {
+      const l0 = b.I18N.lang;
+      b.els.lang.fire('click');
+      return b.I18N.lang !== l0 && b.I18N.lang === 'zh';
+    })(), b.I18N.lang);
+    b.tick(3);
+    ok('切换语言后游戏没有异常', b.errors.length === 0, b.errors[0]);
+  }
+
   return out;
 }
