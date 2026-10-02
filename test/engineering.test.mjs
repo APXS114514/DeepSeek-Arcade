@@ -624,5 +624,39 @@ export function run() {
     }
   }
 
+  /* ================= U. Canvas 调色板同源映射 =================
+   * shared/palette.js 是「CSS 设计变量 → Canvas 能用的 hex」的显式小映射
+   * （Canvas 的 ctx.fillStyle 用不了 CSS 变量，品牌蓝 #4d6bfe 因此在 JS 里
+   * 被抄了 26 遍）。这里静态比对：映射里每个 token 必须在 shared/arcade.css
+   * 的 :root 里定义，且 hex 与它逐字相同 —— 谁改了另一半都会立刻红，
+   * 映射不可能悄悄过期。本轮只做准备，没有任何脚本引用它。 */
+  {
+    const palSrc = source('shared/palette.js');
+    ok('shared/palette.js 存在并挂在 window.ArcadePalette 上',
+      /global\.ArcadePalette\s*=/.test(palSrc) && /\(window\)/.test(palSrc));
+    const entries = [...palSrc.matchAll(/(--[a-z0-9-]+)['"]?\s*,\s*hex:\s*'(#[0-9a-fA-F]{6})'/g)]
+      .map((m) => ({ token: m[1], hex: m[2].toLowerCase() }));
+    ok('palette 映射里每项都带 token + hex（' + entries.length + ' 项）', entries.length >= 4,
+      entries.map((e) => e.token).join(' '));
+    const css = source('shared/arcade.css');
+    const cssValue = (token) => {
+      const m = new RegExp(token + ':[ \\t]*(#[0-9a-fA-F]{6})').exec(css);
+      return m ? m[1].toLowerCase() : null;
+    };
+    const missing = entries.filter((e) => cssValue(e.token) === null);
+    ok('palette 引用的 token 都在 shared/arcade.css 里定义', missing.length === 0,
+      missing.map((e) => e.token).join(', '));
+    const drifted = entries.filter((e) => cssValue(e.token) !== null && cssValue(e.token) !== e.hex);
+    ok('palette 的 hex 与 shared/arcade.css 的 token 逐字一致（不会漂移）', drifted.length === 0,
+      drifted.map((e) => e.token + '=' + e.hex + ' vs css ' + cssValue(e.token)).join(', '));
+    /* 反向：这四支颜色确实是 Canvas 侧真实在用的，映射不是凭空造的 */
+    const CANVAS_JS = ['arcade.js', 'shared/character.js', 'games/runner/game.js',
+      'games/snake/game.js', 'games/token-fall/game.js', 'games/attention-maze/game.js',
+      'games/context-breaker/game.js'];
+    const usedInCanvas = entries.filter((e) => CANVAS_JS.some((f) => source(f).indexOf(e.hex) !== -1));
+    ok('palette 至少覆盖了真的在 Canvas 侧出现的共享色（' + usedInCanvas.length + ' 支）',
+      usedInCanvas.length >= 3, usedInCanvas.map((e) => e.token).join(', '));
+  }
+
   return out;
 }
