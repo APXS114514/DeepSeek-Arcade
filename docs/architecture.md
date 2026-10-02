@@ -7,7 +7,7 @@
 
 ## 设计原则
 
-- **零依赖、零构建、零运行时外部请求**：五款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D）。
+- **零依赖、零构建、零运行时外部请求**：六款游戏都是纯 HTML + CSS + 原生 JavaScript（Canvas 2D）。
   经典形态的全部美术（小鲸鱼、迷宫、掉落物、粒子、UI）都是 `fillRect` / `fillText` 画出来的，没有任何外部图片；
   可选的**图片角色皮肤**（鲸鱼娘）只加载 `assets/whale-yunyue/` 下**仓库自带**的 WebP
   （第三方素材，按自己的授权；不走 CDN、不请求外部域名），而且是**懒加载**的。
@@ -50,7 +50,7 @@
 
 ## Canvas 与 DPR
 
-五款游戏都是同一个套路：**逻辑坐标恒定**（例如 Whale Runner 用 `PX` 缩放、Token Fall 固定 380×560、
+六款游戏都是同一个套路：**逻辑坐标恒定**（例如 Whale Runner 用 `PX` 缩放、Token Fall 固定 380×560、
 Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` 并 `ctx.scale(dpr, dpr)`，
 上限 3 避免高倍屏过度绘制；判定完全在逻辑坐标里做，所以换屏幕 / 换 DPR 不会改变碰撞区域。
 画布都设了 `image-rendering: pixelated`，CSS 放大时保持像素硬边。
@@ -129,7 +129,7 @@ Attention Maze 固定 420×354），DPR 只用来设置 `canvas.width/height` �
 
 | 皮肤 | 素材 | 说明 |
 | --- | --- | --- |
-| `classic`（默认） | `shared/whale.js` 的字符画 + 各游戏自己的像素精灵 | 五款游戏的判定盒、难度、手感全部按原样 |
+| `classic`（默认） | `shared/whale.js` 的字符画 + 各游戏自己的像素精灵 | 六款游戏的判定盒、难度、手感全部按原样 |
 | `yunyue` | `assets/whale-yunyue/*.webp`（19 张派生 WebP，统一画布 192×208） | 贴图替换，同样不动任何玩法数值 |
 
 ### 注册表：游戏只说语义状态
@@ -217,7 +217,7 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
   派生过程可复现（`tools/derive-character-assets.py`，dev-only，运行时完全不用 Python）；
 - 第三方声明汇总在 `THIRD_PARTY_NOTICES.md`：根目录 `LICENSE` 是 MIT，**只覆盖代码与原创内容**。
 
-## 五款游戏的实现细节
+## 六款游戏的实现细节
 
 ## 🐳 Whale Runner — `games/runner/`
 
@@ -435,6 +435,163 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
 
 **存储**：最高分 `arcade.breakerHighScore`（与另外四款互不覆盖），localStorage 不可用时静默降级。
 
+
+---
+
+## 🧠 Hallucination Hunt — `games/hallucination-hunt/`
+
+第 6 款正式游戏，也是本项目**第一次明显的技术升级**：从「静态题库」变成
+**离线幻觉模拟引擎（Offline Hallucination Simulation Engine）**。
+
+> 玩家看到的是「模型生成的回答」，但那条错误**不是手写的** ——
+> 它由程序从一条正确事实里实时制造出来，并且每一局都能用 seed 复现。
+
+### 模块划分（为什么要拆成十个文件）
+
+| 文件 | 职责 |
+| --- | --- |
+| `content.js` | 离线知识库：canonical fact + 来源元数据 + 中英两套表述。**不含任何游戏逻辑** |
+| `rng.js` | 确定性 PRNG（mulberry32）+ 字符串哈希 + 日期→seed |
+| `mutators.js` | 幻觉变异引擎：11 种 mutation，每种都是纯函数 |
+| `generator.js` | Round 组装 + **Validator** + 安全 fallback |
+| `difficulty.js` | 难度导演：把最近表现压成 skill 再映射到 LOAD 1~5 |
+| `effects.js` | 独立视觉特效系统（粒子 / 闪 / 抖动 / 扫描束 / glitch / RGB 位移） |
+| `renderer.js` | 背景画布层：底色、网格、鲸鱼娘 verifier |
+| `game.js` | 状态机、DOM 接线、streaming、计分、Daily、分享 |
+| `index.html` / `style.css` | DOM 结构与样式（文字与交互都在 DOM 里） |
+
+模块之间只通过 `window.Hunt*` 命名空间通信，用 **IIFE + 有序 `<script>`**，
+**没有用 ES Module** —— 因为要保证 `file://` 直接双击打开也能跑。
+
+### 内容不是题库，是 Knowledge Base
+
+```js
+{
+  id: 'geo-ca-capital', category: 'geography', type: 'relation', baseDifficulty: 1,
+  sourceName: 'Encyclopaedia Britannica', sourceUrl: 'https://...', checked: '2026-10-01',
+  zh: { topic: '加拿大', claims: [ { t: '{subject}的首都是{value}。',
+        s: { subject: '加拿大', value: '渥太华' }, alt: ['多伦多','温哥华'] } ], explanation: '…' },
+  en: { … }
+}
+```
+
+- 每条 fact **2~5 条 claim**，中英**数量与顺序一一对应**；
+- `t` 是模板、`s` 是正确取值、`alt` 是同类错误值、`num` 是数字漂移区间；
+- `sourceName` / `sourceUrl` / `checked` 是**审核用的开发期元数据**，
+  运行时**一次都不访问这些 URL**（零运行时外部请求）；
+- 只收录长期稳定、无争议、可查证的事实；不接实时新闻、现任政治人物、会变化的数据。
+
+### Mutation Engine：11 种幻觉
+
+| 类型 | 机制 | 起始 LOAD |
+| --- | --- | --- |
+| `ENTITY_SWAP` | 把某个实体换成同类实体 | 1 |
+| `LOCATION_SWAP` | 地理类实体的同类替换 | 1 |
+| `ATTRIBUTE_SWAP` | 属性值的同类替换 | 2 |
+| `RELATION_SWAP` | 关系值的同类替换 | 3 |
+| `NUMBER_DRIFT` | 在合理区间内改动数值 | 2 |
+| `MAGNITUDE_ERROR` | 数量级错误（×10 / ÷10） | 4 |
+| `DATE_SHIFT` | 年份偏移（仍落在 1000~2099） | 3 |
+| `UNIT_ERROR` | 只换单位、不动数字 | 4 |
+| `NEGATION` | 插入否定（is→is not / 是→不是） | 3 |
+| `FABRICATED_DETAIL` | 追加**凭空捏造的出处或精度** | 4 |
+| `CONTRADICTION` | 让回答里出现互相冲突的两条陈述 | 5 |
+
+四种 swap 共用一套机制，但**按事实语义给出不同标签**（`semanticSwapLabel()`），
+所以 metadata 对玩家有意义，代码又不必写四遍。
+每个 mutator 的签名都是 `canApply(fact, claim, lang)` + `apply(claim, rng, lang)`，
+返回 `{ text, meta: { type, original, replacement } }` —— **纯函数**，测试可以逐类型断言性质。
+
+### Validator：Mutation 完不能直接显示
+
+```
+Generator → Mutator → Validator → Valid Round
+```
+
+不合格就 **reject，然后用同一条 RNG stream 继续生成**（同一 seed 仍然可复现）；
+重试上限 `MAX_ATTEMPTS = 24`，超过则给安全 fallback round（fallback 自身**也必须通过校验**）。
+
+校验规则：id 存在、load 合法、claim 数量符合 LOAD、**mutation ≠ canonical**、
+mutation 可判定（不是只有空白差异）、claim 文本非空且不含 `undefined` / 未替换占位符、
+同一 round 内 claim 不重复、hallucination index 合法且与 count 一致、
+幻觉数量符合 LOAD 规则、confidence 与 scanMs 合法。
+**校验器对任何输入都不允许抛异常**（包括 `null` 与越界 index）。
+
+### Seeded RNG
+
+`mulberry32`（32 位状态）+ FNV-1a 字符串哈希。核心生成路径**一次都不调用 `Math.random()`**：
+
+```js
+var rng = HuntRNG.create(seed);
+rng.next(); rng.int(1, 5); rng.pick(arr); rng.shuffle(arr); rng.fork('mutate');
+```
+
+同 seed ⇒ 相同 Fact、相同 Mutation、相同 claim 顺序、相同 Confidence、相同 Round。
+`rng.fork(label)` 用来派生独立子流，互不干扰。
+
+### Difficulty Director
+
+把最近 **8 轮**的表现压成分数，再用 EMA 平滑：
+
+```js
+skill = skill * 0.8 + performance * 0.2;     // performance ∈ [0,1]
+load  = clamp(1 + round(skill * 4), 1, 5);
+step  = clamp(want - load, -1, +1);          // 单轮最多变一档
+```
+
+- 正确 +0.72；全清（无幻觉轮判对）+0.08；反应越快最多再 +0.2；
+- 反应用 `FAST_MS / SLOW_MS` 归一，`NaN / Infinity / 负数` 都被安全兜住；
+- **优秀表现不会让难度回落**（skill 上升只会把 LOAD 顶得更高），
+  连续失误则会把 skill 压下来，所以 LOAD 也不会被无限往上顶。
+
+### DOM + Canvas 混合渲染
+
+| 层 | 负责 |
+| --- | --- |
+| DOM | QUERY、MODEL RESPONSE、每条可聚焦的 `<button class="claim">`、HUD、动作区、结果浮层、键盘焦点与无障碍 |
+| Canvas（背景层 `#game`） | 底色、网格、鲸鱼娘 verifier |
+| Canvas（特效层 `#fx`，`pointer-events:none`） | 粒子、浮动文字、闪、抖动、扫描束、glitch 切片、RGB 位移 |
+
+文字**始终是真正可选择、可聚焦的 DOM**，不是画出来的。
+
+### Streaming Text Engine
+
+时间是唯一驱动量，**不用帧计数**：
+
+```js
+visibleChars = f(elapsedMs);     // 每个字符有基础成本，标点额外加停顿
+```
+
+逗号 +90ms、句号 +180ms、换行 +260ms。因为只依赖 elapsed，
+**60Hz / 120Hz / 144Hz 下的速度完全一致**，测试可以对同一 `elapsed` 断言同一个字数。
+streaming 完成后才进入 `scanning` 并开始计时 —— 玩家不会因为「生成中」被惩罚。
+
+### 状态机
+
+```
+intro → streaming → scanning → verifying → result → (streaming | gameOver)
+                            ↘ paused ↙
+```
+
+七个状态集中在 `setState()` 管理，**没有互相交错的 boolean**。
+`paused` 会冻结 streaming 计时、scan 计时、特效计时、角色动画时钟与难度统计；
+`visibilitychange` 与 `blur` 按项目惯例自动暂停。
+
+### Daily Hunt 与分享
+
+- `RNG.fromDate('YYYY-MM-DD')` → 当天 seed，固定 **10 轮**、固定顺序，所有人同一套题；
+- 结束生成纯文本战绩（含 10 格进度条、Accuracy、Best Streak、Score），
+  `COPY RESULT` 走 Clipboard API，**不可用时回退到 `execCommand`，再不行就把文本显示出来让玩家手动复制**；
+- 存档两个 key：`arcade.hallucinationHunt.high` 与 `arcade.hallucinationHunt.daily`，
+  JSON 损坏时安全恢复，且与另外五款互不覆盖。
+
+### Progressive Enhancement 与无障碍
+
+- `OffscreenCanvas` 只用做 glitch 的离屏合成，**feature detect 失败就退回主 Canvas 直绘**，游戏完全可玩；
+- `prefers-reduced-motion: reduce` 时自动关闭抖动 / RGB 位移 / glitch 切片，并把闪光与粒子削减到最低；
+- 每条 claim 都能 Tab 聚焦、Enter / Space 选择，有清晰的 focus style；
+  状态变化通过 `aria-live` 播报（**不会逐字符朗读 streaming**，只在阶段切换时播报一次完整的提示）。
+
 ## 目录结构（完整）
 
 ```text
@@ -451,7 +608,8 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
 │   ├── snake/                            Context Snake：index.html / style.css / game.js
 │   ├── token-fall/                       Token Fall：index.html / style.css / game.js
 │   ├── attention-maze/                   Attention Maze：index.html / style.css / levels.js + game.js
-│   └── context-breaker/                  Context Breaker：index.html / style.css / game.js
+│   ├── context-breaker/                  Context Breaker：index.html / style.css / game.js
+│   └── hallucination-hunt/               Hallucination Hunt：content / rng / mutators / generator / difficulty / effects / renderer / game
 ├── test/                                 无头回归测试（桩 DOM + 桩 Canvas，不需要浏览器）
 │   ├── run.mjs / run.sh                  一条命令跑全部：bash test/run.sh
 │   ├── helpers.mjs                       测试环境（按页面装配 DOM）
@@ -462,7 +620,8 @@ frame = Math.floor(animationTime / frameMs) % frameCount;
 │   ├── attentionmaze.test.mjs            12 关可解性、Q/K/V、MULTI-HEAD、进度星级
 │   ├── engineering.test.mjs              v1.0 结构：CI、统一音效、共享素材、关卡拆分
 │   ├── contextbreaker.test.mjs           Context Breaker 玩法、五种砖块、暂停冻结、高分
-│   ├── i18n.test.mjs                     六个页面的中英切换 + 词典完整性
+│   ├── hunt.test.mjs                     Hallucination Hunt：知识库 / mutation 性质测试 / 千级 seed 不变量 / 难度
+│   ├── i18n.test.mjs                     七个页面的中英切换 + 词典完整性
 │   └── paths.test.mjs                    死链 / 绝对路径 / localStorage key 冲突
 ├── assets/whale-yunyue/                  鲸鱼娘运行时素材（19 张派生 WebP）+ ATTRIBUTION.md
 ├── tools/derive-character-assets.py      角色素材派生脚本（dev-only，运行时不用）

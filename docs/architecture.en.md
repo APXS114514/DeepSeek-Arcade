@@ -7,7 +7,7 @@ for the test story see [docs/testing.en.md](testing.en.md).
 
 ## Design principles
 
-- **No dependencies, no build, no runtime external requests**: all five games are plain HTML + CSS + JavaScript
+- **No dependencies, no build, no runtime external requests**: all six games are plain HTML + CSS + JavaScript
   (Canvas 2D). In classic mode every piece of art (whale, mazes, falling tokens, particles, UI) is drawn with
   `fillRect` / `fillText` — no external files at all. The two optional **image character skins** load third-party WebP
   files **shipped inside this repo** (`assets/whale-yunyue/`, under its own licence) —
@@ -53,7 +53,7 @@ come before `game.js`. A missing file never crashes the game; it logs a clear wa
 
 ## Canvas & DPR
 
-All five games follow the same pattern: **logical coordinates are fixed** (Whale Runner scales everything with `PX`,
+All six games follow the same pattern: **logical coordinates are fixed** (Whale Runner scales everything with `PX`,
 Token Fall is 380×560, Attention Maze is 420×354). DPR is only used to set `canvas.width/height` and to call
 `ctx.scale(dpr, dpr)`, capped at 3 to avoid overdrawing on high-density screens. All collision happens in logical
 coordinates, so changing screens or DPR never changes the hitboxes. Every canvas uses `image-rendering: pixelated`
@@ -505,7 +505,8 @@ localStorage is unavailable.
 │   ├── snake/                            Context Snake: index.html / style.css / game.js
 │   ├── token-fall/                       Token Fall: index.html / style.css / game.js
 │   ├── attention-maze/                   Attention Maze: index.html / style.css / levels.js + game.js
-│   └── context-breaker/                  Context Breaker: index.html / style.css / game.js
+│   ├── context-breaker/                  Context Breaker: index.html / style.css / game.js
+│   └── hallucination-hunt/               Hallucination Hunt: content / rng / mutators / generator / difficulty / effects / renderer / game
 ├── test/                                 headless tests (stub DOM + stub Canvas, no browser)
 │   ├── run.mjs / run.sh                  run everything: bash test/run.sh
 │   ├── helpers.mjs                       harness (assembles the DOM per page)
@@ -516,7 +517,8 @@ localStorage is unavailable.
 │   ├── attentionmaze.test.mjs            12-layer solvability, Q/K/V, MULTI-HEAD, progress and stars
 │   ├── engineering.test.mjs              v1.0 contracts: CI, global sound, shared assets, level split
 │   ├── contextbreaker.test.mjs           Context Breaker rules, five brick types, pause freeze, high score
-│   ├── i18n.test.mjs                     zh/en switching on six pages + dictionary parity
+│   ├── hunt.test.mjs                     Hallucination Hunt: knowledge base / mutation properties / 1500-seed invariants / difficulty
+│   ├── i18n.test.mjs                     zh/en switching on seven pages + dictionary parity
 │   └── paths.test.mjs                    dead links / absolute paths / localStorage key collisions
 ├── assets/
 │   └── whale-yunyue/                     Whale Girl runtime assets (19 derived WebP) + ATTRIBUTION.md
