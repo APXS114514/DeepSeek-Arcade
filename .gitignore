@@ -2,3 +2,5 @@
 Thumbs.db
 AGENT-NOTES.md
 .shots/
+# 真实浏览器冒烟的失败截图（本地跑出来的，CI 用 artifact 保存）
+browser-smoke-artifacts/

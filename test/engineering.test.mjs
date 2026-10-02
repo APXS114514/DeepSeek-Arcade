@@ -70,6 +70,22 @@ export function run() {
     ok('deploy 依赖 test（needs: test）→ 测试不过就不部署', /needs:\s*test\b/.test(wf));
     ok('test job 排在 deploy 之前', wf.indexOf('  test:') < wf.indexOf('  deploy:'));
     ok('保留 push main 与 workflow_dispatch', /branches:\s*\[main\]/.test(wf) && /workflow_dispatch:/.test(wf));
+    /* ---- 真实浏览器冒烟门禁（test/browser-smoke.mjs）----
+     * 逻辑测试和真实浏览器测试是两件事：前者跑在自制 DOM 桩上，后者必须真的开 Chrome。
+     * 这条链必须是 test -> browser-smoke -> deploy，任何一环断了都不能上线。 */
+    ok('有独立的 browser-smoke job（真实 Chrome 门禁）', /^  browser-smoke:/m.test(wf));
+    ok('browser-smoke 跑的是 test/browser-smoke.mjs', /run:\s*node test\/browser-smoke\.mjs/.test(wf));
+    ok('browser-smoke 排在 test 之后（先跑完 1800+ 逻辑断言再开浏览器）',
+      wf.indexOf('  test:') < wf.indexOf('  browser-smoke:') && /^  browser-smoke:[\s\S]*?needs:\s*test\b/m.test(wf));
+    ok('deploy 依赖 browser-smoke（真实浏览器冒烟不过就不部署）',
+      /^  deploy:[\s\S]*?needs:\s*browser-smoke/m.test(wf));
+    ok('CI 里浏览器冒烟不允许静默跳过（REQUIRE_BROWSER=1）', /REQUIRE_BROWSER:\s*'1'/.test(wf));
+    ok('冒烟失败时保留截图 / 诊断（upload-artifact + if: failure）',
+      /actions\/upload-artifact@v4/.test(wf) && /if:\s*failure\(\)/.test(wf));
+    ok('零依赖：冒烟没有引入 Playwright / Puppeteer / Selenium / chromedriver',
+      !/playwright|puppeteer|selenium|chromedriver/i.test(wf));
+    ok('browser-smoke 自己不装 npm 包（只用 Node 原生 fetch / WebSocket + 真 Chrome）',
+      /browser-smoke:[\s\S]*?\n  deploy:/.test(wf) && !/npm\s+(install|ci)/.test(wf));
     ok('Pages 三件套没被破坏',
       /actions\/configure-pages@v5/.test(wf) && /actions\/upload-pages-artifact@v3/.test(wf) && /actions\/deploy-pages@v4/.test(wf));
     ok('零依赖：workflow 里没有 npm install', !/npm\s+(install|ci)/.test(wf));

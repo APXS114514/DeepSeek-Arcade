@@ -1,7 +1,11 @@
 name: Test & Deploy to GitHub Pages
 
-# 流程：checkout -> setup Node -> 跑全部测试 -> 通过后才配置/上传/部署 Pages。
-# 测试不过，deploy job 不会开始（needs: test），线上就保持上一版。
+# 流程：checkout -> setup Node -> 跑全部逻辑测试 -> 真实 Chrome 冒烟 -> 通过后才配置/上传/部署 Pages。
+# 任何一环失败，后面的 job 都不会开始（needs 链），线上就保持上一版。
+#
+# 为什么冒烟要独立一个 job：test/run.mjs 的 1800+ 条断言全跑在自制 DOM 桩上，
+#   「真实浏览器里事件冒泡到谁」「CSS 解析器有没有丢掉整条规则」这类事实它证明不了。
+#   browser-smoke 只补那一层（约 46 条），不重复已有逻辑，也不引任何 npm 依赖。
 on:
   push:
     branches: [main]
@@ -30,9 +34,49 @@ jobs:
       - name: Run tests
         run: node test/run.mjs
 
+  browser-smoke:
+    name: Real Chrome smoke
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 确认有真实浏览器（不假定固定路径）
+        run: |
+          for b in google-chrome google-chrome-stable chromium chromium-browser; do
+            if command -v "$b" >/dev/null 2>&1; then
+              echo "found: $b -> $(command -v "$b")"
+              "$b" --version || true
+              exit 0
+            fi
+          done
+          echo "runner 上没有现成浏览器，尝试装 chromium"
+          sudo apt-get update -qq && sudo apt-get install -y -qq chromium || sudo apt-get install -y -qq chromium-browser
+          for b in chromium chromium-browser google-chrome; do
+            if command -v "$b" >/dev/null 2>&1; then echo "installed: $b"; exit 0; fi
+          done
+          echo "::error::找不到任何 Chrome/Chromium，真实浏览器冒烟无法运行"
+          exit 1
+      - name: Run browser smoke
+        env:
+          REQUIRE_BROWSER: '1'
+        run: node test/browser-smoke.mjs
+      - name: 冒烟失败时保留截图与诊断
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-smoke-artifacts
+          path: browser-smoke-artifacts
+          if-no-files-found: ignore
+          retention-days: 7
+
   deploy:
     name: Deploy Pages
-    needs: test
+    needs: browser-smoke
     runs-on: ubuntu-latest
     environment:
       name: github-pages
