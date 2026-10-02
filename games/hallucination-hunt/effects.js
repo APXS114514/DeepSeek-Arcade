@@ -27,6 +27,7 @@
     var beam = null, glitchAmt = 0, rgbAmt = 0, pulseAmt = 0;
 
     var glitchSource = opts.glitchSource || null;   // glitch 切片采样哪张画布
+    var clears = 0;
     var offscreen = null;
     function probeOffscreen() {
       if (reduced) { offscreen = null; return; }
@@ -144,7 +145,26 @@
       g.restore && g.restore();
     }
 
+    /* overlay 是**带 alpha 的覆盖层**，每帧必须先彻底清空。
+     * 否则 flash / rgbSplit / glitch 这些半透明全屏效果会按 a + a(1-a) 不断累积，
+     * 几百毫秒内就把整块画布叠成不透明 —— 这就是实机上的白屏 / 青色残影。
+     * 不靠「调低透明度」掩盖，而是老老实实清屏，特效结束后画布回到全透明。 */
+    function clearOverlay() {
+      if (!ctx) return false;
+      try {
+        /* 先复位变换，保证 clearRect 覆盖整块 backing store（含 DPR 缩放） */
+        if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (ctx.globalAlpha !== undefined) ctx.globalAlpha = 1;
+        if (ctx.globalCompositeOperation !== undefined) ctx.globalCompositeOperation = 'source-over';
+        if (ctx.clearRect) ctx.clearRect(0, 0, W, H);
+        clears++;
+        return true;
+      } catch (e) { return false; }
+    }
+
     function drawOverlay(c) {
+      /* 只有画到本模块自己的画布时才清屏；外部 ctx 保持通用 */
+      if (!c || c === ctx) clearOverlay();
       var g = c || ctx;
       if (!g) return;
       /* glitch 切片：优先用 OffscreenCanvas 离屏合成，没有就直接自绘 */
@@ -219,6 +239,9 @@
 
     return {
       resize: resize, update: update, clear: clearFx,
+      clearOverlay: clearOverlay,
+      size: function () { return { w: W, h: H, dpr: dpr }; },
+      stats: function () { return { clears: clears }; },
       burst: burst, float: float, flash: flash, shake: shake,
       scan: scan, glitch: glitch, rgbSplit: rgbSplit, pulse: pulse,
       drawBackdrop: drawBackdrop, drawOverlay: drawOverlay,

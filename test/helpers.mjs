@@ -144,6 +144,7 @@ const PAGES = {
       { id: 'overlay-title' }, { id: 'overlay-body' },
       { id: 'status' },
       { id: 'share-out', tag: 'textarea' },
+      { id: 'verifier-stage' },
       { attrs: { 'data-i18n-html': 'hunt.tips' } },
     ],
   },
@@ -200,7 +201,7 @@ export function harness(opts) {
   if (!page) throw new Error('未知页面: ' + pageName);
 
   const px = opts.px === undefined ? 3 : opts.px;
-  const log = { texts: [], rects: 0, warns: [], draws: [], scales: [] };
+  const log = { texts: [], rects: 0, clears: 0, warns: [], draws: [], scales: [] };
   const errors = [];
 
   /* 桩 Canvas：多记一点「画这张图时 ctx 处于什么状态」，
@@ -214,7 +215,7 @@ export function harness(opts) {
       createLinearGradient: () => ({ addColorStop() {} }),
       scale: (x, y) => { log.scales.push([x, y]); },
       setTransform: () => {},
-      save() {}, restore() {}, clearRect() {}, translate() {}, rotate() {}, beginPath() {},
+      save() {}, restore() {}, clearRect: () => { log.clears++; }, translate() {}, rotate() {}, beginPath() {},
       arc() {}, fill() {}, stroke() {}, closePath() {}, moveTo() {}, lineTo() {}, setLineDash() {},
       fillRect: () => { log.rects++; },
       fillText: (s) => { log.texts.push(String(s)); },

@@ -91,7 +91,7 @@
   }
 
   /* ---------------- Canvas / 特效 ---------------- */
-  var backdrop = null, overlay = null;
+  var backdrop = null, overlay = null, resizeObserver = null;
   var renderer = null, fx = null;
   var reducedMotion = false;
 
@@ -101,25 +101,71 @@
     } catch (e) { return false; }
   }
 
+  /* 画布的真实尺寸只从布局读，不写死任何魔法数字 */
+  function shellSize() {
+    var shell = el('game-shell');
+    if (shell && shell.getBoundingClientRect) {
+      var r = shell.getBoundingClientRect();
+      if (r && r.width > 0 && r.height > 0) return { w: Math.round(r.width), h: Math.round(r.height) };
+    }
+    return null;
+  }
+  /* backing store 必须始终与真实 CSS 尺寸 + DPR 一致。
+   * 按钮显隐、QUERY/RESPONSE 文案长度、语言切换都会改变布局，所以这里可重复调用。 */
+  function syncSize() {
+    var sz = shellSize();
+    if (!sz) return false;
+    var dpr = Math.max(1, Math.min(global.devicePixelRatio || 1, 3));
+    if (renderer) renderer.resize(sz.w, sz.h, dpr);
+    if (fx) fx.resize(sz.w, sz.h, dpr);
+    return true;
+  }
+  function watchResize() {
+    var shell = el('game-shell');
+    if (shell) {
+      try {
+        if (typeof global.ResizeObserver === 'function') {
+          resizeObserver = new global.ResizeObserver(function () { syncSize(); });
+          resizeObserver.observe(shell);
+        }
+      } catch (e) { resizeObserver = null; }
+    }
+    /* fallback：没有 ResizeObserver（或 observe 失败）时至少跟窗口变化走 */
+    if (global.addEventListener) global.addEventListener('resize', function () { syncSize(); });
+  }
   function setupCanvas() {
     backdrop = document.getElementById('game');
     overlay = document.getElementById('fx');
-    var dpr = Math.max(1, Math.min(global.devicePixelRatio || 1, 3));
-    var w = 640, h = 420;
-    var shell = document.getElementById('game-shell');
-    if (shell && shell.getBoundingClientRect) {
-      var r = shell.getBoundingClientRect();
-      if (r && r.width) { w = Math.round(r.width); h = Math.round(r.height); }
-    }
     reducedMotion = prefersReduced();
-    if (backdrop && REND) {
-      renderer = REND.create(backdrop, { reducedMotion: reducedMotion });
-      renderer.resize(w, h, dpr);
+    if (backdrop && REND) renderer = REND.create(backdrop, { reducedMotion: reducedMotion });
+    if (overlay && FX) fx = FX.create(overlay, { reducedMotion: reducedMotion, glitchSource: backdrop });
+    syncSize();
+    watchResize();
+  }
+
+  /* 特效坐标一律从画布尺寸推导，不再出现写死的 640 / 320 / 400 */
+  function fxBox() {
+    if (fx && fx.size) { var a = fx.size(); return { w: a.w, h: a.h, cx: a.w / 2, cy: a.h / 2 }; }
+    var c = el('fx');
+    var w = (c && c.width) ? c.width : 1, h = (c && c.height) ? c.height : 1;
+    return { w: w, h: h, cx: w / 2, cy: h / 2 };
+  }
+  /* verifier 角色有专属的视觉空间（.verifier-stage），位置从它推导 */
+  function verifierBox() {
+    var shell = el('game-shell'), stage = el('verifier-stage');
+    if (shell && stage && shell.getBoundingClientRect && stage.getBoundingClientRect) {
+      var sr = shell.getBoundingClientRect(), tr = stage.getBoundingClientRect();
+      if (sr.width > 0 && tr.width > 0 && tr.height > 0) {
+        return {
+          x: tr.left - sr.left + tr.width / 2,
+          y: tr.bottom - sr.top,
+          size: Math.max(40, Math.min(tr.height * 0.94, tr.width * 0.42))
+        };
+      }
     }
-    if (overlay && FX) {
-      fx = FX.create(overlay, { reducedMotion: reducedMotion, glitchSource: backdrop });
-      fx.resize(w, h, dpr);
-    }
+    var sz = renderer && renderer.size ? renderer.size() : null;
+    if (sz) return { x: sz.w / 2, y: sz.h - 6, size: Math.max(40, Math.min(96, sz.h * 0.22)) };
+    return { x: 0, y: 0, size: 72 };
   }
 
   /* ---------------- DOM 引用 ---------------- */
@@ -201,6 +247,8 @@
         remaining -= c.text.length;
       }
       var revealed = clickable || !streaming;
+      /* 选中只是「我怀疑这条」，用中性强调色，绝不等同于判对/判错 */
+      if (game.state === 'scanning' && game.marked === i) cls += ' selected';
       var mark = '';
       if (round.claims[i].__mark === 'hit') { cls += ' hit'; mark = ' <span class="tag">HALLUCINATION</span>'; }
       else if (round.claims[i].__mark === 'ok') { cls += ' ok'; mark = ' <span class="tag">VERIFIED</span>'; }
@@ -243,6 +291,9 @@
   function setState(s) {
     game.state = s;
     syncActions(s);
+    syncVerify();
+    /* 动作按钮显隐会改变布局 -> 画布尺寸必须跟着重算 */
+    syncSize();
     var shell = el('game-shell');
     if (shell && shell.setAttribute) shell.setAttribute('data-state', s);
     var pause = el('btn-pause');
@@ -251,32 +302,59 @@
     if (actions && actions.setAttribute) actions.setAttribute('data-enabled', (s === 'scanning') ? 'true' : 'false');
   }
 
-  /* ---------------- 玩家动作 ---------------- */
-  function markClaim(index) {
+  /* ---------------- 玩家动作 ----------------
+   * 流程：scanning --(点 claim)--> scanning(已选中) --(VERIFY)--> verifying --> result
+   *       scanning --(NO HALLUCINATION)--> verifying --> result
+   * 「选中」只记录意图，**不进入 verifying、也不暴露对错**。 */
+  function selectClaim(index) {
     if (game.state !== 'scanning') return false;
     var r = game.round;
     if (!r || !(index >= 0 && index < r.claims.length)) return false;
     game.marked = index;
+    renderResponse(r, roundFullText(r).length, true);
+    syncVerify();
+    beep({ type: 'square', from: 520, to: 640, ms: 45, gain: 0.03 });
+    return true;
+  }
+
+  /* VERIFY：确认当前选中的 claim；没选中就不允许 */
+  function confirmSelection() {
+    if (game.state !== 'scanning') return false;
+    var r = game.round;
+    if (!r || !(game.marked >= 0 && game.marked < r.claims.length)) return false;
+    var c = r.claims[game.marked];
     setState('verifying');
     game.verifyLeft = VERIFY_MS / 1000;
-    var c = r.claims[index];
     if (fx) {
-      fx.scan(0, 60, 640, 240, 620);
-      if (c.isHallucination) { fx.glitch(1); fx.rgbSplit(1); fx.burst(320, 180, 26, '#7fe3f0'); }
-      else { fx.flash('#ff3355', 0.4); fx.shake(9); fx.burst(320, 180, 16, '#ff3355'); }
+      var b = fxBox();
+      fx.scan(0, b.h * 0.18, b.w, b.h * 0.5, 620);
+      if (c.isHallucination) { fx.glitch(1); fx.rgbSplit(1); fx.burst(b.cx, b.cy, 26, '#7fe3f0'); }
+      else { fx.flash('#ff3355', 0.4); fx.shake(9); fx.burst(b.cx, b.cy, 16, '#ff3355'); }
     }
     beep({ type: c.isHallucination ? 'square' : 'sawtooth', from: c.isHallucination ? 700 : 300, to: c.isHallucination ? 1100 : 160, ms: 140, gain: 0.05 });
     return true;
   }
 
+  /* NO HALLUCINATION：直接确认「整段回答没有幻觉」，与 VERIFY 完全不同的语义 */
   function markNone() {
     if (game.state !== 'scanning') return false;
+    if (!game.round) return false;
     game.marked = -1;
     setState('verifying');
     game.verifyLeft = VERIFY_MS / 1000;
-    if (fx) { fx.scan(0, 60, 640, 240, 620); fx.pulse(0.6); }
+    if (fx) { var b = fxBox(); fx.scan(0, b.h * 0.18, b.w, b.h * 0.5, 620); fx.pulse(0.6); }
     beep({ type: 'triangle', from: 440, to: 660, ms: 120, gain: 0.045 });
     return true;
+  }
+
+  /* VERIFY 只有在 scanning 且真的选中了一条 claim 时才可用 */
+  function syncVerify() {
+    var v = el('btn-verify');
+    if (!v || !v.setAttribute) return;
+    var enabled = game.state === 'scanning' && game.marked >= 0;
+    v.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    if (enabled) { if (v.removeAttribute) v.removeAttribute('disabled'); }
+    else v.setAttribute('disabled', '');
   }
 
   /* ---------------- 结算 ---------------- */
@@ -301,13 +379,14 @@
       game.streak++;
       if (game.streak > game.bestStreak) game.bestStreak = game.streak;
       game.correct++;
-      if (fx) { fx.burst(320, 150, 30, '#7fe3f0'); fx.float('+' + gained, 320, 140, '#7fe3f0'); fx.pulse(0.5); }
+      if (fx) { var gb = fxBox(); fx.burst(gb.cx, gb.h * 0.34, 30, '#7fe3f0'); fx.float('+' + gained, gb.cx, gb.h * 0.3, '#7fe3f0'); fx.pulse(0.5); }
     } else {
       game.streak = 0;
       game.lives--;
       if (fx) {
         fx.flash('#ff3355', 0.45); fx.shake(10);
-        fx.float(outcome === 'falseAlarm' ? T('hunt.falseAlarm') : T('hunt.missed'), 320, 150, '#ff8a8a');
+        var fb = fxBox();
+        fx.float(outcome === 'falseAlarm' ? T('hunt.falseAlarm') : T('hunt.missed'), fb.cx, fb.h * 0.34, '#ff8a8a');
       }
     }
     game.answered++;
@@ -487,9 +566,10 @@
     else if (game.state === 'result' && game.lastOutcome) {
       charState = (game.lastOutcome.outcome === 'hit' || game.lastOutcome.outcome === 'clean') ? 'correct' : 'startle';
     } else if (game.state === 'gameOver') charState = 'blocked';
+    var v = verifierBox();
     var scene = {
-      time: game.clock, charState: charState, charSize: 96,
-      charX: 320, charY: 400, glow: fx ? fx.state().pulse : 0
+      time: game.clock, charState: charState, charSize: v.size,
+      charX: v.x, charY: v.y, glow: fx ? fx.state().pulse : 0
     };
     if (renderer) renderer.draw(scene);
     if (fx) fx.drawOverlay(null);
@@ -597,12 +677,12 @@
       resp.addEventListener('click', function (e) {
         var t = e && e.target;
         while (t && t.getAttribute && !t.getAttribute('data-claim')) t = t.parentNode;
-        if (t && t.getAttribute) markClaim(parseInt(t.getAttribute('data-claim'), 10));
+        if (t && t.getAttribute) selectClaim(parseInt(t.getAttribute('data-claim'), 10));
       });
     }
     var none = el('btn-none'); if (none && none.addEventListener) none.addEventListener('click', function () { markNone(); });
     var verify = el('btn-verify'); if (verify && verify.addEventListener) verify.addEventListener('click', function () {
-      if (game.state === 'scanning') markNone();
+      confirmSelection();          // VERIFY 只确认当前选中的 claim，绝不等于 NO HALLUCINATION
     });
     var startBtn = el('btn-start'); if (startBtn && startBtn.addEventListener) startBtn.addEventListener('click', function () { start('endless'); });
     var dailyBtn = el('btn-daily'); if (dailyBtn && dailyBtn.addEventListener) dailyBtn.addEventListener('click', function () { start('daily'); });
@@ -662,7 +742,11 @@
   global.HuntGame = {
     game: game,
     start: start, pause: function () { return togglePause(true); }, resume: function () { return togglePause(false); },
-    markClaim: markClaim, markNone: markNone, copyResult: copyResult, shareText: shareText,
+    selectClaim: selectClaim, confirm: confirmSelection, markNone: markNone,
+    /* 兼容旧调用：markClaim 现在等价于「选中」，不再直接进入 verifying */
+    markClaim: selectClaim,
+    syncSize: syncSize, hasResizeObserver: function () { return !!resizeObserver; },
+    copyResult: copyResult, shareText: shareText,
     nextRound: nextRound, setState: setState, updateHud: updateHud,
     isReducedMotion: function () { return reducedMotion; },
     effects: function () { return fx; }, renderer: function () { return renderer; }

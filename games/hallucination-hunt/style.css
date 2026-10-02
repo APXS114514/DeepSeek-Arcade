@@ -100,6 +100,26 @@
 .controls .btn.ghost { margin-left: 0; }
 
 /* ---------------- 结果浮层 ---------------- */
+/* verifier 角色的专属视觉空间：透明占位块，鲸鱼娘由 Canvas 画在这块区域里透出来，
+   于是它永远不会落在 Start / Daily / Pause / Language / Sound / Verify / No-Hallucination 后面。
+   这里不靠调大 min-height 或挪 charY 蒙混，而是真的给角色留出布局空间。 */
+.verifier-stage {
+  height: 106px;
+  margin-top: 10px;
+  pointer-events: none;
+}
+
+/* 选中态：中性强调色 + 左侧色条，明确「我选中了这条」，
+   但刻意不使用判定色（hit 用青、picked 用红），所以不会提前暴露对错 */
+.claim.selected {
+  border-color: #4d6bfe;
+  background: #12274c;
+  box-shadow: inset 3px 0 0 #4d6bfe;
+}
+
+/* 没有选中 claim 时 VERIFY 不可用 */
+#btn-verify[disabled] { opacity: .45; cursor: default; }
+
 .overlay {
   position: absolute; left: 10px; right: 10px; top: 46%;
   transform: translateY(-50%);
@@ -132,6 +152,7 @@
   .hud-cell.wide { grid-column: span 3; }
   .claim { font-size: 13px; padding: 8px; min-height: 48px; }
   .action-panel .btn, .controls .btn { min-height: 48px; font-size: 13px; }
+  .verifier-stage { height: 92px; }
 }
 @media (max-height: 560px) and (orientation: landscape) {
   .game-shell { min-height: 0; }

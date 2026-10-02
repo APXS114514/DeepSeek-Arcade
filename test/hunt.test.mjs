@@ -399,7 +399,9 @@ export function run() {
     const hallIdx = round.hallucinationIndexes.length ? round.hallucinationIndexes[0] : -1;
     const before = b.G.score;
     if (hallIdx >= 0) {
-      ok('点中幻觉 -> verifying', b.window.HuntGame.markClaim(hallIdx) === true);
+      ok('点中幻觉只是选中，仍在 scanning',
+        b.window.HuntGame.selectClaim(hallIdx) === true && b.G.state === 'scanning', b.G.state);
+      ok('VERIFY 确认后进入 verifying', b.window.HuntGame.confirm() === true && b.G.state === 'verifying', b.G.state);
       b.tick(80);
       ok('点中幻觉后进入 result 且得分上升', b.G.state === 'result' && b.G.score > before,
         b.G.state + '/' + b.G.score);
@@ -418,7 +420,8 @@ export function run() {
     let picked = -1;
     for (let i = 0; i < b.G.round.claims.length; i++) if (!b.G.round.claims[i].isHallucination) { picked = i; break; }
     if (picked >= 0) {
-      b.window.HuntGame.markClaim(picked);
+      b.window.HuntGame.selectClaim(picked);
+      b.window.HuntGame.confirm();
       b.tick(80);
       ok('点到正确 claim（误报）-> 扣一条命且连击清零',
         b.G.lives === lives0 - 1 && b.G.streak === 0, b.G.lives + '/' + b.G.streak);
@@ -533,6 +536,127 @@ export function run() {
     const bad = fresh({ saved: { 'arcade.hallucinationHunt.high': 'not-a-number' } });
     bad.tick(3);
     ok('存档损坏时安全回退为 0', bad.G.high === 0, String(bad.G.high));
+  }
+
+  /* ================= K. 实机缺陷回归 =================
+   * 这些用例对应的都是**真实浏览器里才暴露**的问题，mock 以前发现不了。 */
+  {
+    /* K1. overlay 每帧清屏 —— 白屏/青色残影的根因 */
+    const b = fresh({});
+    b.tick(3);
+    const c0 = b.log.clears;
+    b.tick(20);
+    ok('FX overlay 每帧绘制前会清屏', b.log.clears > c0 + 15, (b.log.clears - c0) + ' 次 / 20 帧');
+
+    const fx = b.window.HuntGame.effects();
+    ok('effects 暴露 clearOverlay / size / stats',
+      typeof fx.clearOverlay === 'function' && typeof fx.size === 'function' && typeof fx.stats === 'function');
+    fx.flash('#ffffff', 0.5); fx.glitch(1); fx.rgbSplit(1); fx.burst(10, 10, 20, '#ffffff');
+    b.tick(240);
+    const st = fx.state();
+    ok('全屏特效会自然衰减到 0（不会永久残留）',
+      st.flash < 0.01 && st.glitch < 0.01 && st.rgb < 0.01, JSON.stringify(st));
+    const c1 = b.log.clears;
+    b.tick(10);
+    ok('特效结束后 overlay 依然每帧被清空（回到全透明）', b.log.clears > c1 + 8, String(b.log.clears - c1));
+    ok('没有任何一帧只叠加不清屏', b.log.clears >= b.log.rects - b.log.rects * 0.9 || b.log.clears > 20,
+      'clears=' + b.log.clears);
+    const before = fx.stats().clears;
+    ok('clearOverlay 可独立调用', fx.clearOverlay() === true && fx.stats().clears === before + 1);
+    const sz = fx.size();
+    ok('effects 对外暴露真实尺寸（不是写死的 640×420）', sz.w > 0 && sz.h > 0, JSON.stringify(sz));
+  }
+  {
+    /* K2. 选中与确认分离；VERIFY ≠ NO HALLUCINATION */
+    const b = fresh({});
+    b.window.HuntGame.start('endless', 20261001);
+    toScanning(b);
+    const H = b.window.HuntGame;
+    const roundIdx = b.G.roundIndex;
+    ok('初始没有选中任何 claim', b.G.marked === -1, String(b.G.marked));
+    ok('没选中时 VERIFY 无效，且仍停留在 scanning',
+      H.confirm() === false && b.G.state === 'scanning', b.G.state);
+    ok('没选中时 VERIFY 按钮是 disabled', b.els['btn-verify'].getAttribute('disabled') !== null,
+      String(b.els['btn-verify'].getAttribute('disabled')));
+    ok('点击 claim 只选中、不进入 verifying',
+      H.selectClaim(0) === true && b.G.state === 'scanning', b.G.state);
+    ok('点击 claim 后 round 没有变化（不会被当成已作答）', b.G.roundIndex === roundIdx);
+    ok('选中被记录', b.G.marked === 0, String(b.G.marked));
+    ok('选中后 VERIFY 变为可用', b.els['btn-verify'].getAttribute('aria-disabled') === 'false');
+    ok('选中态有 selected 样式', b.els.response.innerHTML.indexOf('selected') >= 0);
+    ok('选中不会提前暴露对错（没有 HALLUCINATION / FALSE ALARM 标记）',
+      b.els.response.innerHTML.indexOf('HALLUCINATION') < 0 && b.els.response.innerHTML.indexOf('FALSE ALARM') < 0);
+    ok('VERIFY 才进入 verifying', H.confirm() === true && b.G.state === 'verifying', b.G.state);
+    b.tick(80);
+    ok('verifying 能正常进入 result', b.G.state === 'result', b.G.state);
+    b.tick(200);
+    ok('result 之后能进入下一轮（不会卡在 verifying）',
+      b.G.state === 'streaming' || b.G.state === 'scanning', b.G.state);
+  }
+  {
+    /* K3. NO HALLUCINATION 是独立语义：直接确认「整段没有幻觉」 */
+    const b = fresh({});
+    b.window.HuntGame.start('endless', 77);
+    toScanning(b);
+    ok('NO HALLUCINATION 直接进入 verifying 且 marked = -1',
+      b.window.HuntGame.markNone() === true && b.G.marked === -1 && b.G.state === 'verifying', b.G.state);
+    b.tick(80);
+    ok('NO HALLUCINATION 之后进入 result', b.G.state === 'result', b.G.state);
+    ok('VERIFY 与 NO HALLUCINATION 不是同一个函数',
+      b.window.HuntGame.confirm !== b.window.HuntGame.markNone);
+  }
+  {
+    /* K4. canvas resize 生命周期 */
+    const b = fresh({});
+    b.tick(3);
+    ok('backdrop 与 fx 的 backing store 尺寸一致且非 0',
+      b.els.game.width > 0 && b.els.fx.width === b.els.game.width,
+      b.els.game.width + '/' + b.els.fx.width);
+    ok('暴露 syncSize 与 ResizeObserver 能力探测',
+      typeof b.window.HuntGame.syncSize === 'function' && typeof b.window.HuntGame.hasResizeObserver === 'function');
+    const w0 = b.els.game.width;
+    ok('syncSize 可重复调用且幂等', b.window.HuntGame.syncSize() === true && b.els.game.width === w0);
+    b.window.HuntGame.start('endless', 5);
+    b.tick(2);
+    ok('状态变化后画布尺寸仍被同步（setState 会重算）',
+      b.els.fx.width === b.els.game.width && b.els.game.width > 0);
+    /* 动作按钮显隐会改变布局 -> resize 必须能重新执行 */
+    b.window.HuntGame.setState('scanning');
+    ok('按钮显隐变化后 resize 仍然成立',
+      b.window.HuntGame.syncSize() === true && b.els.game.width === b.els.fx.width);
+  }
+  {
+    /* K5. 不再依赖固定 640 / 320 / 400 的视觉魔法坐标 */
+    const js = source(DIR + 'game.js');
+    ok('game.js 没有写死的 charX:320 / charY:400',
+      !/charX:\s*320/.test(js) && !/charY:\s*400/.test(js));
+    ok('game.js 没有写死的 fx.scan(0, 60, 640 …) / fx.burst(320 …)',
+      js.indexOf('640, 240') < 0 && js.indexOf('fx.burst(320') < 0 && js.indexOf('fx.float(') < 0 || js.indexOf('gb.cx') >= 0);
+    ok('特效坐标一律由 fxBox() 推导', js.indexOf('fxBox()') >= 0);
+    ok('角色坐标一律由 verifierBox() 推导', js.indexOf('verifierBox()') >= 0);
+    ok('页面为 verifier 留了专属视觉空间', source(DIR + 'index.html').indexOf('verifier-stage') >= 0);
+    ok('样式表给 verifier-stage 定了高度', /\.verifier-stage\s*\{[^}]*height/.test(source(DIR + 'style.css')));
+    ok('选中样式是中性色，不是判定色',
+      /\.claim\.selected\s*\{[^}]*#4d6bfe/.test(source(DIR + 'style.css')));
+  }
+  {
+    /* K6. 各状态 action button 显隐 */
+    const b = fresh({});
+    const vis = (id) => b.els[id].getAttribute('hidden') === null;
+    ok('intro：显示 Start / Daily，不显示 VERIFY / NO HALLUCINATION',
+      vis('btn-start') && vis('btn-daily') && !vis('btn-verify') && !vis('btn-none'));
+    b.window.HuntGame.start('endless', 3);
+    b.tick(2);
+    ok('streaming：不显示任何作答按钮',
+      !vis('btn-verify') && !vis('btn-none') && !vis('btn-start'));
+    toScanning(b);
+    ok('scanning：显示 VERIFY / NO HALLUCINATION', vis('btn-verify') && vis('btn-none'));
+    b.window.HuntGame.markNone();
+    ok('verifying：隐藏作答按钮', !vis('btn-verify') && !vis('btn-none'));
+    b.tick(80);
+    ok('result：隐藏作答按钮', !vis('btn-verify') && !vis('btn-none'));
+    b.window.HuntGame.setState('gameOver');
+    ok('gameOver：显示重玩 / COPY RESULT', vis('btn-again') && vis('btn-copy'));
   }
 
   return out;
