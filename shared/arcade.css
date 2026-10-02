@@ -26,6 +26,11 @@
   --line: #d8e4ef;               /* 描边 / 分隔线 */
   --accent: #4d6bfe;             /* 品牌主色（= theme-color） */
   --accent-dark: #3d5be8;        /* 主色 hover */
+  /* 「白字 + 实心蓝底」专用填充色。
+   * 品牌蓝 --accent 上压白字只有 4.33:1，达不到 WCAG AA 的 4.5:1；但又不能动
+   * --accent 本身（favicon / theme-color / 品牌字 / Canvas 预览都用它）。
+   * 所以只给这一类实心填充开一支更深的蓝：白字 5.17:1，过 AA。 */
+  --accent-fill: #465fe8;
   --accent-ghost: #f4f8ff;       /* hover 时的极淡蓝面 */
   --brand-shadow: rgba(77, 107, 254, 0.16);   /* 品牌字的实心投影 */
   --deep: #08152c;               /* 深海蓝：贪吃蛇场地、缩略图底、大厅深色块 */
@@ -147,7 +152,9 @@ h1 { margin: 0; font-size: var(--font-2xl); letter-spacing: 0.03em; }
 .btn[aria-disabled="true"]:active,
 .btn:disabled:active { transform: none; }
 
-.btn.primary { color: #fff; background: var(--accent); border-color: var(--accent); }
+/* 实心 primary action 用 --accent-fill（白字 5.17:1）；hover 仍然走 --accent-dark（白字 5.44:1），
+ * 所以 hover 依旧是「更深」，只是色差变小了。品牌蓝 --accent 一个字节都没动。 */
+.btn.primary { color: #fff; background: var(--accent-fill); border-color: var(--accent-fill); }
 .btn.primary:hover { background: var(--accent-dark); }
 
 .btn.ghost { margin-left: auto; color: var(--muted); }

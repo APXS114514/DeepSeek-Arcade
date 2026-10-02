@@ -622,6 +622,28 @@ export function run() {
       ok('次级文字 --muted 在卡片底上过 WCAG AA（>= 4.5:1）', onCard >= 4.5, onCard.toFixed(2) + ':1');
       ok('次级文字 --muted 在次级面上过 WCAG AA（>= 4.5:1）', onSurface >= 4.5, onSurface.toFixed(2) + ':1');
     }
+
+    /* 「白字 + 实心蓝底」是一类单独的语义：品牌蓝 --accent 上压白字只有 4.33:1，
+     * 达不到 AA。解法不是改 --accent（favicon / theme-color / 品牌字 / Canvas 预览
+     * 都用它），而是另开一支只服务实心填充的 --accent-fill。
+     * 这里把「品牌蓝不许动」和「实心填充必须过 AA」两条一起钉住。 */
+    const accent = tok('accent'), accentFill = tok('accent-fill');
+    ok('品牌蓝 --accent 保持 #4d6bfe（favicon / theme-color / 品牌字 / Canvas 预览共用）',
+      accent === '#4d6bfe', String(accent));
+    ok('--accent-fill 是一支独立的深色交互 token，不等于 --accent',
+      !!accentFill && accentFill !== accent, String(accentFill));
+    if (accentFill) {
+      const whiteOnFill = ratio('#ffffff', accentFill);
+      ok('白字在 --accent-fill 上过 WCAG AA（>= 4.5:1）', whiteOnFill >= 4.5, whiteOnFill.toFixed(2) + ':1');
+    }
+    const flatShared = source('shared/arcade.css').replace(/\s+/g, ' ');
+    const primaryAt = flatShared.indexOf('.btn.primary ');
+    const primaryBlock = primaryAt === -1 ? '' : flatShared.slice(primaryAt, primaryAt + 140);
+    ok('.btn.primary 的实心底色改用 --accent-fill（不再直接吃品牌蓝 --accent）',
+      primaryBlock.indexOf('background: var(--accent-fill)') !== -1 &&
+      primaryBlock.indexOf('background: var(--accent)') === -1, primaryBlock.slice(0, 80));
+    ok('theme-color 仍是品牌蓝 #4d6bfe（没被实心填充色带偏）',
+      /<meta name="theme-color" content="#4d6bfe">/.test(source('index.html')));
   }
 
   /* ================= U. Canvas 调色板同源映射 =================
