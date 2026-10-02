@@ -19,35 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Third-party notices / 第三方声明
-
-The MIT License above covers the source code and original content of this
-project only.
-
-"DeepSeek", the DeepSeek logo, and any related names, graphics and brand
-assets are NOT part of this license. All rights to them remain with their
-respective owners. This is an unofficial fan project: it is not affiliated
-with, endorsed by, or sponsored by DeepSeek.
-
-本项目的 MIT 授权仅覆盖代码本身。"DeepSeek" 名称、Logo 及相关图形、品牌
-资产不包含在 MIT 授权内，其权利归各自权利人所有。本项目为非官方同人作品，
-与 DeepSeek 官方无关联。
-
-The optional "whale girl" character skin is third-party artwork and is NOT part
-of this MIT license: Animated Whale Girl (assets/whale-yunyue/) — author
-YunYueSama, source github.com/YunYueSama/codex-deepseek-pet, licensed under
-大肥鱼项目署名许可 1.0 (a custom attribution licence, not MIT).
-Full text: LICENSES/YUNYUE-WHALE-PET-LICENSE.txt.
-See THIRD_PARTY_NOTICES.md for the details. The classic DeepSeek whale sprites
-in shared/whale.js are part of this project's code and remain under the MIT
-license above.
-
-可选的「鲸鱼娘」角色皮肤属于第三方美术素材，**不属于**上述 MIT 授权范围：
-作者 YunYueSama，来源 github.com/YunYueSama/codex-deepseek-pet，使用
-「大肥鱼项目署名许可 1.0」（自定义许可，不是 MIT）。
-全文见 LICENSES/YUNYUE-WHALE-PET-LICENSE.txt，详见 THIRD_PARTY_NOTICES.md。
-shared/whale.js 里的经典 DeepSeek 小鲸鱼是本项目代码的一部分，仍然使用上面的
-MIT 授权。

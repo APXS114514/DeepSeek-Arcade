@@ -266,8 +266,31 @@ export function run() {
     const lic = source('LICENSE');
     ok('LICENSE 是 MIT', /^MIT License/m.test(lic) && /Permission is hereby granted, free of charge/.test(lic));
     ok('LICENSE 作者是 APXS114514、年份 2026', /Copyright \(c\) 2026 APXS114514/.test(lic));
-    ok('LICENSE 明确 DeepSeek 品牌不在 MIT 授权内',
-      /NOT part of this license/i.test(lic) && /unofficial fan project/i.test(lic));
+    ok('LICENSE 是未经改写的标准 MIT 正文（含 permission paragraph 与 warranty disclaimer）',
+      /^MIT License/m.test(lic) &&
+      /Permission is hereby granted, free of charge/.test(lic) &&
+      /The above copyright notice and this permission notice shall be included in all/.test(lic) &&
+      /THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND/.test(lic));
+    /* GitHub 的 licence 识别只有在 LICENSE 正文就是标准 MIT 时才会报 MIT。
+     * 以前把「第三方声明 / 商标免责」大段追加在 MIT 正文之后，结果识别不出来。
+     * 现在这些内容只允许待在 THIRD_PARTY_NOTICES.md / LICENSES/ / ATTRIBUTION.md。 */
+    ok('LICENSE 里不再追加第三方声明 / 商标免责正文',
+      lic.indexOf('Third-party notices') < 0 && lic.indexOf('第三方声明') < 0 &&
+      lic.indexOf('DeepSeek') < 0 && lic.indexOf('YunYueSama') < 0 &&
+      lic.indexOf('whale-yunyue') < 0 && lic.indexOf('---') < 0);
+    const notices = source('THIRD_PARTY_NOTICES.md');
+    ok('搬走的声明没有丢：DeepSeek 品牌 / Logo 不在任何授权内 + 非官方同人（在 THIRD_PARTY_NOTICES.md）',
+      /part of any license here/i.test(notices) &&
+      /unofficial fan project/i.test(notices) &&
+      /not affiliated with, endorsed by, or/.test(notices));
+    ok('THIRD_PARTY_NOTICES.md 说明根 LICENSE 只覆盖本项目自己的代码与原创内容',
+      /source code and original content of this\s+project only/.test(notices) &&
+      /shared\/whale\.js/.test(notices));
+    ok('THIRD_PARTY_NOTICES.md 仍然指向鲸鱼娘的第三方许可全文与署名要求',
+      notices.indexOf('YUNYUE-WHALE-PET-LICENSE.txt') >= 0 &&
+      notices.indexOf('YunYueSama') >= 0 &&
+      notices.indexOf('大肥鱼项目署名许可 1.0') >= 0 &&
+      notices.indexOf('assets/whale-yunyue/ATTRIBUTION.md') >= 0);
     ok('文档没有过时描述',
       !/coming soon|third game|三款|敬请期待/i.test(source('docs/architecture.md')));
   }
@@ -364,9 +387,12 @@ export function run() {
     const lic = source('LICENSE');
     ok('根 LICENSE 仍然是 MIT（没有被第三方素材改写）',
       /^MIT License/m.test(lic) && /Copyright \(c\) 2026 APXS114514/.test(lic));
-    ok('根 LICENSE 指向第三方许可全文并说明不在 MIT 内',
-      lic.indexOf('YUNYUE-WHALE-PET-LICENSE.txt') !== -1 &&
-      /NOT\s+part\s+of\s+this\s+MIT\s+license/i.test(lic));
+    /* 第三方素材的排除声明搬到了 THIRD_PARTY_NOTICES.md（见 E 段）：
+       根 LICENSE 保持标准 MIT 正文，GitHub 的 licence 识别才能报 MIT。 */
+    ok('第三方许可的排除声明在 THIRD_PARTY_NOTICES.md，且根 LICENSE 里不再有',
+      tpn.indexOf('YUNYUE-WHALE-PET-LICENSE.txt') !== -1 &&
+      /NOT MIT-licensed/.test(tpn) &&
+      lic.indexOf('YUNYUE-WHALE-PET-LICENSE.txt') < 0);
     ok('根 LICENSE 不再提已经删掉的像素皮肤', !mentionsRemovedSkin(lic));
 
     /* ---- README：只留简洁来源说明，不塞长篇授权 ---- */

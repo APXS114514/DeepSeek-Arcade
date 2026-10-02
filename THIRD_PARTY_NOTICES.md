@@ -11,6 +11,18 @@ sprites in [`shared/whale.js`](shared/whale.js)), the maze layout data, the i18n
 dictionary and the tests are released under the **MIT License** — see
 [`LICENSE`](LICENSE).
 
+The root [`LICENSE`](LICENSE) covers **the source code and original content of this
+project only**, and it is kept as clean, unmodified MIT text on purpose so that
+GitHub's licence detection reports the repository as MIT. Everything that is *not*
+covered by MIT is listed below in this file, in
+[`LICENSES/`](LICENSES/) and in
+[`assets/whale-yunyue/ATTRIBUTION.md`](assets/whale-yunyue/ATTRIBUTION.md).
+
+根目录的 [`LICENSE`](LICENSE) 是**未经改写的标准 MIT 正文**，只覆盖本项目自己的
+代码与原创内容（保持干净是为了让 GitHub 能正确识别成 MIT）。**不属于** MIT 的部分
+全部列在本文件、[`LICENSES/`](LICENSES/) 与
+[`assets/whale-yunyue/ATTRIBUTION.md`](assets/whale-yunyue/ATTRIBUTION.md) 里。
+
 ## 2. Whale Girl character skin — 大肥鱼项目署名许可 1.0
 
 | | |
