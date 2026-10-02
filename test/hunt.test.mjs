@@ -1326,8 +1326,14 @@ export function run() {
         const ch = src[i];
         if (ch === '{') {
           if (depth === 0) {
-            const noComments = seg.replace(/\/\*[\s\S]*?\*\//g, ' ');
-            if (seg.indexOf('/*') >= 0 && noComments.trim() !== '') bad.push(seg.trim().replace(/\s+/g, ' ').slice(0, 70));
+            /* 精确判据：只有当「第一条注释之前已经存在选择器文本」时，
+               注释才真的插进了选择器列表。规则前的独立注释其 before 为空白，
+               因此不会误报（这是上一版写错的地方）。 */
+            const firstComment = seg.indexOf('/*');
+            const before = firstComment >= 0 ? seg.slice(0, firstComment) : '';
+            if (firstComment >= 0 && before.replace(/[\s,]/g, '') !== '') {
+              bad.push(seg.trim().replace(/\s+/g, ' ').slice(0, 70));
+            }
           }
           depth++; seg = '';
         } else if (ch === '}') { depth = Math.max(0, depth - 1); seg = ''; }
