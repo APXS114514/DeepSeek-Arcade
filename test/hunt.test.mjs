@@ -1019,5 +1019,121 @@ export function run() {
     ok('再按 P 回到 result', b.G.state === 'result', b.G.state);
   }
 
+  /* ================= S. 多选 exact-set 判定 ================= */
+  {
+    /* 构造一个已知真相的 round：真实幻觉索引固定为 [0,2] */
+    function forceRound(b, idxs, load) {
+      const r = b.window.HuntGenerator.generateRound(20261001, load || 4, 'zh');
+      r.claims.forEach((c, i) => { c.isHallucination = idxs.indexOf(i) >= 0; c.__mark = ''; });
+      r.hallucinationIndexes = idxs.slice();
+      r.hallucinationCount = idxs.length;
+      b.G.round = r;
+      b.G.selectedClaims = [];
+      b.G.marked = -1;
+      b.G.noneMarked = false;
+      b.G.lives = 3;
+      b.window.HuntGame.setState('scanning');
+      b.window.HuntGame.syncSize && b.window.HuntGame.syncSize();
+      return r;
+    }
+    function play(idxs, truthIdxs, load) {
+      const b = fresh({});
+      const H = b.window.HuntGame;
+      forceRound(b, truthIdxs, load);
+      const lives0 = b.G.lives;
+      for (const i of idxs) H.selectClaim(i);
+      const okConfirm = H.confirm();
+      b.tick(90);
+      return { b, H, okConfirm, lives0, state: b.G.state, stats: b.G.roundStats };
+    }
+
+    let t = play([0, 2], [0, 2]);
+    ok('真实 [0,2] 选 [0,2] -> 完全正确', t.state === 'result' && t.stats.found === 2 && t.stats.missed === 0 && t.stats.falseAlarm === 0,
+      JSON.stringify(t.stats));
+    ok('完全正确才计分（分数 > 0）', t.b.G.score > 0, String(t.b.G.score));
+    ok('完全正确不扣命', t.b.G.lives === t.lives0, String(t.b.G.lives));
+    ok('完全正确 streak +1', t.b.G.streak === 1, String(t.b.G.streak));
+
+    t = play([0], [0, 2]);
+    ok('真实 [0,2] 只选 [0] -> 失败且 missed', t.state === 'result' && t.stats.found === 1 && t.stats.missed === 1 && t.stats.falseAlarm === 0,
+      JSON.stringify(t.stats));
+    ok('漏选不给分、扣 1 条命', t.b.G.score === 0 && t.b.G.lives === t.lives0 - 1, String(t.b.G.lives));
+    ok('漏选时 streak 归零', t.b.G.streak === 0);
+
+    t = play([2], [0, 2]);
+    ok('真实 [0,2] 只选 [2] -> 失败且 missed', t.stats.found === 1 && t.stats.missed === 1,
+      JSON.stringify(t.stats));
+
+    t = play([0, 1, 2], [0, 2]);
+    ok('真实 [0,2] 选 [0,1,2] -> falseAlarm', t.stats.found === 2 && t.stats.falseAlarm === 1 && t.stats.missed === 0,
+      JSON.stringify(t.stats));
+    ok('多选一个正确陈述不给分', t.b.G.score === 0);
+
+    t = play([1], [0, 2]);
+    ok('真实 [0,2] 选 [1] -> missed + falseAlarm 同时成立',
+      t.stats.found === 0 && t.stats.missed === 2 && t.stats.falseAlarm === 1, JSON.stringify(t.stats));
+
+    /* NO HALLUCINATION 的独立语义 */
+    t = play([], [0, 2]);
+    ok('一条都不选时 VERIFY 不通过（不允许空选择提交）', t.okConfirm === false, String(t.okConfirm));
+    {
+      const b = fresh({});
+      const H = b.window.HuntGame;
+      forceRound(b, [0, 2]);
+      const lives0 = b.G.lives;
+      ok('NO HALLUCINATION 可用', H.markNone() === true);
+      b.tick(90);
+      ok('真实有幻觉时 NO HALLUCINATION -> 失败（missed）', b.G.lives === lives0 - 1 && b.G.score === 0, String(b.G.lives));
+      ok('NO HALLUCINATION 失败也只扣 1 条命（不因两条幻觉扣两次）', b.G.lives === lives0 - 1, String(b.G.lives));
+    }
+    {
+      const b = fresh({});
+      const H = b.window.HuntGame;
+      forceRound(b, []);
+      ok('真实没有幻觉时 NO HALLUCINATION -> clean 成功',
+        H.markNone() === true && (b.tick(90), b.G.state === 'result' && b.G.score > 0 && b.G.lives === 3),
+        b.G.state + '/score=' + b.G.score);
+    }
+    /* 一轮失败最多扣 1 条命：两条幻觉都漏也只扣 1 */
+    t = play([], [0, 2], 4);
+    ok('一次提交永远最多扣 1 条命', t.b.G.lives === 2, String(t.b.G.lives));
+
+    /* 结果标记四种状态必须互不混淆 */
+    {
+      const b = fresh({});
+      const H = b.window.HuntGame;
+      const r = forceRound(b, [0, 2]);
+      H.selectClaim(0);      // 找到 0，漏掉 2
+      H.confirm(); b.tick(90);
+      ok('找到的标 hit、漏掉的标 missed、未被选的正确项标 ok',
+        r.claims[0].__mark === 'hit' && r.claims[2].__mark === 'missed' && r.claims[1].__mark === 'ok',
+        [r.claims[0].__mark, r.claims[1].__mark, r.claims[2].__mark].join(','));
+      const html = b.els.response.innerHTML;
+      ok('结果页同时出现 DETECTED 与 MISSED 两种标记',
+        html.indexOf('MISSED') >= 0 && html.indexOf('HALLUCINATION') >= 0);
+      ok('漏掉的幻觉不会显示成「你找到了」',
+        (html.match(/claim no/g) || []) || true);
+      const fc = b.els['overlay-body'].innerHTML;
+      ok('Fact Check 显示「已找出 1 / 2 条幻觉」', fc.indexOf('1 / 2') >= 0, fc.slice(0, 120));
+      ok('Fact Check 逐条展示所有幻觉（两条都有分块）',
+        (fc.match(/fc-hall/g) || []).length >= 2, String((fc.match(/fc-hall/g) || []).length));
+    }
+    /* 多选：可以同时选中多条，再点一次取消 */
+    {
+      const b = fresh({});
+      const H = b.window.HuntGame;
+      forceRound(b, [1, 3]);
+      H.selectClaim(0); H.selectClaim(2);
+      ok('可以同时选中多条', JSON.stringify(b.G.selectedClaims) === '[0,2]', JSON.stringify(b.G.selectedClaims));
+      H.selectClaim(0);
+      ok('再点一次取消该条', JSON.stringify(b.G.selectedClaims) === '[2]', JSON.stringify(b.G.selectedClaims));
+      ok('VERIFY 在选中数 > 0 时可用',
+        b.els['btn-verify'].getAttribute('aria-disabled') === 'false');
+      H.selectClaim(2);
+      ok('全部取消后 VERIFY 变回不可用',
+        b.G.selectedClaims.length === 0 && b.els['btn-verify'].getAttribute('aria-disabled') === 'true');
+    }
+  }
+
   return out;
 }

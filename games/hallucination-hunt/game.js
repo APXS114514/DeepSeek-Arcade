@@ -55,7 +55,9 @@
     resultLeft: 0,
     round: null,
     session: null,
-    marked: -1,
+    marked: -1,            /* 兼容镜像，不驱动核心逻辑 */
+    selectedClaims: [],     /* 唯一真相：玩家选中的 claim 索引（升序） */
+    noneMarked: false,      /* 玩家是否明确按了「没有幻觉」 */
     lastOutcome: null,
     visibleChars: 0,
     daily: null,
@@ -270,7 +272,8 @@
     if (!round) round = GEN.generateRound((game.session ? game.session.seed : 1) + game.roundIndex, load, I18N ? I18N.lang : 'zh');
     game.round = round;
     game.roundIndex++;
-    game.marked = -1;
+    clearSelection();
+    game.noneMarked = false;
     game.streamElapsed = 0;
     game.visibleChars = -1;
     game.lastOutcome = null;
@@ -306,9 +309,10 @@
       }
       var revealed = clickable || !streaming;
       /* 选中只是「我怀疑这条」，用中性强调色，绝不等同于判对/判错 */
-      if (game.state === 'scanning' && game.marked === i) cls += ' selected';
+      if (game.state === 'scanning' && game.selectedClaims && game.selectedClaims.indexOf(i) >= 0) cls += ' selected';
       var mark = '';
-      if (round.claims[i].__mark === 'hit') { cls += ' hit'; mark = ' <span class="tag">HALLUCINATION</span>'; }
+      if (round.claims[i].__mark === 'hit') { cls += ' hit'; mark = ' <span class="tag">' + escapeHtml(T('hunt.detectedTag', 'HALLUCINATION')) + '</span>'; }
+      else if (round.claims[i].__mark === 'missed') { cls += ' missed'; mark = ' <span class="tag">' + escapeHtml(T('hunt.missedTag', 'MISSED')) + '</span>'; }
       else if (round.claims[i].__mark === 'ok') { cls += ' ok'; mark = ' <span class="tag">VERIFIED</span>'; }
       else if (round.claims[i].__mark === 'picked') { cls += ' picked'; mark = ' <span class="tag">FALSE ALARM</span>'; }
       /* 审计序号：纯装饰（aria-hidden），让每条 claim 有独立的视觉锚点 */
@@ -371,30 +375,54 @@
     if (game.state !== 'scanning') return false;
     var r = game.round;
     if (!r || !(index >= 0 && index < r.claims.length)) return false;
-    game.marked = index;
+    var pos = game.selectedClaims.indexOf(index);
+    if (pos >= 0) game.selectedClaims.splice(pos, 1);            // 再点一次 = 取消
+    else { game.selectedClaims.push(index); game.selectedClaims.sort(function (a, b) { return a - b; }); }
+    syncSelection();
     renderResponse(r, roundFullText(r).length, true);
     syncVerify();
     beep({ type: 'square', from: 520, to: 640, ms: 45, gain: 0.03 });
     return true;
   }
 
-  /* VERIFY：确认当前选中的 claim；没选中就不允许 */
+  /* marked 只是给旧调用方/测试看的镜像，判定一律用 selectedClaims */
+  function syncSelection() {
+    game.marked = game.selectedClaims.length ? game.selectedClaims[0] : -1;
+  }
+  function clearSelection() {
+    game.selectedClaims = [];
+    syncSelection();
+  }
+  function isSelected(i) {
+    return game.selectedClaims.indexOf(i) >= 0;
+  }
+  function selectedList() {
+    return game.selectedClaims.slice();
+  }
+
+  /* VERIFY：确认**当前选中的整组** claim；一条都没选就不允许 */
   function confirmSelection() {
     if (game.state !== 'scanning') return false;
     var r = game.round;
-    if (!r || !(game.marked >= 0 && game.marked < r.claims.length)) return false;
-    var c = r.claims[game.marked];
+    if (!r || game.selectedClaims.length === 0) return false;
+    game.noneMarked = false;
+    var picked = game.selectedClaims[game.selectedClaims.length - 1];
     setState('verifying');
     game.verifyLeft = VERIFY_MS / 1000;
     if (fx) {
-      /* 特效只作用在被核验的那一句上，绝不盖住整段正文 */
-      var box = claimBox(game.marked);
-      var cx = box.x + box.w / 2, cy = box.y + box.h / 2;
-      fx.scan(box.x, box.y, box.w, box.h, 620);
-      if (c.isHallucination) { fx.glitch(0.7); fx.rgbSplit(0.6); fx.burst(cx, cy, 18, '#7fe3f0'); }
-      else { fx.flash('#d9534f', 0.16); fx.shake(4); fx.burst(cx, cy, 12, '#d9534f'); }
+      /* 特效只作用在被核验的那些句子上，绝不盖住整段正文 */
+      var anyHall = false;
+      for (var k = 0; k < game.selectedClaims.length; k++) {
+        var idx = game.selectedClaims[k];
+        var box = claimBox(idx);
+        var c0 = r.claims[idx];
+        if (c0 && c0.isHallucination) anyHall = true;
+        fx.scan(box.x, box.y, box.w, box.h, 620);
+        if (c0 && c0.isHallucination) { fx.glitch(0.7); fx.rgbSplit(0.6); fx.burst(box.x + box.w / 2, box.y + box.h / 2, 18, '#7fe3f0'); }
+        else { fx.flash('#d9534f', 0.16); fx.shake(4); fx.burst(box.x + box.w / 2, box.y + box.h / 2, 12, '#d9534f'); }
+      }
     }
-    beep({ type: c.isHallucination ? 'square' : 'sawtooth', from: c.isHallucination ? 700 : 300, to: c.isHallucination ? 1100 : 160, ms: 140, gain: 0.05 });
+    beep({ type: 'square', from: 520, to: 900, ms: 140, gain: 0.05 });
     return true;
   }
 
@@ -402,7 +430,8 @@
   function markNone() {
     if (game.state !== 'scanning') return false;
     if (!game.round) return false;
-    game.marked = -1;
+    clearSelection();
+    game.noneMarked = true;      // 与「什么都没选就 VERIFY」是两回事（后者根本不允许）
     setState('verifying');
     game.verifyLeft = VERIFY_MS / 1000;
     if (fx) { var nb = fxBox(); fx.scan(0, nb.h * 0.18, nb.w, nb.h * 0.5, 620); fx.pulse(0.45); }
@@ -414,7 +443,7 @@
   function syncVerify() {
     var v = el('btn-verify');
     if (!v || !v.setAttribute) return;
-    var enabled = game.state === 'scanning' && game.marked >= 0;
+    var enabled = game.state === 'scanning' && game.selectedClaims.length > 0;
     v.setAttribute('aria-disabled', enabled ? 'false' : 'true');
     if (enabled) { if (v.removeAttribute) v.removeAttribute('disabled'); }
     else v.setAttribute('disabled', '');
@@ -424,16 +453,26 @@
   function resolveRound(timedOut) {
     var r = game.round;
     if (!r) return;
-    var outcome, hitIndex = -1;
+    var outcome;
     var remainRatio = r.scanMs > 0 ? Math.max(0, game.scanLeft) * 1000 / r.scanMs : 0;
 
+    /* exact-set 判定：玩家选择集合必须与真实幻觉集合**完全一致**
+       —— 数量相同、索引相同、没有遗漏、没有误报。 */
+    var truth = (r.hallucinationIndexes || []).slice().sort(function (a, b) { return a - b; });
+    var picked = selectedList();
+    var foundCount = 0;
+    for (var q = 0; q < picked.length; q++) if (truth.indexOf(picked[q]) >= 0) foundCount++;
+    var missedCount = truth.length - foundCount;         // 漏掉的幻觉条数
+    var falseAlarmCount = picked.length - foundCount;    // 误选正确陈述的条数
+    game.roundStats = { found: foundCount, total: truth.length, missed: missedCount, falseAlarm: falseAlarmCount };
+
     if (timedOut) outcome = 'missed';
-    else if (game.marked >= 0) {
-      hitIndex = game.marked;
-      outcome = r.claims[game.marked].isHallucination ? 'hit' : 'falseAlarm';
-    } else {
+    else if (game.noneMarked || picked.length === 0) {
       outcome = r.hallucinationCount === 0 ? 'clean' : 'missed';
-    }
+    } else if (missedCount === 0 && falseAlarmCount === 0) outcome = 'hit';
+    else if (missedCount > 0 && falseAlarmCount === 0) outcome = 'missed';
+    else if (missedCount === 0 && falseAlarmCount > 0) outcome = 'falseAlarm';
+    else outcome = 'mixed';
 
     var gained = 0;
     var success = (outcome === 'hit' || outcome === 'clean');
@@ -449,19 +488,22 @@
       if (fx) {
         fx.flash('#ff3355', 0.45); fx.shake(10);
         var fb = verifierBox();
-        fx.float(outcome === 'falseAlarm' ? T('hunt.falseAlarm') : T('hunt.missed'), fb.x, fb.y - 6, '#ff8a8a');
+        fx.float(outcome === 'falseAlarm' ? T('hunt.falseAlarm')
+          : (outcome === 'mixed' ? T('hunt.mixed', 'FALSE ALARM + MISSED') : T('hunt.missed')), fb.x, fb.y - 6, '#ff8a8a');
       }
     }
     game.answered++;
     game.score += gained;
 
-    /* 标注每条 claim 的结果 */
+    /* 逐条标注：必须区分「找到」「漏掉」「误报」「正确且未选」四种 */
     for (var i = 0; i < r.claims.length; i++) {
       var c = r.claims[i];
-      c.__mark = '';
-      if (c.isHallucination) c.__mark = 'hit';
-      else if (i === hitIndex) c.__mark = 'picked';
-      else if (outcome === 'clean') c.__mark = 'ok';
+      var isTruth = !!c.isHallucination;
+      var wasPicked = isSelected(i);
+      if (isTruth && wasPicked) c.__mark = 'hit';        // DETECTED
+      else if (isTruth) c.__mark = 'missed';             // MISSED：玩家没找出来
+      else if (wasPicked) c.__mark = 'picked';           // FALSE ALARM
+      else c.__mark = 'ok';                              // 正确且未被选
     }
 
     var diff = game.difficulty;
@@ -491,7 +533,8 @@
       hit: ['hunt.detected', 'HALLUCINATION DETECTED'],
       clean: ['hunt.cleanRound', 'NO HALLUCINATION — CLEAN'],
       falseAlarm: ['hunt.falseAlarm', 'FALSE ALARM'],
-      missed: ['hunt.missed', 'HALLUCINATION MISSED']
+      missed: ['hunt.missed', 'HALLUCINATION MISSED'],
+      mixed: ['hunt.mixed', 'FALSE ALARM + MISSED']
     };
     var m = map[outcome] || map.missed;
     if (title) title.textContent = T(m[0], m[1]);
@@ -501,16 +544,32 @@
       rows.push('<div class="fc-row"><span class="fc-k">' + escapeHtml(k) + '</span>' +
         '<span class="fc-v">' + (html || escapeHtml(v)) + '</span></div>');
     }
-    var checked = (game.marked >= 0 && r.claims[game.marked]) ? r.claims[game.marked] : null;
-    var culprit = null;
-    for (var ci = 0; ci < r.claims.length; ci++) if (r.claims[ci].isHallucination) { culprit = r.claims[ci]; break; }
-    if (checked && outcome !== 'clean') row(T('hunt.checkedClaim', 'Checked claim'), checked.text);
-    if (culprit && outcome !== 'clean') {
-      row(T('hunt.modelSaid', 'Model said'), culprit.text);
-      row(T('hunt.truth', 'Correct fact'), culprit.canonical);
-      if (culprit.mutationType) {
-        row(T('hunt.mutation', 'Mutation'), culprit.mutationType, '<code>' + escapeHtml(culprit.mutationType) + '</code>');
-      }
+    var stats = game.roundStats || { found: 0, total: 0, missed: 0, falseAlarm: 0 };
+    /* 「找到几条」：多幻觉轮次必须明确告诉玩家找漏了 */
+    if (outcome !== 'clean' && stats.total > 0) {
+      rows.push('<p class="fc-found' + (stats.found === stats.total && stats.falseAlarm === 0 ? '' : ' bad') + '">' +
+        escapeHtml(T('hunt.foundCount', 'Detected {found} / {total} hallucinations')
+          .replace('{found}', String(stats.found)).replace('{total}', String(stats.total))) + '</p>');
+    } else if (stats.falseAlarm > 0) {
+      rows.push('<p class="fc-found bad">' + escapeHtml(T('hunt.falseAlarm')) + '</p>');
+    }
+    /* 逐条展示**所有**幻觉；漏掉的明确标 MISSED，不能只显示第一条 */
+    var hallNo = 0;
+    for (var hi = 0; hi < r.claims.length; hi++) {
+      var hc = r.claims[hi];
+      if (!hc.isHallucination) continue;
+      hallNo++;
+      var got = isSelected(hi);
+      rows.push('<div class="fc-hall' + (got ? '' : ' missed') + '">' +
+        '<p class="fc-hall-k">' + escapeHtml((hallNo < 10 ? '0' : '') + hallNo + ' · ' +
+          (got ? T('hunt.detectedTag', 'HALLUCINATION') : T('hunt.missedTag', 'MISSED'))) + '</p>' +
+        '<div class="fc-row"><span class="fc-k">' + escapeHtml(T('hunt.modelSaid', 'Model said')) + '</span>' +
+          '<span class="fc-v">' + escapeHtml(hc.text) + '</span></div>' +
+        '<div class="fc-row"><span class="fc-k">' + escapeHtml(T('hunt.truth', 'Correct fact')) + '</span>' +
+          '<span class="fc-v">' + escapeHtml(hc.canonical) + '</span></div>' +
+        (hc.mutationType ? '<div class="fc-row"><span class="fc-k">' + escapeHtml(T('hunt.mutation', 'Mutation')) +
+          '</span><span class="fc-v"><code>' + escapeHtml(hc.mutationType) + '</code></span></div>' : '') +
+        '</div>');
     }
     if (r.explanation) row(T('hunt.note', 'Note'), r.explanation);
     if (r.source && r.source.name) {
@@ -824,7 +883,7 @@
         if (game.round && game.session && game.state !== 'intro' && game.state !== 'gameOver') {
           var load = game.round.load;
           var again = GEN.generateRound(game.session.seed + game.roundIndex, load, I18N.lang);
-          if (again) { game.round = again; game.marked = -1; game.streamElapsed = 0; game.visibleChars = -1; setState('streaming'); renderRound(); }
+          if (again) { game.round = again; clearSelection(); game.streamElapsed = 0; game.visibleChars = -1; setState('streaming'); renderRound(); }
         }
         updateHud();
       });
@@ -854,7 +913,8 @@
   global.HuntGame = {
     game: game,
     start: start, pause: function () { return togglePause(true); }, resume: function () { return togglePause(false); },
-    selectClaim: selectClaim, confirm: confirmSelection, markNone: markNone,
+    selectClaim: selectClaim, toggleClaim: selectClaim, confirm: confirmSelection, markNone: markNone,
+    selectedClaims: selectedList, roundStats: function () { return game.roundStats || null; },
     /* 兼容旧调用：markClaim 现在等价于「选中」，不再直接进入 verifying */
     markClaim: selectClaim,
     syncSize: syncSize, hasResizeObserver: function () { return !!resizeObserver; },
