@@ -16,7 +16,7 @@
 (function (global) {
   'use strict';
 
-  var VERSION = '1.6.8';
+  var VERSION = '1.6.9';
   global.ARCADE_VERSION = VERSION;
 
   function badge() {
