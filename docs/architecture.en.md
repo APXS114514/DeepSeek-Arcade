@@ -489,6 +489,65 @@ independent of the character artwork size (`test/contextbreaker.test.mjs` compar
 **Storage**: high score `arcade.breakerHighScore` (no collision with the other four games); degrades silently when
 localStorage is unavailable.
 
+## 🧠 Hallucination Hunt — `games/hallucination-hunt/`
+
+The sixth official game, and the project's first real technical step up: a **static question game** became an
+**offline hallucination simulation engine**. The wrong sentence the player hunts for is not hand-written — it is
+manufactured at runtime from a true fact, and every round is reproducible from a seed.
+
+### Modules
+
+| File | Responsibility |
+| --- | --- |
+| `content.js` | Offline knowledge base: canonical facts + source metadata + zh/en wording. No game logic |
+| `rng.js` | Deterministic PRNG (mulberry32) + FNV-1a hashing + date-to-seed |
+| `mutators.js` | Hallucination mutation engine: 11 mutation kinds, each a pure function |
+| `generator.js` | Round assembly + **Validator** + safe fallback |
+| `difficulty.js` | Difficulty director: recent performance to skill to LOAD 1-5 |
+| `effects.js` | Standalone visual effects (particles, flash, shake, scan beam, glitch, RGB split) |
+| `renderer.js` | Character layer: the whale-girl verifier only |
+| `game.js` | State machine, DOM wiring, streaming, scoring, Daily Hunt, sharing |
+
+Communication is via `window.Hunt*` namespaces with **IIFE + ordered `<script>`** — no ES modules, so `file://`
+keeps working.
+
+### Pipeline
+
+```
+content -> rng -> mutators -> generator(+validator) -> game
+```
+
+An invalid round is rejected and regenerated on the **same RNG stream** (up to 24 attempts), then a safe fallback
+is used — the fallback itself must also pass validation. The validator checks: id present, load legal, claim count
+matches the LOAD rule, **mutation differs from the canonical text**, the mutation is decisive, no empty /
+`undefined` / unresolved-placeholder text, no duplicate claims, hallucination indexes in range and consistent with
+the count, and legal confidence / scanMs. It must never throw, whatever the input.
+
+### Interface
+
+The UI is organised like an **AI chat product**: a left sidebar (identity, status chips, controls), a narrow
+centred conversation column, and a composer at the bottom. Game information (score / accuracy / streak / lives /
+LOAD / round) is demoted to sidebar status chips instead of a top HUD. The QUERY is a genuine user message and the
+round's claims are consecutive sentences inside one assistant reply — a hover hint appears only when a claim can be
+inspected, selection uses a neutral accent and never reveals correctness, and a FACT CHECK card is inserted
+**into the conversation flow** rather than shown as a modal. Streaming is time-driven (punctuation adds pauses), so
+the pace is identical at 60 / 120 / 144 Hz, and only `scanning` is timed.
+
+The Canvas is a supporting layer: the character canvas draws only the whale-girl verifier inside a dedicated stage
+at the end of the assistant reply, and effects are localised to the claim being verified so they never cover the
+response text. Every frame clears the effects canvas (an uncleared alpha layer accumulates into an opaque sheet).
+`OffscreenCanvas` is progressive enhancement only, and `prefers-reduced-motion` disables shake, RGB displacement
+and glitch slices.
+
+### Determinism, difficulty and Daily Hunt
+
+`mulberry32` with a FNV-1a string hash; the core generation path never calls `Math.random()`. The same seed always
+produces the same fact, mutation, claim order, confidence and round. The difficulty director keeps a rolling window
+of eight rounds, smooths a skill value with an EMA (`skill = skill * 0.8 + performance * 0.2`), maps it to LOAD 1-5
+and moves **at most one step per round**. Daily Hunt derives its seed from the local date and always plays ten
+rounds. Scores persist under `arcade.hallucinationHunt.high` (plus `.daily`), with corrupt saves recovered safely
+and no collision with the other five games.
+
 ## Directory structure (full)
 
 ```text

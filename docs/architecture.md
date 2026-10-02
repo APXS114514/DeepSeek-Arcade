@@ -546,11 +546,16 @@ step  = clamp(want - load, -1, +1);          // 单轮最多变一档
 
 ### DOM + Canvas 混合渲染
 
+界面按**AI 聊天产品**组织：左侧 sidebar（身份 + status chips + 控制）、中间窄栏居中的会话流、底部 composer。
+游戏信息（分数 / 命中率 / 连击 / 命数 / LOAD / 轮次）降级为 sidebar 里的 status chips，不再占据页面顶部；
+QUERY 是一条用户消息，`round.claims` 是一条 assistant 回复里的连续句子（hover 才出现可核验提示，选中用中性强调色，绝不提前暴露对错），
+核验结果作为一张 FACT CHECK 卡**插进会话流**而不是浮层弹窗。
+
 | 层 | 负责 |
 | --- | --- |
-| DOM | QUERY、MODEL RESPONSE、每条可聚焦的 `<button class="claim">`、HUD、动作区、结果浮层、键盘焦点与无障碍 |
-| Canvas（背景层 `#game`） | 底色、网格、鲸鱼娘 verifier |
-| Canvas（特效层 `#fx`，`pointer-events:none`） | 粒子、浮动文字、闪、抖动、扫描束、glitch 切片、RGB 位移 |
+| DOM | 侧边栏（brand / status chips / 控制）、会话流（用户 turn + assistant turn）、每条可聚焦的 `<button class="claim">`、composer 动作区、事实核验卡、键盘焦点与无障碍 |
+| Canvas（角色层 `#game`，`pointer-events:none`） | **只画鲸鱼娘 verifier**，落在回答尾部的专属舞台里；聊天界面下不再铺底色与网格，页面底色交给 CSS |
+| Canvas（特效层 `#fx`，`pointer-events:none`） | 粒子、浮动文字、闪、抖动、扫描束、glitch 切片、RGB 位移；**局部作用在被核验的那一句上，不覆盖正文** |
 
 文字**始终是真正可选择、可聚焦的 DOM**，不是画出来的。
 
