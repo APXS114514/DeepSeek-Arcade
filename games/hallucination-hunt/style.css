@@ -138,6 +138,9 @@ body.hunt-body {
 .welcome h1 { margin: 0 0 8px; font-size: 19px; letter-spacing: .06em; color: var(--hunt-ink); }
 .welcome-sub { margin: 0 0 10px; font-size: 13.5px; color: var(--hunt-ink-2); }
 .welcome-note { margin: 0 auto; max-width: 430px; font-size: 12px; line-height: 1.75; color: var(--hunt-ink-3); }
+/* intro 时鲸鱼娘站在这块专属区域里 —— 位于欢迎文案和 composer 之间，
+   有真实的布局高度，所以不会被 START HUNT / DAILY HUNT 挡住。 */
+.intro-character-stage { height: 88px; margin: 14px 0 4px; }
 
 /* ---------------- 会话轮次 ---------------- */
 .turn { display: flex; }
@@ -339,6 +342,7 @@ body.hunt-body {
   .chat-flow { padding: 18px 14px 8px; gap: 14px; }
   .composer { padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
   .hunt-tips { padding: 0 14px; }
+  .intro-character-stage { height: 72px; margin: 10px 0 2px; }
 }
 
 @media (max-width: 560px) {
@@ -360,5 +364,6 @@ body.hunt-body {
 @media (max-height: 560px) and (orientation: landscape) {
   .chat-flow { padding: 12px 16px 6px; gap: 10px; }
   .verifier-stage { height: 40px; }
+  .intro-character-stage { height: 64px; margin: 8px 0 2px; }
   .welcome { padding-top: 3vh; }
 }

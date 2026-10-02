@@ -807,5 +807,49 @@ export function run() {
     ok('Resume 是真正的 button', /id="btn-resume-main"[^>]*class="btn primary"[^>]*type="button"/.test(source(DIR + 'index.html')));
   }
 
+  /* ================= N. intro 角色布局回归 ================= */
+  {
+    const html = source(DIR + 'index.html');
+    const css = source(DIR + 'style.css');
+    const js = source(DIR + 'game.js');
+    ok('存在 intro 专属角色锚点', /id="intro-character-stage"/.test(html) && /class="intro-character-stage"/.test(html));
+    ok('intro 锚点在欢迎区内，且与 composer 是两个独立区域',
+      (function () {
+        const w = html.indexOf('class="welcome"');
+        const st = html.indexOf('id="intro-character-stage"');
+        const act = html.indexOf('id="action-panel"');
+        return w >= 0 && st > w && act > st;
+      })());
+    ok('CSS 给 intro 锚点真实高度（64~100px）',
+      (function () {
+        const m = /\.intro-character-stage\s*\{[^}]*height:\s*(\d+)px/.exec(css);
+        return !!m && Number(m[1]) >= 64 && Number(m[1]) <= 100;
+      })());
+    ok('矮屏/窄屏会缩小 intro 锚点而不是叠到 composer 上',
+      (css.match(/\.intro-character-stage\s*\{[^}]*height/g) || []).length >= 2);
+    ok('角色锚点按状态选择：intro 用 intro 锚点，其余用 verifier 锚点',
+      /game\.state === 'intro'\) \? 'intro-character-stage' : 'verifier-stage'/.test(js));
+    ok('兜底只用画布中部，不再依赖画布最底部',
+      js.indexOf('sz.h - 6') < 0 && /y: sz\.h \* 0\.5/.test(js));
+    ok('没有写死的 640 / 320 / 400 角色坐标',
+      !/charX:\s*(320|640)/.test(js) && js.indexOf('320, 400') < 0);
+
+    const b = fresh({});
+    const H = b.window.HuntGame;
+    b.tick(3);
+    ok('intro 下角色使用 intro 锚点', H.characterAnchor() === 'intro-character-stage', H.characterAnchor());
+    ok('intro 下拿到的是有效锚点（不是 fallback）',
+      H.characterAnchor() !== 'fallback' && H.characterBox().size > 0, H.characterAnchor());
+    H.start('endless', 20261001);
+    b.tick(3);
+    ok('streaming 下切回 verifier 锚点', H.characterAnchor() === 'verifier-stage', H.characterAnchor());
+    toScanning(b);
+    ok('scanning 下仍是 verifier 锚点', H.characterAnchor() === 'verifier-stage', H.characterAnchor());
+    H.pause(); b.tick(2);
+    ok('paused 下仍是 verifier 锚点（暂停不改变角色布局）', H.characterAnchor() === 'verifier-stage', H.characterAnchor());
+    H.resume(); b.tick(2);
+    ok('恢复后仍是 verifier 锚点', H.characterAnchor() === 'verifier-stage');
+  }
+
   return out;
 }

@@ -145,6 +145,7 @@ const PAGES = {
       { id: 'status' },
       { id: 'share-out', tag: 'textarea' },
       { id: 'verifier-stage' },
+      { id: 'intro-character-stage' },
       { id: 'pause-overlay', attrs: { role: 'dialog' } },
       { id: 'btn-resume-main', attrs: { 'data-i18n': 'hunt.resumeBtn' } },
       { attrs: { 'data-i18n-html': 'hunt.tips' } },

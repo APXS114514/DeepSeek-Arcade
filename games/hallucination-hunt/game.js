@@ -166,22 +166,39 @@
     return { x: 0, y: b.h * 0.18, w: b.w, h: b.h * 0.5 };
   }
 
-  /* verifier 角色有专属的视觉空间（.verifier-stage），位置从它推导 */
-  function verifierBox() {
-    var shell = el('game-shell'), stage = el('verifier-stage');
-    if (shell && stage && shell.getBoundingClientRect && stage.getBoundingClientRect) {
-      var sr = shell.getBoundingClientRect(), tr = stage.getBoundingClientRect();
-      if (sr.width > 0 && tr.width > 0 && tr.height > 0) {
-        return {
-          x: tr.left - sr.left + tr.width / 2,
-          y: tr.bottom - sr.top,
-          size: Math.max(40, Math.min(tr.height * 0.94, tr.width * 0.42))
-        };
-      }
-    }
+  /* 从某个锚点元素推导角色的位置与大小（锚点必须有真实布局尺寸） */
+  function stageBox(stageId) {
+    var shell = el('game-shell'), stage = el(stageId);
+    if (!shell || !stage || !shell.getBoundingClientRect || !stage.getBoundingClientRect) return null;
+    var sr = shell.getBoundingClientRect(), tr = stage.getBoundingClientRect();
+    if (!(sr.width > 0 && tr.width > 0 && tr.height > 0)) return null;   // 元素被隐藏 -> 不可用
+    return {
+      x: tr.left - sr.left + tr.width / 2,
+      y: tr.bottom - sr.top,
+      size: Math.max(36, Math.min(tr.height * 0.94, tr.width * 0.42))
+    };
+  }
+  /* 角色锚点按状态选择：
+   *   intro            -> #intro-character-stage（欢迎页里的专属区域）
+   *   其余所有游戏状态 -> #verifier-stage（回答尾部，gameplay 布局保持不变）
+   * 只有两者都拿不到有效尺寸（真正的异常降级）时才回退到画布中部，
+   * 这个 fallback 绝不参与正常布局。 */
+  var lastAnchor = 'none';
+  function characterBox() {
+    var wantId = (game.state === 'intro') ? 'intro-character-stage' : 'verifier-stage';
+    var box = stageBox(wantId);
+    if (box) { lastAnchor = wantId; return box; }
+    box = stageBox('verifier-stage') || stageBox('intro-character-stage');
+    if (box) { lastAnchor = 'hidden-anchor'; return box; }
+    lastAnchor = 'fallback';
     var sz = renderer && renderer.size ? renderer.size() : null;
-    if (sz) return { x: sz.w / 2, y: sz.h - 6, size: Math.max(40, Math.min(96, sz.h * 0.22)) };
-    return { x: 0, y: 0, size: 72 };
+    if (sz) return { x: sz.w / 2, y: sz.h * 0.5, size: Math.max(36, Math.min(88, sz.h * 0.18)) };
+    return { x: 0, y: 0, size: 64 };
+  }
+  function characterAnchor() { return lastAnchor; }
+  /* gameplay 特效（结算浮动文字等）固定用回答尾部锚点 */
+  function verifierBox() {
+    return stageBox('verifier-stage') || characterBox();
   }
 
   /* ---------------- DOM 引用 ---------------- */
@@ -615,7 +632,7 @@
     else if (game.state === 'result' && game.lastOutcome) {
       charState = (game.lastOutcome.outcome === 'hit' || game.lastOutcome.outcome === 'clean') ? 'correct' : 'startle';
     } else if (game.state === 'gameOver') charState = 'blocked';
-    var v = verifierBox();
+    var v = characterBox();
     var scene = {
       time: game.clock, charState: charState, charSize: v.size,
       charX: v.x, charY: v.y, glow: fx ? fx.state().pulse : 0
@@ -800,6 +817,7 @@
     /* 兼容旧调用：markClaim 现在等价于「选中」，不再直接进入 verifying */
     markClaim: selectClaim,
     syncSize: syncSize, hasResizeObserver: function () { return !!resizeObserver; },
+    characterBox: characterBox, characterAnchor: characterAnchor,
     copyResult: copyResult, shareText: shareText,
     nextRound: nextRound, setState: setState, updateHud: updateHud,
     isReducedMotion: function () { return reducedMotion; },
