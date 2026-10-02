@@ -107,6 +107,19 @@
         <button id="btn-copy" class="btn" type="button" data-i18n="hunt.copyBtn">COPY RESULT</button>
       </div>
     </div>
+    <div class="pause-overlay" id="pause-overlay" role="dialog" aria-modal="false"
+         aria-labelledby="pause-title" aria-describedby="pause-body">
+      <div class="pause-card">
+        <span class="pause-icon" aria-hidden="true">⏸</span>
+        <h2 class="pause-title" id="pause-title" data-i18n="hunt.pauseTitle">已暂停</h2>
+        <p class="pause-body" id="pause-body" data-i18n="hunt.pauseBody">为了避免倒计时继续，游戏已暂停。</p>
+        <p class="pause-hint">
+          <span class="hint-kbd" data-i18n="hunt.pauseHint">按 P 键或点击「继续」恢复</span>
+          <span class="hint-tap" data-i18n="hunt.pauseHintTap">点击「继续」恢复</span>
+        </p>
+        <button id="btn-resume-main" class="btn primary" type="button" data-i18n="hunt.resumeBtn">▶ 继续</button>
+      </div>
+    </div>
   </main>
 
   <canvas id="fx" class="layer-fx" aria-hidden="true"></canvas>

@@ -666,7 +666,8 @@
     var want = force === undefined ? game.state !== 'paused' : !!force;
     if (want && game.state !== 'paused') { game.__resume = game.state; setState('paused'); }
     else if (!want && game.state === 'paused') { setState(game.__resume || 'scanning'); }
-    live(game.state === 'paused' ? T('hunt.paused', 'Paused') : '');
+    /* aria-live 播报：暂停 / 恢复各播一次，但不抢焦点（从外部链接回来时焦点行为要正常） */
+    live(game.state === 'paused' ? T('hunt.livePaused', 'Hunt paused') : T('hunt.liveResumed', 'Hunt resumed'));
     return game.state;
   }
 
@@ -739,6 +740,9 @@
     var again = el('btn-again'); if (again && again.addEventListener) again.addEventListener('click', function () { start(game.mode); });
     var copy = el('btn-copy'); if (copy && copy.addEventListener) copy.addEventListener('click', function () { copyResult(); });
     var pause = el('btn-pause'); if (pause && pause.addEventListener) pause.addEventListener('click', function () { togglePause(); });
+    /* 主区暂停卡里的「继续」只是另一个入口，仍然调用同一个 togglePause(false) */
+    var resumeMain = el('btn-resume-main');
+    if (resumeMain && resumeMain.addEventListener) resumeMain.addEventListener('click', function () { togglePause(false); });
     var snd = el('sound'); if (snd && snd.addEventListener) snd.addEventListener('click', function () { if (Audio && Audio.toggle) Audio.toggle(); syncSound(); });
   }
   function syncSound() {

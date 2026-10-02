@@ -267,6 +267,51 @@ body.hunt-body {
 }
 .share-out { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
+/* ---------------- 暂停提示层 ----------------
+ * 只在 data-state="paused" 显示（状态机是唯一真相来源，不额外加 boolean）。
+ * 它挂在 .hunt-main 内部，所以永远盖不到 sidebar —— 分数 / 命数 / 轮次 /
+ * 语言 / 音效 / 继续 / 返回游戏厅 在暂停时依然可见可点。
+ * 浅色半透明 + 轻模糊，聊天内容仍隐约可见，不是街机黑幕。 */
+.pause-overlay { display: none; }
+.hunt-app[data-state="paused"] .pause-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pause-overlay {
+  position: absolute; inset: 0; z-index: 5;
+  padding: 16px;
+  background: rgba(255, 255, 255, .74);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+/* 不支持 backdrop-filter 也能正常阅读：纯半透明白底已足够 */
+@supports not ((backdrop-filter: blur(3px)) or (-webkit-backdrop-filter: blur(3px))) {
+  .pause-overlay { background: rgba(255, 255, 255, .88); }
+}
+.pause-card {
+  width: 100%; max-width: 340px;
+  background: #fff;
+  border: 1px solid var(--hunt-line);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(27, 39, 51, .10);
+  padding: 20px 22px;
+  text-align: center;
+}
+.pause-icon { font-size: 22px; line-height: 1; display: block; margin-bottom: 8px; }
+.pause-title { margin: 0 0 6px; font-size: 17px; color: var(--hunt-ink); }
+.pause-body { margin: 0 0 10px; font-size: 13px; line-height: 1.7; color: var(--hunt-ink-2); }
+.pause-hint { margin: 0 0 14px; font-size: 11.5px; color: var(--hunt-ink-3); }
+.hint-kbd { display: inline; }
+.hint-tap { display: none; }
+/* 触屏不强调键盘：换成纯点击提示 */
+@media (hover: none), (pointer: coarse) {
+  .hint-kbd { display: none; }
+  .hint-tap { display: inline; }
+}
+.pause-card .btn { width: 100%; min-height: 42px; }
+@media (prefers-reduced-motion: reduce) { .pause-overlay { transition: none; } }
+
 /* ---------------- 响应式 ---------------- */
 @media (max-width: 1023px) {
   .hunt-app {

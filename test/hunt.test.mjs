@@ -727,5 +727,85 @@ export function run() {
     ok('引入过 reduced-motion 覆盖', /prefers-reduced-motion/.test(css));
   }
 
+  /* ================= M. 暂停提示层回归 ================= */
+  {
+    const b = fresh({ navLang: 'zh-CN' });
+    const H = b.window.HuntGame;
+    const shell = b.els['game-shell'];
+    const stateOf = () => shell.getAttribute('data-state');
+
+    ok('暂停层元素存在（真正的 dialog 语义）',
+      !!b.els['pause-overlay'] && source(DIR + 'index.html').indexOf('id="pause-overlay"') >= 0);
+    ok('暂停层带 role=dialog / aria-modal=false / aria-labelledby',
+      /id="pause-overlay"[^>]*role="dialog"/.test(source(DIR + 'index.html')) &&
+      /aria-modal="false"/.test(source(DIR + 'index.html')) &&
+      /aria-labelledby="pause-title"/.test(source(DIR + 'index.html')));
+
+    /* 可见性完全由 data-state 驱动，不加额外 boolean */
+    ok('intro 下不处于 paused', stateOf() === 'intro');
+    b.tick(2);
+    H.start('endless', 20261001);
+    b.tick(2);
+    ok('streaming 下不是 paused', stateOf() !== 'paused', stateOf());
+    toScanning(b);
+    ok('scanning 下不是 paused', stateOf() !== 'paused', stateOf());
+
+    H.pause();
+    ok('setState(paused) 后 #game-shell 标记为 paused', stateOf() === 'paused', stateOf());
+    b.tick(60);
+    ok('暂停期间仍然保持 paused', stateOf() === 'paused');
+    ok('paused 状态下主区 Resume 按钮存在', !!b.els['btn-resume-main']);
+    ok('aria-live 播报「游戏已暂停」',
+      b.els.status.textContent.indexOf('游戏已暂停') >= 0, b.els.status.textContent);
+
+    /* 主区 Resume 走同一个 togglePause(false) */
+    b.els['btn-resume-main'].fire('click');
+    b.tick(2);
+    ok('主区 Resume 能恢复（不再 paused）', stateOf() !== 'paused', stateOf());
+    ok('恢复后 aria-live 播报「游戏已恢复」',
+      b.els.status.textContent.indexOf('游戏已恢复') >= 0, b.els.status.textContent);
+
+    /* P 键能暂停与恢复 */
+    b.key('keydown', 'p', 'KeyP'); b.tick(2);
+    ok('P 键暂停', stateOf() === 'paused', stateOf());
+    b.key('keydown', 'p', 'KeyP'); b.tick(2);
+    ok('P 键恢复', stateOf() !== 'paused', stateOf());
+
+    /* sidebar 的暂停按钮仍然有效（暂停层不挡它）—— 它是 toggle，
+       恢复态点一下应暂停，再点一下应恢复 */
+    ok('进入该步前是运行态', stateOf() !== 'paused', stateOf());
+    b.els['btn-pause'].fire('click'); b.tick(2);
+    ok('sidebar 暂停按钮能暂停（暂停层不挡住 sidebar）', stateOf() === 'paused', stateOf());
+    b.els['btn-pause'].fire('click'); b.tick(2);
+    ok('sidebar 暂停按钮能恢复', stateOf() !== 'paused', stateOf());
+
+    /* 只在 paused 显示；result / gameOver 都不显示 */
+    b.tick(400);
+    ok('result 下不是 paused', stateOf() !== 'paused', stateOf());
+    H.setState('gameOver');
+    ok('gameOver 下不是 paused', stateOf() !== 'paused', stateOf());
+
+    /* CSS 契约（不依赖像素值） */
+    const css = source(DIR + 'style.css');
+    ok('CSS 默认隐藏暂停层', /\.pause-overlay\s*\{\s*display:\s*none/.test(css));
+    ok('CSS 以 [data-state="paused"] 驱动显示',
+      /\.hunt-app\[data-state="paused"\]\s*\.pause-overlay\s*\{[^}]*display:\s*flex/.test(css));
+    ok('暂停层绝对定位覆盖主区（inset: 0）', /\.pause-overlay\s*\{[^}]*position:\s*absolute[^}]*inset:\s*0/.test(css));
+    ok('浅色半透明 + 模糊，并提供 backdrop-filter 不支持时的 fallback',
+      /background:\s*rgba\(255, 255, 255/.test(css) && /backdrop-filter/.test(css) && /@supports not/.test(css));
+    ok('不使用深色全屏遮罩', !/background:\s*rgba\(0,\s*0,\s*0/.test(css));
+    ok('触屏下不强调键盘 P',
+      /@media \(hover: none\), \(pointer: coarse\)/.test(css) && /\.hint-tap/.test(css));
+    ok('暂停层挂在主区内部，结构上不可能盖住 sidebar',
+      (function () {
+        const html = source(DIR + 'index.html');
+        const main = html.indexOf('class="hunt-main"');
+        const ov = html.indexOf('id="pause-overlay"');
+        const aside = html.indexOf('class="hunt-side"');
+        return aside >= 0 && main > aside && ov > main;
+      })());
+    ok('Resume 是真正的 button', /id="btn-resume-main"[^>]*class="btn primary"[^>]*type="button"/.test(source(DIR + 'index.html')));
+  }
+
   return out;
 }
