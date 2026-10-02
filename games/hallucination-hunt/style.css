@@ -49,6 +49,11 @@ body.hunt-body {
   border-left: 1px solid var(--hunt-line);
   border-right: 1px solid var(--hunt-line);
   overflow: hidden;
+  /* 安全区：左右切口区只把内容推进来，背景 / 边框仍然铺满。
+     注意 position:fixed 的 .composer / bottom sheet 不吃这里的 padding，
+     它们各自在下面补。 */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 .layer-backdrop, .layer-fx {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -466,7 +471,8 @@ body.hunt-body {
     z-index: 40;
     flex-direction: column; align-items: stretch; gap: 8px;
     max-height: 78dvh; overflow-y: auto;
-    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    /* fixed bottom sheet：左右也要让开切口区，底部让开 Home Indicator */
+    padding: 14px max(16px, env(safe-area-inset-right, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
     background: #fff;
     border-right: 0; border-top: 1px solid var(--hunt-line);
     border-radius: 20px 20px 0 0;
@@ -545,7 +551,8 @@ body.hunt-body {
   /* ---------- Composer：固定底部 + iPhone Home Indicator ---------- */
   .composer {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    /* fixed composer：同上 —— 横屏刘海 + Home Indicator 都要让开 */
+    padding: 10px max(14px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
     border-top: 1px solid var(--hunt-line);
     border-radius: 18px 18px 0 0;
     box-shadow: 0 -8px 24px rgba(27, 39, 51, .08);
@@ -566,7 +573,10 @@ body.hunt-body {
   .welcome h1 { font-size: 19px; }
   .action-panel .btn { min-height: 50px; }
   .hud-mini { gap: 10px; }
-  .composer { padding-left: 12px; padding-right: 12px; }
+  .composer {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
 }
 
 /* ---------- Very Small ---------- */

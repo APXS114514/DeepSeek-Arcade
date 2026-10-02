@@ -60,14 +60,21 @@
 
 /* 手机横屏：高度紧张，按高度缩放画布，十字键压成一行 */
 @media (max-height: 560px) and (orientation: landscape) {
-  body { align-items: stretch; padding: var(--space-3) var(--space-5); }
+  /* body 内边距是各玩法自己的横屏几何（不共享），但左右必须让开切口区 */
+  body {
+    align-items: stretch;
+    padding: var(--space-3) max(var(--space-5), env(safe-area-inset-right, 0px)) var(--space-3) max(var(--space-5), env(safe-area-inset-left, 0px));
+  }
   /* 舞台与 .card 的横屏公共行为在 shared/arcade.css；
    * 这里只把宽屏的 560px 限宽在横屏放开（游戏本地 base 规则比公共层更靠后，必须自己撤回）。 */
   .card { max-width: 100%; }
   .stage { max-width: 100%; }
   #game {
-    height: calc(100vh - 150px);
-    height: calc(100dvh - 150px);
+    /* 横屏 Home Indicator（iPhone 约 21px）要从画布高度里让出来，
+       否则「画布 + 操作盘一屏放得下」的承诺在有安全区的机型上会被打破。
+       非刘海机型 env() = 0，与原来逐字一致。 */
+    height: calc(100vh - 150px - env(safe-area-inset-bottom, 0px));
+    height: calc(100dvh - 150px - env(safe-area-inset-bottom, 0px));
     width: auto;
     max-width: 100%;
     max-height: none;
