@@ -134,14 +134,16 @@ body.hunt-body {
 .welcome { display: none; text-align: center; padding: 7vh 6px 0; }
 .hunt-app[data-state="intro"] .welcome { display: block; }
 .hunt-app[data-state="intro"] .turn,
-.hunt-app[data-state="intro"] /* 多幻觉轮次：每条幻觉一个分块，漏掉的整块标橙 */
+.hunt-app[data-state="intro"] .factcard { display: none; }
+.factcard { display: none; }
+
+/* 多幻觉轮次：每条幻觉一个分块，漏掉的整块标橙 */
 .fc-found { margin: 0 0 4px; font-size: 13px; font-weight: 600; color: var(--hunt-ok); }
 .fc-found.bad { color: #ea580c; }
 .fc-hall { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 8px; background: #f4f8f6; border: 1px solid #e2efea; }
 .fc-hall.missed { background: #fff8f2; border-color: #fee2ce; }
 .fc-hall-k { margin: 0 0 2px; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: #0f9d8f; }
 .fc-hall.missed .fc-hall-k { color: #ea580c; }
-.factcard { display: none; }
 .welcome h1 { margin: 0 0 8px; font-size: 19px; letter-spacing: .06em; color: var(--hunt-ink); }
 .welcome-sub { margin: 0 0 10px; font-size: 13.5px; color: var(--hunt-ink-2); }
 .welcome-note { margin: 0 auto; max-width: 430px; font-size: 12px; line-height: 1.75; color: var(--hunt-ink-3); }

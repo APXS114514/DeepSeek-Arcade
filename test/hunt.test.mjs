@@ -1306,5 +1306,41 @@ export function run() {
     ok('打开菜单不会进入 paused', b.G.state !== 'paused' || true, b.G.state);
   }
 
+  /* ================= V. CSS 选择器列表完整性守卫 ================= */
+  {
+    /* 本项目踩过一次：一段注释被误插进选择器列表中间，
+       整个 rule 被解析器丢弃，直到肉眼发现 intro 露出多余块才暴露。
+       这里做一条轻量守卫：任何 rule 的「{ 之前」都不得出现注释。 */
+    const files = ['games/hallucination-hunt/style.css', 'shared/arcade.css',
+      'games/runner/style.css', 'games/snake/style.css', 'games/token-fall/style.css',
+      'games/attention-maze/style.css', 'games/context-breaker/style.css'];
+    for (const f of files) {
+      const css = source(f).replace(/\/\*[\s\S]*?\*\//g, (m, off, whole) => m);  // 占位，下面逐段判断
+      /* 去掉字符串里的 { } 干扰后，逐段检查 selector 部分 */
+      const bad = [];
+      const src = source(f);
+      let depth = 0, seg = '';
+      for (let i = 0; i < src.length; i++) {
+        const ch = src[i];
+        if (ch === '{') {
+          if (depth === 0) {
+            /* seg 是本段选择器（含可能存在的注释） */
+            const sel = seg;
+            if (sel.indexOf('/*') >= 0) bad.push(sel.trim().slice(0, 60));
+          }
+          depth++; seg = '';
+        } else if (ch === '}') { depth = Math.max(0, depth - 1); seg = ''; }
+        else if (depth === 0) seg += ch;
+      }
+      ok(f + '：没有注释插进选择器列表（否则整条 rule 会被丢弃）', bad.length === 0, bad.join(' | '));
+    }
+    /* 针对本次 P0 的直接断言 */
+    const hunt = source('games/hallucination-hunt/style.css');
+    ok('intro 隐藏规则存在且选择器完整',
+      /\.hunt-app\[data-state="intro"\] \.turn,\s*\n\.hunt-app\[data-state="intro"\] \.factcard\s*\{/.test(hunt));
+    ok('多幻觉块是独立 rule（不再夹在选择器里）',
+      /\/\* 多幻觉轮次[^*]*\*\/\s*\n\.fc-found\s*\{/.test(hunt));
+  }
+
   return out;
 }
