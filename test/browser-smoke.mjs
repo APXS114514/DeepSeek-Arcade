@@ -145,15 +145,17 @@ const HOOK = `/* ResizeObserver 回调在同一帧里又引发了布局变化时
  * 也不是放宽断言。
  */
 var SMOKE_BENIGN = [
-  /^ResizeObserver loop (completed with undelivered notifications|limit exceeded)/
+  /ResizeObserver loop (completed with undelivered notifications|limit exceeded)/
 ];
 window.__smokeErrors = [];
-function __smokeRecord(msg) {
+/* 注意：匹配的是**原始消息**，不要拿加过 'error: ' 前缀的串去匹配 ——
+   一旦写成 ^ResizeObserver 就会永远匹配不上，这个坑已经踩过一次。 */
+function __smokeRecord(prefix, msg) {
   for (var i = 0; i < SMOKE_BENIGN.length; i++) { if (SMOKE_BENIGN[i].test(msg)) return; }
-  window.__smokeErrors.push(msg);
+  window.__smokeErrors.push(prefix + msg);
 }
-window.addEventListener('error', function (e) { __smokeRecord('error: ' + (e.message || (e.error && e.error.message) || 'unknown')); });
-window.addEventListener('unhandledrejection', function (e) { __smokeRecord('unhandledrejection: ' + String(e.reason)); });
+window.addEventListener('error', function (e) { __smokeRecord('error: ', (e.message || (e.error && e.error.message) || 'unknown')); });
+window.addEventListener('unhandledrejection', function (e) { __smokeRecord('unhandledrejection: ', String(e.reason)); });
 window.__lastKey = null;
 document.addEventListener('keydown', function (e) {
   var t = e.target || {};
