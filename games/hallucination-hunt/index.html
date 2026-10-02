@@ -8,91 +8,124 @@
 <link rel="stylesheet" href="../../shared/arcade.css">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <main class="card hunt-card">
-    <p class="back-row"><a class="arcade-back" href="../../" data-i18n="ui.back">← 返回游戏厅</a></p>
-    <header class="head">
-      <h1 data-i18n="hunt.h1">🐳 HALLUCINATION HUNT</h1>
-      <p class="sub" data-i18n="hunt.sub">读懂回答 · 找出幻觉 · 验证事实</p>
-    </header>
+<body class="hunt-body">
 
-    <div class="game-shell" id="game-shell" data-state="intro">
-      <canvas id="game" class="layer-backdrop" aria-hidden="true"></canvas>
+<!-- #game-shell 仍是整块应用根：脚本用它量尺寸、挂 ResizeObserver 和 data-state -->
+<div class="hunt-app" id="game-shell" data-state="intro">
+  <canvas id="game" class="layer-backdrop" aria-hidden="true"></canvas>
 
-      <div class="hud" id="hud">
-        <div class="hud-cell"><span class="hud-k" data-i18n="hunt.score">SCORE</span><b id="hud-score">0</b></div>
-        <div class="hud-cell"><span class="hud-k" data-i18n="hunt.hi">HIGH SCORE</span><b id="hud-high">0</b></div>
-        <div class="hud-cell"><span class="hud-k" data-i18n="hunt.accuracy">ACCURACY</span><b id="hud-accuracy">0%</b></div>
-        <div class="hud-cell"><span class="hud-k" data-i18n="hunt.streak">STREAK</span><b id="hud-streak">×0</b></div>
-        <div class="hud-cell"><span class="hud-k" data-i18n="hunt.load">LOAD</span><b id="hud-load">LOAD 1</b></div>
-        <div class="hud-cell"><span class="hud-k" data-i18n="hunt.lives">LIVES</span><b id="hud-lives">3</b></div>
-        <div class="hud-cell wide"><span class="hud-k" data-i18n="hunt.round">ROUND</span><b id="hud-round">#0</b></div>
-      </div>
-
-      <section class="query-panel">
-        <p class="panel-k" data-i18n="hunt.query">QUERY</p>
-        <p class="query-text" id="query-text"></p>
-      </section>
-
-      <section class="confidence" aria-hidden="true">
-        <span class="panel-k" data-i18n="hunt.confidence">MODEL CONFIDENCE</span>
-        <div class="conf-track"><div class="conf-fill" id="confidence-bar" style="width:0%"></div></div>
-        <span class="conf-value" id="confidence-value">0%</span>
-      </section>
-
-      <section class="response-panel">
-        <p class="panel-k" data-i18n="hunt.response">MODEL RESPONSE</p>
-        <div class="response" id="response" role="group" aria-busy="true" data-i18n-aria="hunt.responseAria"></div>
-      </section>
-
-      <section class="action-panel" id="action-panel" data-enabled="false">
-        <button id="btn-none" class="btn" type="button" data-i18n="hunt.noHallucination">NO HALLUCINATION</button>
-        <button id="btn-verify" class="btn primary" type="button" data-i18n="hunt.verify">VERIFY</button>
-        <button id="btn-start" class="btn primary" type="button" data-i18n="hunt.startBtn">开始审查</button>
-        <button id="btn-daily" class="btn" type="button" data-i18n="hunt.dailyBtn">DAILY HUNT</button>
-        <button id="btn-again" class="btn" type="button" data-i18n="hunt.againBtn">再玩一次</button>
-        <button id="btn-copy" class="btn" type="button" data-i18n="hunt.copyBtn">COPY RESULT</button>
-      </section>
-
-      <div class="timer-track"><div class="timer-fill" id="scan-bar" style="width:100%"></div></div>
-
-      <div class="controls">
-        <button id="btn-pause" class="btn ghost" type="button" data-i18n="hunt.pauseBtn">⏸ 暂停</button>
-        <button id="lang" class="btn ghost" type="button"
-                title="切换语言 / Switch language" aria-label="切换语言 / Switch language">🌐 English</button>
-        <button id="sound" class="btn ghost" type="button" aria-pressed="true">🔊 音效</button>
-      </div>
-
-      <div class="verifier-stage" id="verifier-stage" aria-hidden="true"></div>
-
-      <div class="overlay" id="overlay" data-show="false">
-        <h2 class="ov-title" id="overlay-title"></h2>
-        <div class="ov-body" id="overlay-body"></div>
-      </div>
-
-      <canvas id="fx" class="layer-fx" aria-hidden="true"></canvas>
+  <aside class="hunt-side" data-i18n-aria="hunt.sideAria" aria-label="Hallucination Hunt">
+    <div class="side-brand">
+      <span class="brand-mark" aria-hidden="true">🐳</span>
+      <span class="brand-text">
+        <b>DeepSeek Arcade</b>
+        <i>Hallucination Hunt</i>
+      </span>
     </div>
 
-    <p class="sr-status" id="status" role="status" aria-live="polite"></p>
-    <textarea id="share-out" class="share-out" readonly aria-label="Result text" tabindex="-1"></textarea>
+    <div class="side-tags">
+      <span class="tag-chip" data-i18n="hunt.tagSim">SIMULATION</span>
+      <span class="tag-chip" data-i18n="hunt.tagArcade">ARCADE MODE</span>
+    </div>
 
-    <footer class="tips" data-i18n-html="hunt.tips">
-      模型会生成一段回答，其中可能藏着一条或多条 <b>HALLUCINATION</b>，也可能完全正确。
-      点出你认为错误的那一条，或者选择 <b>NO HALLUCINATION</b>。<b>MODEL CONFIDENCE</b> 只是气氛，高置信度也可能是错的。
-    </footer>
+    <div class="side-stats" id="hud">
+      <div class="stat"><span data-i18n="hunt.score">SCORE</span><b id="hud-score">0</b></div>
+      <div class="stat"><span data-i18n="hunt.hi">HIGH SCORE</span><b id="hud-high">0</b></div>
+      <div class="stat"><span data-i18n="hunt.accuracy">ACCURACY</span><b id="hud-accuracy">0%</b></div>
+      <div class="stat"><span data-i18n="hunt.streak">STREAK</span><b id="hud-streak">×0</b></div>
+      <div class="stat"><span data-i18n="hunt.load">LOAD</span><b id="hud-load">LOAD 1</b></div>
+      <div class="stat"><span data-i18n="hunt.lives">LIVES</span><b id="hud-lives">3</b></div>
+      <div class="stat"><span data-i18n="hunt.round">ROUND</span><b id="hud-round">#0</b></div>
+    </div>
+
+    <div class="side-foot">
+      <button id="btn-pause" class="icon-btn" type="button" data-i18n="hunt.pauseBtn">⏸ 暂停</button>
+      <button id="lang" class="icon-btn" type="button"
+              title="切换语言 / Switch language" aria-label="切换语言 / Switch language">🌐 English</button>
+      <button id="sound" class="icon-btn" type="button" aria-pressed="true">🔊 音效</button>
+    </div>
+
+    <a class="arcade-back side-back" href="../../" data-i18n="ui.back">← 返回游戏厅</a>
+  </aside>
+
+  <main class="hunt-main">
+    <header class="chat-head">
+      <span class="chat-dot" aria-hidden="true"></span>
+      <b class="chat-model" data-i18n="hunt.modelName">Context Model</b>
+      <span class="chat-tag" data-i18n="hunt.tagHunt">HUNT MODE</span>
+      <div class="timer-track" aria-hidden="true"><div class="timer-fill" id="scan-bar" style="width:100%"></div></div>
+    </header>
+
+    <div class="chat-scroll" id="chat-scroll">
+      <div class="chat-flow">
+        <section class="welcome">
+          <h1 data-i18n="hunt.h1">HALLUCINATION HUNT</h1>
+          <p class="welcome-sub" data-i18n="hunt.sub">读懂回答 · 找出幻觉 · 验证事实</p>
+          <p class="welcome-note" data-i18n-html="hunt.welcomeNote">这是一个离线模拟：回答由本地题库与变异引擎生成，不会连接任何真实模型。</p>
+        </section>
+
+        <article class="turn turn-user">
+          <div class="turn-body"><p class="query-text" id="query-text"></p></div>
+        </article>
+
+        <article class="turn turn-assistant">
+          <div class="assistant-meta">
+            <span class="am-name" data-i18n="hunt.modelName">Context Model</span>
+            <span class="am-conf">
+              <span data-i18n="hunt.confidence">MODEL CONFIDENCE</span>
+              <b id="confidence-value">0%</b>
+              <em class="am-sim" data-i18n="hunt.simulated">SIMULATED</em>
+            </span>
+          </div>
+          <div class="assistant-body">
+            <div class="conf-track" aria-hidden="true"><div class="conf-fill" id="confidence-bar" style="width:0%"></div></div>
+            <div class="response" id="response" role="group" aria-busy="true" data-i18n-aria="hunt.responseAria"></div>
+            <div class="verifier-stage" id="verifier-stage" aria-hidden="true"></div>
+          </div>
+        </article>
+
+        <section class="factcard" id="overlay" data-show="false" aria-live="polite">
+          <p class="factcard-k" data-i18n="hunt.factCheck">FACT CHECK</p>
+          <h2 class="factcard-title" id="overlay-title"></h2>
+          <div class="factcard-body" id="overlay-body"></div>
+        </section>
+
+        <footer class="hunt-tips" data-i18n-html="hunt.tips">
+          模型会生成一段回答，其中可能藏着一条或多条 <b>HALLUCINATION</b>，也可能完全正确。
+        </footer>
+      </div>
+    </div>
+
+    <div class="composer">
+      <p class="composer-hint" data-i18n="hunt.composerHint">选择回答中可疑的陈述进行核验</p>
+      <div class="action-panel" id="action-panel" data-enabled="false">
+        <button id="btn-verify" class="btn primary" type="button" data-i18n="hunt.verify">核验选中陈述</button>
+        <button id="btn-none" class="btn" type="button" data-i18n="hunt.noHallucination">回答中没有幻觉</button>
+        <button id="btn-start" class="btn primary" type="button" data-i18n="hunt.startBtn">开始审查</button>
+        <button id="btn-daily" class="btn" type="button" data-i18n="hunt.dailyBtn">DAILY HUNT</button>
+        <button id="btn-again" class="btn primary" type="button" data-i18n="hunt.againBtn">再玩一次</button>
+        <button id="btn-copy" class="btn" type="button" data-i18n="hunt.copyBtn">COPY RESULT</button>
+      </div>
+    </div>
   </main>
 
-  <script src="../../shared/i18n.js"></script>
-  <script src="../../shared/audio.js"></script>
-  <script src="../../shared/whale.js"></script>
-  <script src="../../shared/character.js"></script>
-  <script src="rng.js"></script>
-  <script src="content.js"></script>
-  <script src="mutators.js"></script>
-  <script src="generator.js"></script>
-  <script src="difficulty.js"></script>
-  <script src="effects.js"></script>
-  <script src="renderer.js"></script>
-  <script src="game.js"></script>
+  <canvas id="fx" class="layer-fx" aria-hidden="true"></canvas>
+</div>
+
+<p class="sr-status" id="status" role="status" aria-live="polite"></p>
+<textarea id="share-out" class="share-out" readonly aria-label="Result text" tabindex="-1"></textarea>
+
+<script src="../../shared/i18n.js"></script>
+<script src="../../shared/audio.js"></script>
+<script src="../../shared/whale.js"></script>
+<script src="../../shared/character.js"></script>
+<script src="rng.js"></script>
+<script src="content.js"></script>
+<script src="mutators.js"></script>
+<script src="generator.js"></script>
+<script src="difficulty.js"></script>
+<script src="effects.js"></script>
+<script src="renderer.js"></script>
+<script src="game.js"></script>
 </body>
 </html>

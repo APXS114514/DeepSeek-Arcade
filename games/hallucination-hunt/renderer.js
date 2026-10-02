@@ -92,15 +92,28 @@
       return drawn;
     }
 
-    /* 每帧调用：先背景、再角色。FX 由 HuntEffects 画在覆盖层画布上。 */
-    function draw(scene) {
-      drawBackdrop(scene);
+    /* 只清空、不画背景场：聊天界面下 Canvas 退居辅助层，页面底色交给 CSS */
+    function clearSurface() {
+      if (!ctx) return;
+      try {
+        if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (ctx.globalAlpha !== undefined) ctx.globalAlpha = 1;
+        if (ctx.clearRect) ctx.clearRect(0, 0, W, H);
+      } catch (e) { /* 清屏失败也不能影响可玩性 */ }
+    }
+
+    /* 每帧调用：先清屏/背景、再角色。FX 由 HuntEffects 画在覆盖层画布上。
+     * opts.field === false 时只清屏不铺深色背景场（聊天界面用）。 */
+    function draw(scene, opts) {
+      if (opts && opts.field === false) clearSurface();
+      else drawBackdrop(scene);
       return drawCharacter(scene);
     }
 
     return {
       resize: resize,
       draw: draw,
+      clearSurface: clearSurface,
       drawBackdrop: drawBackdrop,
       drawCharacter: drawCharacter,
       charStateFor: charStateFor,

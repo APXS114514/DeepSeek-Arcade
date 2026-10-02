@@ -150,6 +150,22 @@
     var w = (c && c.width) ? c.width : 1, h = (c && c.height) ? c.height : 1;
     return { w: w, h: h, cx: w / 2, cy: h / 2 };
   }
+  /* 被核验的那一条 claim 在画布坐标系里的位置：特效据此局部化，不覆盖正文 */
+  function claimBox(index) {
+    var shell = el('game-shell'), resp = el('response');
+    if (shell && resp && shell.getBoundingClientRect && resp.getBoundingClientRect) {
+      var sr = shell.getBoundingClientRect();
+      var nodes = resp.children || [];
+      var node = (index >= 0) ? nodes[index] : null;
+      if (node && node.getBoundingClientRect) {
+        var r = node.getBoundingClientRect();
+        if (r && r.width > 0) return { x: r.left - sr.left, y: r.top - sr.top, w: r.width, h: r.height };
+      }
+    }
+    var b = fxBox();
+    return { x: 0, y: b.h * 0.18, w: b.w, h: b.h * 0.5 };
+  }
+
   /* verifier 角色有专属的视觉空间（.verifier-stage），位置从它推导 */
   function verifierBox() {
     var shell = el('game-shell'), stage = el('verifier-stage');
@@ -326,10 +342,12 @@
     setState('verifying');
     game.verifyLeft = VERIFY_MS / 1000;
     if (fx) {
-      var b = fxBox();
-      fx.scan(0, b.h * 0.18, b.w, b.h * 0.5, 620);
-      if (c.isHallucination) { fx.glitch(1); fx.rgbSplit(1); fx.burst(b.cx, b.cy, 26, '#7fe3f0'); }
-      else { fx.flash('#ff3355', 0.4); fx.shake(9); fx.burst(b.cx, b.cy, 16, '#ff3355'); }
+      /* 特效只作用在被核验的那一句上，绝不盖住整段正文 */
+      var box = claimBox(game.marked);
+      var cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+      fx.scan(box.x, box.y, box.w, box.h, 620);
+      if (c.isHallucination) { fx.glitch(0.7); fx.rgbSplit(0.6); fx.burst(cx, cy, 18, '#7fe3f0'); }
+      else { fx.flash('#d9534f', 0.16); fx.shake(4); fx.burst(cx, cy, 12, '#d9534f'); }
     }
     beep({ type: c.isHallucination ? 'square' : 'sawtooth', from: c.isHallucination ? 700 : 300, to: c.isHallucination ? 1100 : 160, ms: 140, gain: 0.05 });
     return true;
@@ -342,7 +360,7 @@
     game.marked = -1;
     setState('verifying');
     game.verifyLeft = VERIFY_MS / 1000;
-    if (fx) { var b = fxBox(); fx.scan(0, b.h * 0.18, b.w, b.h * 0.5, 620); fx.pulse(0.6); }
+    if (fx) { var nb = fxBox(); fx.scan(0, nb.h * 0.18, nb.w, nb.h * 0.5, 620); fx.pulse(0.45); }
     beep({ type: 'triangle', from: 440, to: 660, ms: 120, gain: 0.045 });
     return true;
   }
@@ -431,14 +449,34 @@
     };
     var m = map[outcome] || map.missed;
     if (title) title.textContent = T(m[0], m[1]);
-    var detail = r.explanation || '';
-    var truth = r.claims.filter(function (c) { return c.isHallucination; })
-      .map(function (c) { return c.mutationType + ': ' + (c.original || '—') + ' → ' + c.replacement; }).join(' · ');
-    if (body) {
-      body.innerHTML = '<p class="ov-line">' + escapeHtml(detail) + '</p>' +
-        (truth ? '<p class="ov-truth">' + escapeHtml(truth) + '</p>' : '') +
-        '<p class="ov-gain">' + (gained > 0 ? '+' + gained : '—') + '</p>';
+    var rows = [];
+    function row(k, v, html) {
+      if (!v) return;
+      rows.push('<div class="fc-row"><span class="fc-k">' + escapeHtml(k) + '</span>' +
+        '<span class="fc-v">' + (html || escapeHtml(v)) + '</span></div>');
     }
+    var checked = (game.marked >= 0 && r.claims[game.marked]) ? r.claims[game.marked] : null;
+    var culprit = null;
+    for (var ci = 0; ci < r.claims.length; ci++) if (r.claims[ci].isHallucination) { culprit = r.claims[ci]; break; }
+    if (checked && outcome !== 'clean') row(T('hunt.checkedClaim', 'Checked claim'), checked.text);
+    if (culprit && outcome !== 'clean') {
+      row(T('hunt.modelSaid', 'Model said'), culprit.text);
+      row(T('hunt.truth', 'Correct fact'), culprit.canonical);
+      if (culprit.mutationType) {
+        row(T('hunt.mutation', 'Mutation'), culprit.mutationType, '<code>' + escapeHtml(culprit.mutationType) + '</code>');
+      }
+    }
+    if (r.explanation) row(T('hunt.note', 'Note'), r.explanation);
+    if (r.source && r.source.name) {
+      var srcHtml = r.source.url
+        ? '<a href="' + escapeHtml(r.source.url) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(r.source.name) + '</a>'
+        : escapeHtml(r.source.name);
+      row(T('hunt.source', 'Source'), r.source.name, srcHtml);
+    }
+    rows.push('<p class="fc-gain' + (gained > 0 ? '' : ' bad') + '">' +
+      (gained > 0 ? '+' + gained : T('hunt.noScore', 'no score')) +
+      (game.streak > 0 ? ' · ' + escapeHtml(T('hunt.streak')) + ' ×' + game.streak : '') + '</p>');
+    if (body) body.innerHTML = rows.join('');
     var ov = el('overlay');
     if (ov && ov.setAttribute) ov.setAttribute('data-show', 'true');
     var liveMsg = {
@@ -462,12 +500,21 @@
     }
     var ov = el('overlay');
     if (ov && ov.setAttribute) ov.setAttribute('data-show', 'true');
-    setText('overlay-title', T('hunt.gameOver', 'GAME OVER'));
+    setText('overlay-title', T('hunt.sessionSummary', 'Session summary'));
     var body = el('overlay-body');
     if (body) {
-      body.innerHTML = '<p class="ov-line">' + escapeHtml(T('hunt.finalScore', 'Final score')) + ' ' + game.score + '</p>' +
-        '<p class="ov-line">' + escapeHtml(T('hunt.accuracy', 'ACCURACY')) + ' ' + accuracyPct() + '%</p>' +
-        '<p class="ov-line">' + escapeHtml(T('hunt.bestStreak', 'Best streak')) + ' ×' + game.bestStreak + '</p>';
+      var srows = [];
+      function srow(k, v) {
+        srows.push('<div class="fc-row"><span class="fc-k">' + escapeHtml(k) + '</span>' +
+          '<span class="fc-v">' + escapeHtml(String(v)) + '</span></div>');
+      }
+      srow(T('hunt.finalScore', 'Final score'), game.score);
+      srow(T('hunt.accuracy', 'ACCURACY'), accuracyPct() + '%');
+      srow(T('hunt.bestStreak', 'Best streak'), '×' + game.bestStreak);
+      srow(T('hunt.rounds', 'Rounds'), game.answered);
+      if (game.mode === 'daily') srow(T('hunt.mode', 'Mode'), T('hunt.dailyBtn'));
+      srows.push('<p class="fc-gain">' + escapeHtml(shareText().split('\n')[0]) + '</p>');
+      body.innerHTML = srows.join('');
     }
     live(T('hunt.gameOver', 'Game over'));
     beep({ type: 'sawtooth', from: 320, to: 90, ms: 480, gain: 0.055 });
@@ -571,7 +618,8 @@
       time: game.clock, charState: charState, charSize: v.size,
       charX: v.x, charY: v.y, glow: fx ? fx.state().pulse : 0
     };
-    if (renderer) renderer.draw(scene);
+    /* Canvas 退居辅助层：不再铺满深色背景场，只画 verifier 角色 */
+    if (renderer) renderer.draw(scene, { field: false });
     if (fx) fx.drawOverlay(null);
     updateTimerBar();
   }

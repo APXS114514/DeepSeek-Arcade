@@ -637,7 +637,10 @@ export function run() {
     ok('页面为 verifier 留了专属视觉空间', source(DIR + 'index.html').indexOf('verifier-stage') >= 0);
     ok('样式表给 verifier-stage 定了高度', /\.verifier-stage\s*\{[^}]*height/.test(source(DIR + 'style.css')));
     ok('选中样式是中性色，不是判定色',
-      /\.claim\.selected\s*\{[^}]*#4d6bfe/.test(source(DIR + 'style.css')));
+      (function () {
+        const m = /\.claim\.selected\s*\{([^}]*)\}/.exec(source(DIR + 'style.css'));
+        return !!m && /--hunt-accent|#4d6bfe/.test(m[1]) && !/--hunt-ok|--hunt-bad/.test(m[1]);
+      })());
   }
   {
     /* K6. 各状态 action button 显隐 */
@@ -657,6 +660,54 @@ export function run() {
     ok('result：隐藏作答按钮', !vis('btn-verify') && !vis('btn-none'));
     b.window.HuntGame.setState('gameOver');
     ok('gameOver：显示重玩 / COPY RESULT', vis('btn-again') && vis('btn-copy'));
+  }
+
+  /* ================= L. 聊天审查界面结构回归 ================= */
+  {
+    const html = source(DIR + 'index.html');
+    const css = source(DIR + 'style.css');
+    const js = source(DIR + 'game.js');
+    /* 结构：sidebar + 会话流 + composer，全部保留既有 id */
+    ok('存在 sidebar / 主区 / 滚动会话区 / composer',
+      /class="hunt-side"/.test(html) && /class="hunt-main"/.test(html) &&
+      /id="chat-scroll"/.test(html) && /class="composer"/.test(html));
+    ok('应用根仍是 #game-shell（尺寸与 data-state 的锚点不变）',
+      /id="game-shell"/.test(html) && html.indexOf('class="hunt-app"') >= 0);
+    ok('QUERY 呈现为用户消息轮次（不是大写标签面板）',
+      /class="turn turn-user"/.test(html) && !/class="query-panel"/.test(html) &&
+      !/data-i18n="hunt.query"/.test(html));
+    ok('回答呈现为 assistant 轮次，claim 仍在同一个容器里',
+      /class="turn turn-assistant"/.test(html) && /id="response"/.test(html));
+    ok('事实核验卡插在会话流里，而不是悬浮弹窗',
+      /class="factcard"/.test(html) && html.indexOf('id="overlay"') > html.indexOf('id="response"'));
+    ok('composer 承载全部 Hunt 动作',
+      ['btn-verify', 'btn-none', 'btn-start', 'btn-daily', 'btn-again', 'btn-copy']
+        .every((id) => html.indexOf('id="' + id + '"') >= 0));
+    ok('MODEL CONFIDENCE 被标注为 SIMULATED（不冒充真实概率）',
+      /hunt\.simulated/.test(html) && /data-i18n="hunt.simulated"/.test(html));
+    ok('页面标明 DeepSeek Arcade / Hallucination Hunt 身份，且不冒充官方服务',
+      html.indexOf('DeepSeek Arcade') >= 0 && html.indexOf('Hallucination Hunt') >= 0 &&
+      !/DeepSeek Chat/.test(html));
+    ok('没有真的输入框（不暗示能调用真实模型）',
+      !/<textarea[^>]*class="[^"]*composer/.test(html) && !/contenteditable/.test(html));
+
+    /* CSS contract：浅色聊天基调 + 内容栏居中 + 响应式断点 */
+    ok('聊天内容有最大宽度并居中', /--hunt-content:\s*\d+px/.test(css) && /max-width:\s*var\(--hunt-content\)/.test(css));
+    ok('桌面是 sidebar + 聊天两栏，窄屏折叠为单栏',
+      /grid-template-columns:\s*236px minmax\(0, 1fr\)/.test(css) && /@media \(max-width: 1023px\)/.test(css));
+    ok('claim 默认看起来是文本（透明底 + 透明边框），不是表单按钮',
+      /\.claim\s*\{[^}]*background:\s*transparent/.test(css) && /\.claim\s*\{[^}]*border:\s*1px solid transparent/.test(css));
+    ok('选中态用中性强调色，且不使用判定色',
+      (function () {
+        const m = /\.claim\.selected\s*\{([^}]*)\}/.exec(css);
+        if (!m) return false;
+        return /--hunt-accent|#4d6bfe/.test(m[1]) && !/--hunt-ok|--hunt-bad|#0f9d8f|#d9534f/.test(m[1]);
+      })());
+    ok('支持 safe-area（手机底部不被系统手势条挡住）', /env\(safe-area-inset-bottom/.test(css));
+    ok('Canvas 退居辅助层：只在辅助层绘制，不画深色背景场',
+      js.indexOf('{ field: false }') >= 0 && /renderer\.draw\(scene, \{ field: false \}\)/.test(js));
+    ok('特效局部化到被核验的那一句（不再全屏铺）', js.indexOf('claimBox(') >= 0);
+    ok('引入过 reduced-motion 覆盖', /prefers-reduced-motion/.test(css));
   }
 
   return out;

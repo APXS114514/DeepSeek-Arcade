@@ -1,167 +1,295 @@
-/* 动作区按状态显隐；.action-panel 是 flex，优先级高于 UA 的 [hidden]，必须显式声明 */
+/* ============================================================
+ * HALLUCINATION HUNT — 模拟聊天审查界面
+ *
+ * 设计基调：浅色、AI Chat 产品感（内容窄栏居中、低对比边框、克制蓝 accent、
+ * 大面积留白）。Arcade 个性只作为第二层（少量状态色 + 鲸鱼娘 verifier）。
+ * 页面外壳变量仍复用 shared/arcade.css。
+ *
+ * 重要：所有既有元素 id 全部保留，这里只改变它们的呈现与层级。
+ * ============================================================ */
+
+:root {
+  --hunt-bg: #f5f7fb;
+  --hunt-surface: #ffffff;
+  --hunt-side: #f8fafc;
+  --hunt-line: #e6ebf2;
+  --hunt-line-2: #d8e0ea;
+  --hunt-ink: #1b2733;
+  --hunt-ink-2: #57697c;
+  --hunt-ink-3: #8b99a8;
+  --hunt-accent: #4d6bfe;
+  --hunt-accent-soft: #eef2ff;
+  --hunt-ok: #0f9d8f;
+  --hunt-bad: #d9534f;
+  --hunt-radius: 12px;
+  --hunt-content: 720px;      /* 聊天内容最大宽度：窄栏居中，两侧留白 */
+}
+
+/* .action-panel 是 flex，优先级高于 UA 的 [hidden]，必须显式声明 */
 [hidden] { display: none !important; }
 
-/* HALLUCINATION HUNT 专属样式（页面外壳见 ../../shared/arcade.css）
- * DOM 负责文字与交互，Canvas 分两层：背景层在内容之下，特效层在内容之上。 */
+body.hunt-body {
+  margin: 0;
+  padding: 0;
+  display: block;
+  background: var(--hunt-bg);
+  color: var(--hunt-ink);
+}
 
-@media (min-width: 721px) { .card { max-width: 720px; } }
-
-.game-shell {
+.hunt-app {
   position: relative;
-  width: 100%;
-  min-height: 470px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  max-width: 1180px;
+  margin: 0 auto;
+  background: var(--hunt-surface);
+  border-left: 1px solid var(--hunt-line);
+  border-right: 1px solid var(--hunt-line);
   overflow: hidden;
-  background: #061024;
-  padding: 10px;
 }
 .layer-backdrop, .layer-fx {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  display: block;
+  z-index: 0; pointer-events: none;
 }
-.layer-fx { pointer-events: none; z-index: 5; }
-.layer-backdrop { z-index: 0; }
-.game-shell > *:not(.layer-backdrop):not(.layer-fx) { position: relative; z-index: 2; }
+.layer-fx { z-index: 6; }
 
-/* ---------------- HUD ---------------- */
-.hud {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px 8px;
-  padding: 6px 8px;
-  margin-bottom: 8px;
-  background: rgba(11, 28, 56, 0.82);
-  border: 1px solid #1b3560;
-  border-radius: 8px;
+/* ---------------- Sidebar ---------------- */
+.hunt-side {
+  position: relative; z-index: 3;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 16px 14px;
+  background: var(--hunt-side);
+  border-right: 1px solid var(--hunt-line);
+  overflow: auto;
 }
-.hud-cell { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.hud-cell.wide { grid-column: span 4; }
-.hud-k { font-size: 9px; letter-spacing: 0.08em; color: #7f9dd6; font-family: ui-monospace, monospace; }
-.hud-cell b { font-size: 14px; color: #eaf2ff; font-family: ui-monospace, monospace; }
-#hud-lives { color: #ff9a9a; }
-
-/* ---------------- 面板 ---------------- */
-.panel-k {
-  margin: 0 0 4px; font-size: 9.5px; letter-spacing: 0.1em;
-  color: #7f9dd6; font-family: ui-monospace, monospace;
+.side-brand { display: flex; align-items: center; gap: 9px; }
+.brand-mark { font-size: 20px; line-height: 1; }
+.brand-text { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+.brand-text b { font-size: 13px; color: var(--hunt-ink); }
+.brand-text i { font-style: normal; font-size: 11.5px; color: var(--hunt-ink-3); }
+.side-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-chip {
+  font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--hunt-ink-3); background: #fff;
+  border: 1px solid var(--hunt-line); border-radius: 999px; padding: 3px 8px;
 }
-.query-panel, .response-panel {
-  background: rgba(8, 21, 44, 0.86);
-  border: 1px solid #16305c;
-  border-radius: 10px;
-  padding: 8px 10px;
-  margin-bottom: 8px;
+.side-nav { display: flex; flex-direction: column; gap: 6px; }
+.side-item {
+  text-align: left; font: inherit; font-size: 13px; color: var(--hunt-ink);
+  background: transparent; border: 1px solid transparent; border-radius: 9px;
+  padding: 8px 10px; cursor: pointer; min-height: 36px;
 }
-.query-text { margin: 0; color: #cfe0ff; font-size: 13.5px; }
+.side-item:hover { background: #fff; border-color: var(--hunt-line); }
+.side-item:focus-visible { outline: 2px solid var(--hunt-accent); outline-offset: 1px; }
+.side-stats {
+  display: flex; flex-direction: column; gap: 7px;
+  padding: 10px; border: 1px solid var(--hunt-line); border-radius: 10px; background: #fff;
+}
+.stat { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.stat span { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--hunt-ink-3); }
+.stat b { font-size: 13px; color: var(--hunt-ink); font-variant-numeric: tabular-nums; }
+#hud-lives { color: var(--hunt-bad); }
+.side-foot { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.icon-btn {
+  font: inherit; font-size: 12px; color: var(--hunt-ink-2);
+  background: #fff; border: 1px solid var(--hunt-line); border-radius: 999px;
+  padding: 6px 10px; min-height: 32px; cursor: pointer;
+}
+.icon-btn:hover { border-color: var(--hunt-line-2); color: var(--hunt-ink); }
+.icon-btn:focus-visible { outline: 2px solid var(--hunt-accent); outline-offset: 1px; }
+.side-back { font-size: 12px; }
 
-.confidence { display: flex; align-items: center; gap: 8px; margin: 0 2px 8px; }
-.confidence .panel-k { margin: 0; flex: 0 0 auto; }
-.conf-track { flex: 1 1 auto; height: 8px; background: #0d2144; border-radius: 4px; overflow: hidden; }
-.conf-fill { height: 100%; background: linear-gradient(90deg, #4d6bfe, #7fe3f0); transition: width .25s ease; }
-.conf-value { font-family: ui-monospace, monospace; font-size: 12px; color: #9db4ff; }
+/* ---------------- 主聊天区 ---------------- */
+.hunt-main {
+  position: relative; z-index: 2; min-width: 0;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  /* 刻意不设 background：白色由 .hunt-app 提供，
+     否则会盖住 z-index:0 的角色 Canvas（鲸鱼娘就看不见了） */
+}
+.chat-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 20px; border-bottom: 1px solid var(--hunt-line); position: relative;
+}
+.chat-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--hunt-accent); }
+.chat-model { font-size: 13px; color: var(--hunt-ink); }
+.chat-tag {
+  font-size: 9.5px; letter-spacing: .09em; color: var(--hunt-ink-3);
+  border: 1px solid var(--hunt-line); border-radius: 999px; padding: 2px 7px;
+}
+.timer-track { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; }
+.timer-fill { height: 100%; background: var(--hunt-accent); transition: width .12s linear; }
 
-/* ---------------- Claim ---------------- */
-.response { display: flex; flex-direction: column; gap: 6px; }
+.chat-scroll { overflow-y: auto; overscroll-behavior: contain; }
+.chat-flow {
+  max-width: var(--hunt-content); margin: 0 auto;
+  padding: 24px 20px 8px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+
+/* ---------------- 空聊天态（intro） ---------------- */
+.welcome { display: none; text-align: center; padding: 7vh 6px 0; }
+.hunt-app[data-state="intro"] .welcome { display: block; }
+.hunt-app[data-state="intro"] .turn,
+.hunt-app[data-state="intro"] .factcard { display: none; }
+.welcome h1 { margin: 0 0 8px; font-size: 19px; letter-spacing: .06em; color: var(--hunt-ink); }
+.welcome-sub { margin: 0 0 10px; font-size: 13.5px; color: var(--hunt-ink-2); }
+.welcome-note { margin: 0 auto; max-width: 430px; font-size: 12px; line-height: 1.75; color: var(--hunt-ink-3); }
+
+/* ---------------- 会话轮次 ---------------- */
+.turn { display: flex; }
+.turn-user { justify-content: flex-end; }
+.turn-user .turn-body {
+  max-width: 78%;
+  background: var(--hunt-accent-soft);
+  border: 1px solid #dfe6ff;
+  border-radius: 14px 14px 4px 14px;
+  padding: 10px 14px;
+}
+.query-text { margin: 0; font-size: 14px; line-height: 22px; color: var(--hunt-ink); }
+.turn-assistant { flex-direction: column; gap: 8px; }
+.assistant-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.am-name { font-size: 12.5px; font-weight: 600; color: var(--hunt-ink); }
+.am-conf {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: var(--hunt-ink-3);
+}
+.am-conf b { font-size: 12px; text-transform: none; color: var(--hunt-ink-2); font-variant-numeric: tabular-nums; }
+.am-sim {
+  font-style: normal; font-size: 9px; letter-spacing: .08em;
+  border: 1px solid var(--hunt-line); border-radius: 999px; padding: 1px 6px; color: var(--hunt-ink-3);
+}
+.assistant-body { display: flex; flex-direction: column; gap: 10px; }
+.conf-track { height: 3px; background: #eef1f6; border-radius: 999px; overflow: hidden; }
+.conf-fill { height: 100%; background: var(--hunt-accent); transition: width .25s ease; }
+
+/* ---------------- Claim：看起来是回答里的句子，不是表单按钮 ---------------- */
+.response { display: flex; flex-direction: column; gap: 2px; }
 .claim {
   display: block; width: 100%; text-align: left;
-  padding: 8px 10px; min-height: 44px;
-  font: inherit; font-size: 13.5px; line-height: 1.55;
-  color: #dbe7ff; background: #0b1c38;
-  border: 1px solid #1d3a68; border-radius: 8px;
-  cursor: pointer; transition: background .15s ease, border-color .15s ease;
+  font: inherit; font-size: 14px; line-height: 22px; color: var(--hunt-ink);
+  background: transparent;
+  border: 1px solid transparent; border-left: 2px solid transparent;
+  border-radius: 8px; padding: 7px 10px; cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
 }
-.claim:hover:not(:disabled) { background: #12274c; border-color: #2f5798; }
-.claim:focus-visible { outline: 2px solid #7fe3f0; outline-offset: 2px; }
-.claim:disabled { cursor: default; opacity: .92; }
+.claim:hover:not(:disabled) { background: #f7f9fc; border-color: var(--hunt-line); }
+.claim:focus-visible { outline: 2px solid var(--hunt-accent); outline-offset: 1px; }
+.claim:disabled { cursor: default; }
+/* 选中 = 中性强调色，刻意不用判定色，不提前暴露对错 */
+.claim.selected { background: var(--hunt-accent-soft); border-color: #c7d2fe; border-left-color: var(--hunt-accent); }
+.claim.hit { background: #ecfdf7; border-color: #a7f3d0; border-left-color: var(--hunt-ok); }
+.claim.ok { border-left-color: #a7f3d0; }
+.claim.picked { background: #fef2f2; border-color: #fecaca; border-left-color: var(--hunt-bad); }
 .claim .tag {
-  display: inline-block; margin-left: 6px; padding: 1px 6px;
-  font-size: 10px; letter-spacing: .06em; border-radius: 4px;
-  font-family: ui-monospace, monospace;
+  display: inline-block; margin-left: 6px; vertical-align: 1px;
+  font-size: 9.5px; letter-spacing: .06em; border-radius: 999px; padding: 1px 7px;
 }
-.claim.hit { border-color: #7fe3f0; background: #0d2f42; }
-.claim.hit .tag { background: #7fe3f0; color: #04222c; }
-.claim.ok { border-color: #52d08a; }
-.claim.ok .tag { background: #52d08a; color: #04220f; }
-.claim.picked { border-color: #ff5d7a; background: #2a0f1a; }
-.claim.picked .tag { background: #ff5d7a; color: #2a0009; }
+.claim.hit .tag { background: #d1fae5; color: #065f46; }
+.claim.ok .tag { background: #e8f6f1; color: #065f46; }
+.claim.picked .tag { background: #fee2e2; color: #991b1b; }
 
-/* ---------------- 动作区 ---------------- */
-.action-panel { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+/* 鲸鱼娘 verifier 的专属空间：在回答尾部，不遮挡正文、不与按钮重叠 */
+.verifier-stage { height: 64px; }
+
+/* ---------------- 事实核验卡：插在会话流里，不是弹窗 ---------------- */
+.factcard {
+  display: none;
+  border: 1px solid var(--hunt-line); border-radius: var(--hunt-radius);
+  background: #fbfcfe; padding: 14px 16px;
+}
+.factcard[data-show="true"] { display: block; }
+.factcard-k { margin: 0 0 6px; font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--hunt-ink-3); }
+.factcard-title { margin: 0 0 10px; font-size: 15px; color: var(--hunt-ink); }
+.factcard-body { display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.75; color: var(--hunt-ink-2); }
+.fc-row { display: flex; gap: 10px; }
+.fc-k { flex: 0 0 86px; font-size: 11.5px; color: var(--hunt-ink-3); padding-top: 2px; }
+.fc-v { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+.fc-v code {
+  font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--hunt-ink);
+  background: #eef1f6; border-radius: 5px; padding: 1px 5px;
+}
+.fc-v a { color: var(--hunt-accent); text-decoration: none; }
+.fc-v a:hover { text-decoration: underline; }
+.fc-gain { font-size: 13px; font-weight: 600; color: var(--hunt-ok); }
+.fc-gain.bad { color: var(--hunt-bad); }
+
+/* ---------------- Composer：像聊天输入区，承载 Hunt 操作 ---------------- */
+.composer {
+  border-top: 1px solid var(--hunt-line);
+  padding: 12px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--hunt-surface);
+}
+.composer-hint {
+  max-width: var(--hunt-content); margin: 0 auto 8px;
+  font-size: 12px; color: var(--hunt-ink-3);
+}
+.action-panel { max-width: var(--hunt-content); margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; }
 .action-panel .btn { min-width: 0; flex: 1 1 auto; }
-.action-panel[data-enabled="false"] .btn { opacity: .5; }
-#btn-none { flex: 0 1 100%; }
-
-.timer-track { height: 4px; margin-top: 8px; background: #0d2144; border-radius: 2px; overflow: hidden; }
-.timer-fill { height: 100%; background: #7fe3f0; transition: width .12s linear; }
-
-.controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.controls .btn { min-width: 0; flex: 1 1 auto; }
-.controls .btn.ghost { margin-left: 0; }
-
-/* ---------------- 结果浮层 ---------------- */
-/* verifier 角色的专属视觉空间：透明占位块，鲸鱼娘由 Canvas 画在这块区域里透出来，
-   于是它永远不会落在 Start / Daily / Pause / Language / Sound / Verify / No-Hallucination 后面。
-   这里不靠调大 min-height 或挪 charY 蒙混，而是真的给角色留出布局空间。 */
-.verifier-stage {
-  height: 106px;
-  margin-top: 10px;
-  pointer-events: none;
-}
-
-/* 选中态：中性强调色 + 左侧色条，明确「我选中了这条」，
-   但刻意不使用判定色（hit 用青、picked 用红），所以不会提前暴露对错 */
-.claim.selected {
-  border-color: #4d6bfe;
-  background: #12274c;
-  box-shadow: inset 3px 0 0 #4d6bfe;
-}
-
-/* 没有选中 claim 时 VERIFY 不可用 */
 #btn-verify[disabled] { opacity: .45; cursor: default; }
 
-.overlay {
-  position: absolute; left: 10px; right: 10px; top: 46%;
-  transform: translateY(-50%);
-  z-index: 4;
-  padding: 14px 16px;
-  background: rgba(4, 12, 28, .92);
-  border: 1px solid #2f5798; border-radius: 12px;
-  display: none;
+.hunt-tips {
+  max-width: var(--hunt-content); margin: 10px auto 4px; padding: 12px 20px 0;
+  border-top: 1px solid var(--hunt-line);
+  font-size: 11.5px; line-height: 1.7; color: var(--hunt-ink-3);
 }
-.overlay[data-show="true"] { display: block; }
-.ov-title { margin: 0 0 8px; font-size: 17px; letter-spacing: .04em; color: #eaf2ff; }
-.ov-body { font-size: 12.5px; color: #9db4ff; }
-.ov-line, .ov-truth, .ov-gain { margin: 4px 0; }
-.ov-truth { font-family: ui-monospace, monospace; color: #7fe3f0; }
-.ov-gain { color: #ffd77a; font-weight: 600; }
+.hunt-tips b { color: var(--hunt-ink-2); font-weight: 600; }
 
-/* 屏幕阅读器专用状态：不朗读每个 streaming 字符，只在关键时刻播报 */
+/* 屏幕阅读器专用 / 复制回退用的隐藏元素 */
 .sr-status {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
 }
-.share-out {
-  position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0;
-}
+.share-out { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 
 /* ---------------- 响应式 ---------------- */
-@media (max-width: 720px) {
-  .game-shell { min-height: 430px; padding: 8px; }
-  .hud { grid-template-columns: repeat(3, 1fr); }
-  .hud-cell.wide { grid-column: span 3; }
-  .claim { font-size: 13px; padding: 8px; min-height: 48px; }
-  .action-panel .btn, .controls .btn { min-height: 48px; font-size: 13px; }
-  .verifier-stage { height: 92px; }
-}
-@media (max-height: 560px) and (orientation: landscape) {
-  .game-shell { min-height: 0; }
-  .query-panel, .response-panel { padding: 6px 8px; margin-bottom: 6px; }
-  .claim { font-size: 12px; padding: 6px 8px; min-height: 36px; }
+@media (max-width: 1023px) {
+  .hunt-app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    max-width: none; border: 0;
+  }
+  .hunt-side {
+    flex-direction: row; align-items: center; gap: 10px;
+    padding: 8px 12px;
+    border-right: 0; border-bottom: 1px solid var(--hunt-line);
+    overflow-x: auto; overflow-y: hidden;
+  }
+  .brand-text i, .side-tags { display: none; }
+  .side-nav { flex-direction: row; }
+  .side-stats { flex-direction: row; gap: 12px; padding: 6px 10px; }
+  .stat { flex-direction: column; align-items: flex-start; gap: 0; }
+  .side-foot { margin-top: 0; margin-left: auto; }
+  .side-back { white-space: nowrap; }
+  .hunt-main { grid-row: 2; }
+  .chat-head { padding: 10px 14px; }
+  /* 触屏下限：claim 是主要交互目标，必须 >=44px 高 */
+  .claim { min-height: 44px; padding: 11px 10px; }
+  .icon-btn { min-height: 40px; }
+  .chat-flow { padding: 18px 14px 8px; gap: 14px; }
+  .composer { padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .hunt-tips { padding: 0 14px; }
 }
 
-/* 减少动态效果：关掉过渡与动画，只保留必要的信息 */
+@media (max-width: 560px) {
+  .brand-text b { font-size: 12px; }
+  .side-stats { gap: 9px; }
+  .stat b { font-size: 12px; }
+  .turn-user .turn-body { max-width: 88%; }
+  .fc-row { flex-direction: column; gap: 2px; }
+  .fc-k { flex: none; }
+  .action-panel .btn { min-height: 46px; }
+  .side-item { min-height: 44px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .claim, .conf-fill, .timer-fill { transition: none; }
-  .overlay { transform: none; top: 40%; }
+}
+
+/* 横屏矮屏：压缩纵向留白 */
+@media (max-height: 560px) and (orientation: landscape) {
+  .chat-flow { padding: 12px 16px 6px; gap: 10px; }
+  .verifier-stage { height: 44px; }
+  .welcome { padding-top: 3vh; }
 }
