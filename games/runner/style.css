@@ -1,9 +1,11 @@
 /* Whale Runner 专属样式。
  * 页面外壳、设计变量、舞台底框（.stage / .stage > canvas）都在 ../../shared/arcade.css。
- * 这里只留 Runner 自己的：浅海天光底色、画布自己的触摸策略、横屏提示与横屏画布高度。 */
+ * 这里只留 Runner 自己的：浅海天光底色、画布自己的触摸策略、竖屏面板、横屏提示。 */
 
-/* 五款里只有 Runner 用亮底舞台（其余走 shared 的深色默认） */
-.stage { background: #e2f3ff; }
+/* 五款里只有 Runner 用亮底舞台（其余走 shared 的深色默认）。
+ * var(--sky) 由 game.js 按当前天色同步（浅海 rgb(226,243,255) ↔ 深海深蓝）；
+ * 默认值就是浅海色，JS 没跑起来（测试桩 / 脚本被拦）时同样是正确颜色。 */
+.stage { background: var(--sky, #e2f3ff); }
 
 /* 画面本身可点（点一下跳），触摸策略与其他玩法不同：
  * 先给 manipulation，窄屏才收紧成 none。 */
@@ -14,6 +16,26 @@
 
 @media (hover: none) and (pointer: coarse) and (orientation: portrait) {
   .rotate-hint { display: block; }
+}
+
+/* -------- 竖屏手机：把「上下死白」变成真正的宽屏游戏面板 --------
+ * 画布世界是 900×200（4.5:1）的宽世界，390px 宽的竖屏下画布最多只有 ~87px 高。
+ * 这是玩法固有的比例：CSS 想把画面变大，只能拉伸（失真）或裁切（看不到前方障碍），
+ * 两者都属于改玩法，本轮不做 ——「画面更大」的正确解法就是横屏（下面的 .rotate-hint）。
+ *
+ * 但卡片被强制撑到 100dvh 再垂直居中，会让这 87px 浮在 ~470px 的死白中间。
+ * 这里让舞台吃掉那部分空间：它变成一块有明确形状的宽屏面板，画布在其中垂直居中；
+ * 面板底色跟着游戏天色走，浅海 / 深海都不会与画布断层。
+ * 只改 CSS 盒子；画布世界尺寸 / DPR 生命周期 / 玩法数值一律不动。 */
+@media (max-width: 720px) and (orientation: portrait) {
+  .stage {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    max-height: 38vh;
+  }
 }
 
 @media (max-width: 720px) {

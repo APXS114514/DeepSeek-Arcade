@@ -28,6 +28,19 @@
   ctx.scale(dpr, dpr);
   ctx.imageSmoothingEnabled = false;
 
+  /* 把当前天色暴露给 CSS：竖屏时画布上下会多出「宽屏面板」的留白，
+   * 面板底色必须跟着浅海 ↔ 深海一起走，否则潜入深海后画布会和面板断层。
+   * 只是把 theme() 里已经算好的 bg 同步出去，不改任何配色与画法；
+   * 值没变就不写，稳定帧零开销。 */
+  var skyHost = canvas.parentNode;
+  var lastSky = null;
+  function syncSky(t) {
+    if (!skyHost || !skyHost.style || !skyHost.style.setProperty) return;
+    if (t.bg === lastSky) return;
+    lastSky = t.bg;
+    skyHost.style.setProperty('--sky', t.bg);
+  }
+
   /* ---------------- 多语言（词典与切换逻辑在 i18n.js） ---------------- */
   var I18N = window.I18N || null;
   function T(key) { return (I18N && I18N.t) ? I18N.t(key) : key; }
@@ -781,6 +794,7 @@
 
   function render() {
     var t = theme();
+    syncSky(t);
 
     ctx.fillStyle = t.bg;
     ctx.fillRect(0, 0, W, H);
