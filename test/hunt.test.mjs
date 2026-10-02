@@ -695,8 +695,22 @@ export function run() {
     ok('聊天内容有最大宽度并居中', /--hunt-content:\s*\d+px/.test(css) && /max-width:\s*var\(--hunt-content\)/.test(css));
     ok('桌面是 sidebar + 聊天两栏，窄屏折叠为单栏',
       /grid-template-columns:\s*236px minmax\(0, 1fr\)/.test(css) && /@media \(max-width: 1023px\)/.test(css));
-    ok('claim 默认看起来是文本（透明底 + 透明边框），不是表单按钮',
-      /\.claim\s*\{[^}]*background:\s*transparent/.test(css) && /\.claim\s*\{[^}]*border:\s*1px solid transparent/.test(css));
+    ok('claim 默认就是独立软卡片（实底 + 低对比边框 + 圆角），不是透明正文',
+      /\.claim\s*\{([^}]*)\}/.test(css) &&
+      (function () {
+        const b = /\.claim\s*\{([^}]*)\}/.exec(css)[1];
+        return /background:\s*#fff/.test(b) && /border:\s*1px solid var\(--hunt-line\)/.test(b) &&
+          /border-radius:\s*10px/.test(b) && !/background:\s*transparent/.test(b);
+      })());
+    ok('claim 之间有清晰的纵向间距（>=8px）',
+      (function () { const m = /\.response\s*\{[^}]*gap:\s*(\d+)px/.exec(css); return !!m && Number(m[1]) >= 8; })());
+    ok('hover 有背景/边框/阴影变化，且带轻微位移',
+      /\.claim:hover:not\(:disabled\)\s*\{[^}]*border-color/.test(css) &&
+      /\.claim:hover:not\(:disabled\)\s*\{[^}]*translateY\(-1px\)/.test(css));
+    ok('每条 claim 有轻量审计序号，且对辅助技术隐藏',
+      /class="claim-no" aria-hidden="true"/.test(js) && /\.claim-no\s*\{/.test(css));
+    ok('verifier 舞台收紧到回答尾部（<=56px，不漂在空白里）',
+      (function () { const m = /\.verifier-stage\s*\{[^}]*height:\s*(\d+)px/.exec(css); return !!m && Number(m[1]) <= 56; })());
     ok('选中态用中性强调色，且不使用判定色',
       (function () {
         const m = /\.claim\.selected\s*\{([^}]*)\}/.exec(css);

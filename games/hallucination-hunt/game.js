@@ -269,8 +269,10 @@
       if (round.claims[i].__mark === 'hit') { cls += ' hit'; mark = ' <span class="tag">HALLUCINATION</span>'; }
       else if (round.claims[i].__mark === 'ok') { cls += ' ok'; mark = ' <span class="tag">VERIFIED</span>'; }
       else if (round.claims[i].__mark === 'picked') { cls += ' picked'; mark = ' <span class="tag">FALSE ALARM</span>'; }
+      /* 审计序号：纯装饰（aria-hidden），让每条 claim 有独立的视觉锚点 */
+      var no = text ? '<span class="claim-no" aria-hidden="true">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' : '';
       out.push('<button type="button" class="' + cls + '" data-claim="' + i + '"' +
-        (revealed ? '' : ' disabled') + '>' + escapeHtml(text) + mark + '</button>');
+        (revealed ? '' : ' disabled') + '>' + no + escapeHtml(text) + mark + '</button>');
     }
     setHtml('response', out.join(''));
     var resp = el('response');
@@ -397,14 +399,14 @@
       game.streak++;
       if (game.streak > game.bestStreak) game.bestStreak = game.streak;
       game.correct++;
-      if (fx) { var gb = fxBox(); fx.burst(gb.cx, gb.h * 0.34, 30, '#7fe3f0'); fx.float('+' + gained, gb.cx, gb.h * 0.3, '#7fe3f0'); fx.pulse(0.5); }
+      if (fx) { var vb = verifierBox(); fx.burst(vb.x, vb.y - 18, 26, '#7fe3f0'); fx.float('+' + gained, vb.x, vb.y - 6, '#7fe3f0'); fx.pulse(0.45); }
     } else {
       game.streak = 0;
       game.lives--;
       if (fx) {
         fx.flash('#ff3355', 0.45); fx.shake(10);
-        var fb = fxBox();
-        fx.float(outcome === 'falseAlarm' ? T('hunt.falseAlarm') : T('hunt.missed'), fb.cx, fb.h * 0.34, '#ff8a8a');
+        var fb = verifierBox();
+        fx.float(outcome === 'falseAlarm' ? T('hunt.falseAlarm') : T('hunt.missed'), fb.x, fb.y - 6, '#ff8a8a');
       }
     }
     game.answered++;
