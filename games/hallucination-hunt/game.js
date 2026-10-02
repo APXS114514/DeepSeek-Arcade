@@ -317,7 +317,10 @@
       else if (round.claims[i].__mark === 'picked') { cls += ' picked'; mark = ' <span class="tag">FALSE ALARM</span>'; }
       /* 审计序号：纯装饰（aria-hidden），让每条 claim 有独立的视觉锚点 */
       var no = text ? '<span class="claim-no" aria-hidden="true">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' : '';
-      out.push('<button type="button" class="' + cls + '" data-claim="' + i + '"' +
+      /* 多选：每个 claim 都是真 button，aria-pressed 必须如实反映是否已选中 */
+      var pressed = (game.state === 'scanning' &&
+        game.selectedClaims && game.selectedClaims.indexOf(i) >= 0) ? 'true' : 'false';
+      out.push('<button type="button" class="' + cls + '" data-claim="' + i + '" aria-pressed="' + pressed + '"' +
         (revealed ? '' : ' disabled') + '>' + no + escapeHtml(text) + mark + '</button>');
     }
     setHtml('response', out.join(''));

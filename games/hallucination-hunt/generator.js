@@ -18,10 +18,10 @@
   /* ---------------- LOAD 规则（难度定义，与文档一致） ---------------- */
   var LOAD_RULES = {
     1: { claims: [2, 3], hall: [1, 1], scanMs: 22000, allowNone: false, noneChance: 0 },
-    2: { claims: [2, 3], hall: [1, 1], scanMs: 19000, allowNone: false, noneChance: 0 },
+    2: { claims: [3, 3], hall: [1, 1], scanMs: 19000, allowNone: false, noneChance: 0 },
     3: { claims: [3, 4], hall: [1, 1], scanMs: 16000, allowNone: true, noneChance: 0.18 },
-    4: { claims: [3, 4], hall: [1, 2], scanMs: 13500, allowNone: true, noneChance: 0.22 },
-    5: { claims: [4, 5], hall: [1, 2], scanMs: 11000, allowNone: true, noneChance: 0.25 }
+    4: { claims: [4, 5], hall: [1, 2], scanMs: 13500, allowNone: true, noneChance: 0.22 },
+    5: { claims: [5, 6], hall: [1, 2], scanMs: 11000, allowNone: true, noneChance: 0.25 }
   };
   var MAX_ATTEMPTS = 24;
   var RECENT_LIMIT = 12;

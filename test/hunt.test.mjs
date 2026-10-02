@@ -1132,7 +1132,68 @@ export function run() {
       H.selectClaim(2);
       ok('全部取消后 VERIFY 变回不可用',
         b.G.selectedClaims.length === 0 && b.els['btn-verify'].getAttribute('aria-disabled') === 'true');
+      /* 无障碍：aria-pressed 必须如实反映多选状态 */
+      {
+        const b2 = fresh({});
+        const H2 = b2.window.HuntGame;
+        forceRound(b2, [0, 3]);
+        H2.selectClaim(0); H2.selectClaim(3);
+        const html = b2.els.response.innerHTML;
+        ok('选中的 claim aria-pressed=true（可同时多条）',
+          (html.match(/aria-pressed="true"/g) || []).length === 2, String((html.match(/aria-pressed="true"/g) || []).length));
+        ok('未选中的 claim aria-pressed=false',
+          (html.match(/aria-pressed="false"/g) || []).length >= 2);
+        H2.selectClaim(0);
+        ok('取消后该条 aria-pressed 变回 false',
+          (b2.els.response.innerHTML.match(/aria-pressed="true"/g) || []).length === 1);
+        ok('claim 仍然是真正的 button 元素',
+          b2.els.response.innerHTML.indexOf('<button type="button"') >= 0);
+      }
     }
+  }
+
+  /* ================= T. LOAD claim 数量阶梯（大规模 seed 统计） ================= */
+  {
+    const GEN = fresh({}).window.HuntGenerator;
+    const RANGE = { 1: [2, 3], 2: [3, 3], 3: [3, 4], 4: [4, 5], 5: [5, 6] };
+    const N = 400;
+    const stats = {};
+    for (let load = 1; load <= 5; load++) {
+      const counts = [], halls = [];
+      for (let s = 1; s <= N; s++) {
+        const r = GEN.generateRound(s * 7919 + load, load, 'zh');
+        counts.push(r.claims.length);
+        halls.push(r.hallucinationCount);
+        if (r.claims.length < RANGE[load][0] || r.claims.length > RANGE[load][1]) {
+          counts.__bad = (counts.__bad || 0) + 1;
+        }
+        /* 幻觉索引必须与 isHallucination 完全一致 */
+        const idx = r.claims.map((c, i) => (c.isHallucination ? i : -1)).filter((i) => i >= 0);
+        if (JSON.stringify(idx) !== JSON.stringify(r.hallucinationIndexes)) counts.__mismatch = (counts.__mismatch || 0) + 1;
+        if (r.hallucinationCount !== idx.length) counts.__count = (counts.__count || 0) + 1;
+      }
+      const avg = counts.reduce((a, b) => a + b, 0) / counts.length;
+      stats[load] = { avg, min: Math.min(...counts), max: Math.max(...counts),
+        bad: counts.__bad || 0, mismatch: counts.__mismatch || 0, cnt: counts.__count || 0,
+        twoHall: halls.filter((h) => h === 2).length };
+      ok('LOAD ' + load + '：claim 数总是落在 ' + RANGE[load][0] + '~' + RANGE[load][1] + '（实测 ' + stats[load].min + '~' + stats[load].max + '，均值 ' + avg.toFixed(2) + '）',
+        stats[load].bad === 0 && stats[load].min >= RANGE[load][0] && stats[load].max <= RANGE[load][1],
+        '越界=' + stats[load].bad);
+      ok('LOAD ' + load + '：hallucinationIndexes 与 isHallucination 完全一致',
+        stats[load].mismatch === 0 && stats[load].cnt === 0,
+        'mismatch=' + stats[load].mismatch + ' count=' + stats[load].cnt);
+    }
+    ok('claim 数量随 LOAD 单调上升（' + [1, 2, 3, 4, 5].map((l) => stats[l].avg.toFixed(2)).join(' < ') + '）',
+      stats[1].avg < stats[2].avg && stats[2].avg <= stats[3].avg &&
+      stats[3].avg < stats[4].avg && stats[4].avg < stats[5].avg,
+      [1, 2, 3, 4, 5].map((l) => stats[l].avg.toFixed(2)).join(','));
+    ok('LOAD 5 明显比 LOAD 1 长（平均 ' + stats[5].avg.toFixed(2) + ' vs ' + stats[1].avg.toFixed(2) + ' 条）',
+      stats[5].avg - stats[1].avg >= 2);
+    ok('高 LOAD 不会静默退回 3 条（LOAD 4/5 最小 ' + stats[4].min + '/' + stats[5].min + '）',
+      stats[4].min >= 4 && stats[5].min >= 5);
+    ok('LOAD 4/5 确实会出双幻觉（' + stats[4].twoHall + '/' + stats[5].twoHall + ' 轮，共 ' + N + ' 轮）',
+      stats[4].twoHall > 0 && stats[5].twoHall > 0);
+    ok('claim 数从不超过 MAX_CLAIMS', [1, 2, 3, 4, 5].every((l) => stats[l].max <= 6));
   }
 
   return out;
