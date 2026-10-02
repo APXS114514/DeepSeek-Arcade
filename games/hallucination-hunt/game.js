@@ -637,7 +637,10 @@
       'hud-score': game.score, 'hud-high': game.high, 'hud-accuracy': accuracyPct() + '%',
       'hud-streak': '×' + game.streak, 'hud-lives': game.lives,
       'hud-load': game.round ? 'LOAD ' + game.round.load : 'LOAD 1',
-      'hud-round': (game.mode === 'daily' ? game.roundIndex + '/' + DAILY_ROUNDS : '#' + game.roundIndex)
+      'hud-round': (game.mode === 'daily' ? game.roundIndex + '/' + DAILY_ROUNDS : '#' + game.roundIndex),
+      'bar-load': game.round ? 'LOAD ' + game.round.load : 'LOAD 1',
+      'hud-mini-score': game.score, 'hud-mini-accuracy': accuracyPct() + '%',
+      'hud-mini-streak': '×' + game.streak, 'hud-mini-lives': game.lives
     };
     for (var k in v) {
       if (!Object.prototype.hasOwnProperty.call(v, k)) continue;
@@ -856,10 +859,55 @@
     /* 主区暂停卡里的「继续」只是另一个入口，仍然调用同一个 togglePause(false) */
     var resumeMain = el('btn-resume-main');
     if (resumeMain && resumeMain.addEventListener) resumeMain.addEventListener('click', function () { togglePause(false); });
+    var menuBtn = el('btn-menu'); if (menuBtn && menuBtn.addEventListener) menuBtn.addEventListener('click', function () { toggleMenu(); });
+    var scrim = el('sheet-scrim'); if (scrim && scrim.addEventListener) scrim.addEventListener('click', function () { setMenu(false); });
+    /* 菜单里的任何动作执行完都收起 sheet */
+    var aside = el('game-shell-aside');
+    if (aside && aside.addEventListener) aside.addEventListener('click', function (e) {
+      var t = e.target;
+      while (t && t !== aside) { if (t.tagName && String(t.tagName).toLowerCase() === 'button') { setMenu(false); return; } t = t.parentNode; }
+    });
     var nextBtn = el('btn-next');
     if (nextBtn && nextBtn.addEventListener) nextBtn.addEventListener('click', function () { advanceFromResult(); });
     var snd = el('sound'); if (snd && snd.addEventListener) snd.addEventListener('click', function () { if (Audio && Audio.toggle) Audio.toggle(); syncSound(); });
   }
+  /* ---------------- 移动端 App Bar 菜单 ----------------
+   * 手机端 .hunt-side 本身就是 bottom sheet（同一批真 button），
+   * 所以这里只负责开关、焦点与 aria，不复制任何控件、不新增 id。 */
+  function menuOpen() {
+    var aside = el('game-shell-aside');
+    return !!(aside && aside.getAttribute('data-open') === 'true');
+  }
+  function setMenu(open) {
+    var aside = el('game-shell-aside'), btn = el('btn-menu'), scrim = el('sheet-scrim');
+    if (!aside || !aside.setAttribute) return false;
+    aside.setAttribute('data-open', open ? 'true' : 'false');
+    if (btn && btn.setAttribute) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) { if (open) { if (scrim.removeAttribute) scrim.removeAttribute('hidden'); }
+                 else if (scrim.setAttribute) scrim.setAttribute('hidden', ''); }
+    return open;
+  }
+  function toggleMenu() { return setMenu(!menuOpen()); }
+
+  /* composer 实际高度写进 CSS 变量：内容不会被固定底部操作区遮住，
+     而且文案换行导致高度变化时也会自动跟上（不写死 160px）。 */
+  function watchComposerHeight() {
+    var c = document.querySelector ? document.querySelector('.composer') : null;
+    if (!c) return;
+    var apply = function () {
+      var h = c.getBoundingClientRect ? c.getBoundingClientRect().height : 0;
+      if (h > 0 && document.documentElement && document.documentElement.style) {
+        document.documentElement.style.setProperty('--composer-height', Math.round(h) + 'px');
+      }
+    };
+    apply();
+    if (global.ResizeObserver) {
+      try { new global.ResizeObserver(apply).observe(c); } catch (e) { /* 观测失败不影响可玩性 */ }
+    } else if (global.addEventListener) {
+      global.addEventListener('resize', apply);
+    }
+  }
+
   /* 这些状态不参与「失焦自动暂停」 */
   var NO_AUTO_PAUSE = { paused: true, intro: true, gameOver: true, result: true };
 
@@ -876,6 +924,7 @@
   function boot() {
     setupCanvas();
     wireClicks();
+    watchComposerHeight();
     syncSound();
     updateHud();
     setState('intro');
@@ -897,6 +946,9 @@
       global.addEventListener('blur', function () { if (!NO_AUTO_PAUSE[game.state]) togglePause(true); });
     }
     if (document.addEventListener) {
+      document.addEventListener('keydown', function (e) {
+        if ((e.key === 'Escape' || e.key === 'Esc') && menuOpen()) { setMenu(false); if (e.preventDefault) e.preventDefault(); }
+      });
       document.addEventListener('visibilitychange', function () {
         if (document.hidden && !NO_AUTO_PAUSE[game.state]) togglePause(true);
       });
@@ -922,6 +974,7 @@
     markClaim: selectClaim,
     syncSize: syncSize, hasResizeObserver: function () { return !!resizeObserver; },
     characterBox: characterBox, characterAnchor: characterAnchor,
+    setMenu: setMenu, toggleMenu: toggleMenu, menuOpen: menuOpen,
     copyResult: copyResult, shareText: shareText,
     nextRound: nextRound, setState: setState, updateHud: updateHud,
     isReducedMotion: function () { return reducedMotion; },

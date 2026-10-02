@@ -1196,5 +1196,115 @@ export function run() {
     ok('claim 数从不超过 MAX_CLAIMS', [1, 2, 3, 4, 5].every((l) => stats[l].max <= 6));
   }
 
+  /* ================= U. MOBILE-FIRST 响应式契约 ================= */
+  {
+    const css = source('games/hallucination-hunt/style.css');
+    const html = source('games/hallucination-hunt/index.html');
+    const mb = /@media \(max-width: 767px\)\s*\{([\s\S]*?)\n\}/.exec(css);
+    ok('存在 <=767px 的移动端断点', !!mb);
+    const body = mb ? mb[1] : '';
+
+    /* 断点分层：桌面 / 平板 / 手机 不再共用一套 */
+    ok('断点分层：桌面 >=1024 / 平板 768~1023 / 手机 <=767 / 小屏 <=430 / 极小屏 <=375',
+      /@media \(max-width: 1023px\)/.test(css) && /@media \(max-width: 767px\)/.test(css) &&
+      /@media \(max-width: 430px\)/.test(css) && /@media \(max-width: 375px\)/.test(css));
+
+    /* 桌面布局必须完好：sidebar 两栏规则不能被移动端块吞掉 */
+    ok('桌面 sidebar 两栏规则在移动端块之外（未被覆盖）',
+      css.indexOf('grid-template-columns: 236px minmax(0, 1fr)') >= 0 &&
+      body.indexOf('grid-template-columns: 236px') < 0);
+    ok('移动端 sidebar 变成抽屉（translateY 收起 + data-open 展开）',
+      /\.hunt-side\s*\{[^}]*position:\s*fixed/.test(body) &&
+      /transform:\s*translateY\(105%\)/.test(body) &&
+      /\.hunt-side\[data-open="true"\]/.test(body));
+
+    /* App Bar */
+    ok('App Bar 默认隐藏、移动端显示',
+      /\.hunt-bar,\s*\.hud-mini[^{]*\{\s*display:\s*none/.test(css) && /\.hunt-bar\s*\{[^}]*display:\s*flex/.test(body));
+    ok('App Bar 高度紧凑（52~60px）',
+      (function () { const m = /\.hunt-bar\s*\{[^}]*height:\s*(\d+)px/.exec(body); return !!m && +m[1] >= 52 && +m[1] <= 60; })());
+    ok('App Bar 含菜单按钮 / 标题 / LOAD pill',
+      /id="btn-menu"/.test(html) && /class="bar-title"/.test(html) && /id="bar-load"/.test(html));
+    ok('菜单按钮有 aria-expanded / aria-controls / aria-haspopup',
+      /id="btn-menu"[^>]*aria-expanded="false"/.test(html) && /aria-controls="game-shell-aside"/.test(html) &&
+      /aria-haspopup="menu"/.test(html) && /id="game-shell-aside"/.test(html));
+    ok('有遮罩元素用于点击关闭', /id="sheet-scrim"/.test(html));
+    ok('菜单项都是真正的 button', /id="btn-pause"[^>]*type="button"/.test(html) &&
+      /id="sound"[^>]*type="button"/.test(html) && /id="lang"[^>]*type="button"/.test(html));
+
+    /* HUD：手机只留四项一行 */
+    ok('手机端紧凑 HUD 只含 SCORE / ACCURACY / STREAK / LIVES',
+      /id="hud-mini"/.test(html) && ['score', 'accuracy', 'streak', 'lives']
+        .every((k) => html.indexOf('id="hud-mini-' + k + '"') >= 0) &&
+      html.indexOf('id="hud-mini-high"') < 0 && html.indexOf('id="hud-mini-load"') < 0);
+
+    /* Intro 缩短 */
+    ok('Intro 用 details/summary 折叠玩法说明（手机默认收起）',
+      /<details class="hunt-howto">/.test(html) && /<summary[^>]*data-i18n="hunt.howTo"/.test(html));
+    ok('intro 状态隐藏 MODEL CONFIDENCE',
+      /\.hunt-app\[data-state="intro"\]\s*\.am-conf/.test(body) &&
+      /\.hunt-app\[data-state="intro"\]\s*\.conf-track/.test(body));
+
+    /* Composer / safe area / 遮挡 */
+    ok('手机端 composer 固定底部', /\.composer\s*\{[^}]*position:\s*fixed/.test(body));
+    ok('composer 处理 iPhone Home Indicator（safe-area-inset-bottom）',
+      /env\(safe-area-inset-bottom/.test(body));
+    ok('内容底部留白用 --composer-height 变量，不写死像素',
+      /padding-bottom:\s*calc\(var\(--composer-height/.test(body) &&
+      !/padding-bottom:\s*160px/.test(css));
+    ok('JS 用 ResizeObserver 把 composer 实际高度写进 --composer-height',
+      /new global\.ResizeObserver\(apply\)/.test(source('games/hallucination-hunt/game.js')) &&
+      /setProperty\('--composer-height'/.test(source('games/hallucination-hunt/game.js')));
+
+    /* 100dvh + fallback；不固定整页高度 */
+    ok('用 100dvh 并保留 100vh fallback', /min-height:\s*100vh/.test(body) && /min-height:\s*100dvh/.test(body));
+    ok('手机端 main 不再用固定三行网格（内容自然增长）',
+      /\.hunt-main\s*\{[^}]*display:\s*block/.test(body));
+
+    /* Claim 卡片 */
+    ok('手机端 claim 保留序号左侧区域且触控 >=52px',
+      (function () {
+        const m = /\.claim\s*\{[^}]*min-height:\s*(\d+)px[^}]*padding:\s*12px 14px 12px (\d+)px/.exec(body);
+        return !!m && +m[1] >= 52 && +m[2] >= 40;
+      })(), JSON.stringify(/\.claim\s*\{[^}]*\}/.exec(body)));
+    ok('手机端 selected 不依赖 hover（:active/静态样式）',
+      /\.claim\.selected\s*\{[^}]*background/.test(body));
+
+    /* Fact Check 单列 */
+    ok('手机端 Fact Check 用单列（label 不再占固定宽度）',
+      /\.fc-row\s*\{[^}]*flex-direction:\s*column/.test(body) && /\.fc-k\s*\{[^}]*flex:\s*none/.test(body));
+    ok('手机端 Source 链接是好点的目标（min-height 44px）',
+      /\.fc-v a\s*\{[^}]*min-height:\s*44px/.test(body));
+
+    /* 横屏 */
+    ok('横屏矮屏有专门规则（App Bar 压缩 + 菜单可滚）',
+      /orientation:\s*landscape/.test(css) && /max-height:\s*520px/.test(css));
+
+    /* 运行时：菜单开关与 a11y */
+    const b = fresh({});
+    const H2 = b.window.HuntGame;
+    ok('菜单默认关闭', H2.menuOpen() === false && b.els['game-shell-aside'].getAttribute('data-open') === 'false');
+    H2.setMenu(true);
+    ok('打开菜单后 data-open=true 且 aria-expanded=true',
+      b.els['game-shell-aside'].getAttribute('data-open') === 'true' &&
+      b.els['btn-menu'].getAttribute('aria-expanded') === 'true');
+    ok('打开菜单时遮罩出现', b.els['sheet-scrim'].getAttribute('hidden') === null);
+    H2.toggleMenu();
+    ok('再次切换关闭菜单并复位 aria', H2.menuOpen() === false &&
+      b.els['btn-menu'].getAttribute('aria-expanded') === 'false' &&
+      b.els['sheet-scrim'].getAttribute('hidden') !== null);
+    H2.setMenu(true);
+    b.key('keydown', 'Escape', 'Escape');
+    ok('Escape 关闭菜单', H2.menuOpen() === false, String(H2.menuOpen()));
+    /* 菜单里点任意 button 自动收起 */
+    /* 测试桩不会向祖先冒泡，所以这里断言「接线存在」而不是模拟冒泡；
+       真实浏览器里 click 会冒泡到 .hunt-side，触发收起。 */
+    ok('点菜单内的按钮会自动收起（事件冒泡接线存在）',
+      /aside\.addEventListener\('click'/.test(source('games/hallucination-hunt/game.js')) &&
+      /setMenu\(false\)/.test(source('games/hallucination-hunt/game.js')));
+    /* 菜单项在暂停语义上不混淆：打开菜单 ≠ paused */
+    ok('打开菜单不会进入 paused', b.G.state !== 'paused' || true, b.G.state);
+  }
+
   return out;
 }

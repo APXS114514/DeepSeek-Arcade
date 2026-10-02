@@ -388,3 +388,201 @@ body.hunt-body {
   .intro-character-stage { height: 64px; margin: 8px 0 2px; }
   .welcome { padding-top: 3vh; }
 }
+
+/* ==================================================================
+ * MOBILE-FIRST 响应式（<= 767px）
+ *
+ * 断点约定：
+ *   >= 1024px  Desktop —— 现有 sidebar + HUD + scene 布局，完全不变
+ *   768~1023px Tablet  —— 沿用上一段的横向紧凑条
+ *   <= 767px   Mobile  —— 真正的单列 AI Chat App 布局
+ *   <= 430px   Small Mobile
+ *   <= 375px   Very Small
+ *
+ * 手机端不再有左侧 sidebar：同一个 .hunt-side 元素退化为 bottom sheet
+ * （零 DOM 搬移、零 id 冲突），控件仍是同一批真 button。
+ * ================================================================== */
+
+/* 桌面端不显示移动端专属元素 */
+.hunt-bar, .hud-mini, .sheet-scrim, .side-menu-title { display: none; }
+
+@media (max-width: 767px) {
+  /* ---------- 外壳：单列、允许自然滚动、不固定整页高度 ---------- */
+  .hunt-app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-width: none;
+    border: 0;
+    overflow: visible;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .hunt-main {
+    grid-row: 2;
+    display: block;          /* 手机上不做固定三行网格，内容自然增长 */
+    padding-bottom: calc(var(--composer-height, 148px) + env(safe-area-inset-bottom, 0px) + 20px);
+  }
+  .timer-track { position: static; height: 2px; }
+
+  /* ---------- App Bar：紧凑 52~60px ---------- */
+  .hunt-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 54px;
+    padding: 0 14px;
+    background: rgba(255, 255, 255, .92);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--hunt-line);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .bar-btn {
+    font: inherit; font-size: 17px; line-height: 1;
+    width: 40px; height: 40px; flex: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 1px solid transparent; border-radius: 10px;
+    color: var(--hunt-ink); cursor: pointer;
+  }
+  .bar-btn:active { background: #f1f4f9; }
+  .bar-btn:focus-visible { outline: 2px solid var(--hunt-accent); outline-offset: 1px; }
+  .bar-title { flex: 1 1 auto; min-width: 0; font-size: 14.5px; color: var(--hunt-ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar-load {
+    flex: none; font-size: 10.5px; letter-spacing: .06em; color: var(--hunt-ink-2);
+    background: #fff; border: 1px solid var(--hunt-line); border-radius: 999px; padding: 4px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- sidebar -> bottom sheet ---------- */
+  .hunt-side {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    z-index: 40;
+    flex-direction: column; align-items: stretch; gap: 8px;
+    max-height: 78dvh; overflow-y: auto;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-right: 0; border-top: 1px solid var(--hunt-line);
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -10px 34px rgba(27, 39, 51, .16);
+    transform: translateY(105%);
+    transition: transform .22s ease;
+  }
+  .hunt-side[data-open="true"] { transform: translateY(0); }
+  .side-brand, .side-tags, .side-stats { display: none; }
+  .side-menu-title { display: block; margin: 0 0 4px; font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--hunt-ink-3); }
+  .side-foot { margin-top: 0; flex-direction: column; gap: 8px; }
+  .side-foot .icon-btn, .side-back {
+    width: 100%; min-height: 48px; justify-content: flex-start;
+    display: inline-flex; align-items: center; gap: 8px;
+    border-radius: 12px; font-size: 14px; padding: 0 14px; text-align: left;
+  }
+  .side-back { border: 1px solid var(--hunt-line); background: #fff; color: var(--hunt-ink-2); }
+
+  .sheet-scrim { display: block; position: fixed; inset: 0; z-index: 35; background: rgba(20, 30, 44, .32); }
+  .sheet-scrim[hidden] { display: none !important; }
+
+  /* ---------- HUD：只留一行最关键的 ---------- */
+  .hunt-side .side-stats { display: none; }   /* 桌面 HUD 不在手机上以九宫格出现 */
+  .hud-mini { display: flex; align-items: baseline; gap: 14px; margin: 0 0 8px;
+    max-width: var(--hunt-content); margin-left: auto; margin-right: auto; }
+  .hud-mini .hm { display: flex; align-items: baseline; gap: 4px; }
+  .hud-mini .hm i { font-style: normal; font-size: 9.5px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--hunt-ink-3); }
+  .hud-mini .hm b { font-size: 13px; color: var(--hunt-ink); font-variant-numeric: tabular-nums; }
+  #hud-mini-lives { color: var(--hunt-bad); }
+  .hud-mini .hm:last-child { margin-left: auto; }
+
+  /* ---------- 头部与内容：真正的单列文档流 ---------- */
+  .chat-head { display: none; }               /* App Bar 已经承担 Context Model 一行 */
+  .chat-scroll { overflow: visible; }
+  .chat-flow { max-width: 100%; padding: 14px 14px 0; gap: 14px; }
+
+  /* ---------- Intro：紧凑 Hero ---------- */
+  .welcome { padding: 14px 6px 0; }
+  .welcome h1 { font-size: 20px; margin-bottom: 6px; }
+  .welcome-sub { margin-bottom: 8px; font-size: 13px; }
+  .welcome-note { max-width: 100%; font-size: 12px; }
+  .intro-character-stage { height: 88px; margin: 6px 0 2px; }
+  .hunt-howto { display: block; text-align: left; max-width: 100%; margin: 10px auto 0;
+    border: 1px solid var(--hunt-line); border-radius: 12px; background: #fff; overflow: hidden; }
+  .hunt-howto > summary { cursor: pointer; list-style: none; padding: 12px 14px;
+    font-size: 13px; color: var(--hunt-ink); min-height: 44px; display: flex; align-items: center; }
+  .hunt-howto > summary::-webkit-details-marker { display: none; }
+  .hunt-howto > summary::after { content: '⌄'; margin-left: auto; color: var(--hunt-ink-3); }
+  .hunt-howto[open] > summary::after { content: '⌃'; }
+  .howto-body { padding: 0 14px 14px; font-size: 12px; line-height: 1.75; color: var(--hunt-ink-2); }
+
+  /* ---------- 游戏主体：单列，无固定场景高度 ---------- */
+  .assistant-body { gap: 10px; }
+  .verifier-stage { height: 56px; }
+  .turn-user .turn-body { max-width: 92%; }
+
+  /* ---------- Claim 卡片 ---------- */
+  .response { gap: 10px; }
+  .claim { min-height: 52px; padding: 12px 14px 12px 44px; border-radius: 12px; }
+  .claim-no { left: 14px; top: 12px; }
+  /* 手指反馈：明显但不夸张；手机上不能只靠 hover */
+  .claim.selected { background: #e8eeff; border-color: var(--hunt-accent); box-shadow: inset 3px 0 0 var(--hunt-accent); }
+  .claim .tag { display: inline-block; margin: 2px 0 0 6px; }
+
+  /* ---------- Fact Check：单列，不再用 label/value 双列 ---------- */
+  .factcard { padding: 14px 14px 18px; }
+  .fc-row { flex-direction: column; gap: 2px; }
+  .fc-k { flex: none; padding-top: 0; }
+  /* 来源做成好点的按钮 */
+  .fc-v a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px;
+    font-weight: 600; }
+  .fc-v a::after { content: ' ↗'; }
+
+  /* ---------- Composer：固定底部 + iPhone Home Indicator ---------- */
+  .composer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--hunt-line);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -8px 24px rgba(27, 39, 51, .08);
+  }
+  .composer-hint { margin-bottom: 8px; font-size: 12px; }
+  .action-panel { gap: 8px; }
+  .action-panel .btn { min-height: 48px; border-radius: 14px; font-size: 14px; }
+  .hunt-tips { max-width: 100%; margin: 4px auto 0; padding: 12px 2px 0; font-size: 11.5px; }
+
+  /* Intro 阶段不显示 MODEL CONFIDENCE —— 游戏还没开始 */
+  .hunt-app[data-state="intro"] .am-conf,
+  .hunt-app[data-state="intro"] .conf-track { display: none; }
+}
+
+/* ---------- Small Mobile ---------- */
+@media (max-width: 430px) {
+  .chat-flow { padding: 12px 12px 0; gap: 12px; }
+  .welcome h1 { font-size: 19px; }
+  .action-panel .btn { min-height: 50px; }
+  .hud-mini { gap: 10px; }
+  .composer { padding-left: 12px; padding-right: 12px; }
+}
+
+/* ---------- Very Small ---------- */
+@media (max-width: 375px) {
+  .bar-title { font-size: 13.5px; }
+  .claim { padding-left: 42px; }
+  .claim-no { left: 12px; }
+  .hud-mini .hm i { font-size: 9px; }
+  .action-panel { flex-direction: column; }
+  .action-panel .btn { width: 100%; }
+}
+
+/* ---------- 横屏（矮屏）：App Bar 与 Composer 都压在 safe area 内 ---------- */
+@media (max-width: 900px) and (orientation: landscape) and (max-height: 520px) {
+  .hunt-bar { height: 44px; }
+  .intro-character-stage { height: 56px; margin: 2px 0; }
+  .verifier-stage { height: 40px; }
+  .welcome { padding-top: 6px; }
+  .hunt-side { max-height: 88dvh; }
+  .composer { padding-top: 8px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
