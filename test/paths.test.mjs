@@ -28,8 +28,10 @@ export function run() {
     ok(page + ' 至少引用了 1 个本地资源', refs.some((r) => !/^(https?:|mailto:|#|data:)/.test(r)), refs.join(','));
     for (const ref of refs) {
       if (/^(https?:|mailto:|#|data:)/.test(ref)) continue;
-      const target = path.resolve(path.dirname(abs), ref);
-      const isDir = ref.endsWith('/');
+      /* cache-busting 的 ?v= 只是 query，文件系统解析前必须剥掉 */
+      const clean = ref.split('?')[0].split('#')[0];
+      const target = path.resolve(path.dirname(abs), clean);
+      const isDir = clean.endsWith('/');
       const exists = isDir ? fs.existsSync(path.join(target, 'index.html')) : fs.existsSync(target);
       ok(page + ' -> ' + ref, exists, '解析到 ' + target);
     }
@@ -144,5 +146,44 @@ export function run() {
   ok('语言存储键统一为 arcade.lang', i18n.indexOf("var STORAGE_KEY = 'arcade.lang';") >= 0);
   ok('兼容旧的语言键 whaleRunner.lang', i18n.indexOf('LEGACY_KEY') >= 0);
 
+
+  /* ---------------- cache-busting：所有本地资源必须带统一版本 ---------------- */
+  {
+    const vSrc = fs.readFileSync(path.join(ROOT, 'shared/version.js'), 'utf8');
+    const mv = /var VERSION = '([^']+)'/.exec(vSrc);
+    ok('shared/version.js 提供唯一的版本常量', !!mv, mv ? mv[1] : '缺失');
+    const V = mv ? mv[1] : '0.0.0';
+    ok('版本号形如 x.y.z', /^\d+\.\d+\.\d+$/.test(V), V);
+    ok('shared/version.js 会渲染右下角版本角标',
+      /arcade-version/.test(vSrc) && /appendChild/.test(vSrc) && /ARCADE_VERSION/.test(vSrc));
+    ok('shared/arcade.css 定义了角标样式（含 pointer-events:none）',
+      /\.arcade-version\s*\{[^}]*pointer-events:\s*none/.test(
+        fs.readFileSync(path.join(ROOT, 'shared/arcade.css'), 'utf8')));
+
+    for (const page of PAGES) {
+      const html = fs.readFileSync(path.join(ROOT, page), 'utf8');
+      /* 每个本地 css/js 引用都必须带 ?v=<当前版本> */
+      const local = [];
+      const re = /(?:src|href)="([^"]+\.(?:css|js))(?:\?([^"]*))?"/g;
+      let m2;
+      while ((m2 = re.exec(html))) local.push({ url: m2[1], query: m2[2] || '' });
+      ok(page + '：本地 css/js 引用共 ' + local.length + ' 个', local.length > 0);
+      ok(page + '：所有本地 css/js 都带 ?v=' + V,
+        local.length > 0 && local.every((r) => r.query === 'v=' + V),
+        local.filter((r) => r.query !== 'v=' + V).map((r) => r.url + '?' + r.query).join(', '));
+      /* 外部 / data / 锚点 URL 绝不能带版本参数 */
+      const ext = html.match(/(?:src|href)="(?:https?:|mailto:|data:|#)[^"]*\?v=[^"]*"/g) || [];
+      ok(page + '：没有给外部 / data: URL 加无意义参数', ext.length === 0, ext.join(', '));
+      /* version.js 必须最先加载 */
+      const vi = html.indexOf('shared/version.js');
+      const ii = html.indexOf('shared/i18n.js');
+      ok(page + '：shared/version.js 在 shared/i18n.js 之前加载', vi >= 0 && vi < ii, vi + '/' + ii);
+    }
+
+    ok('提供了开发期同步脚本 tools/bump-asset-version.mjs',
+      fs.existsSync(path.join(ROOT, 'tools/bump-asset-version.mjs')));
+    const bumpSrc = fs.readFileSync(path.join(ROOT, 'tools/bump-asset-version.mjs'), 'utf8');
+    ok('同步脚本是幂等的（会吃掉已有的 ?v= 再写回）', /\?v=[^"]*/.test(bumpSrc) && /--check/.test(bumpSrc));
+  }
   return out;
 }

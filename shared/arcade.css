@@ -149,3 +149,22 @@ h1 { margin: 0; font-size: 20px; letter-spacing: 0.03em; }
   .back-row { margin-bottom: 6px; }
   .arcade-back { padding: 4px 10px; font-size: 12px; }
 }
+/* ---------------- 右下角版本角标 ----------------
+ * 纯静态站没有构建产物信息，用它一眼确认线上跑的是哪一版（cache-busting 的可见证据）。
+ * 由 shared/version.js 注入；pointer-events:none 保证它永远不会挡住任何交互。 */
+.arcade-version {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  z-index: 60;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  background: rgba(255, 255, 255, .82);
+  border: 1px solid var(--line);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

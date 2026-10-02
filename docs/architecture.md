@@ -597,12 +597,18 @@ intro → streaming → scanning → verifying → result → (streaming | gameO
 - 每条 claim 都能 Tab 聚焦、Enter / Space 选择，有清晰的 focus style；
   状态变化通过 `aria-live` 播报（**不会逐字符朗读 streaming**，只在阶段切换时播报一次完整的提示）。
 
+## 版本与 cache-busting
+
+`shared/version.js` 是全站唯一的版本常量，同时负责渲染右下角的版本角标；
+所有本地 CSS / JS 都带 `?v=<VERSION>`。发布流程与原因见 README 的「发布与缓存」一节。
+
 ## 目录结构（完整）
 
 ```text
 .
 ├── index.html / arcade.css / arcade.js   游戏大厅（GitHub Pages 首页）
 ├── shared/                               真正共用的部分
+│   ├── version.js                        全站版本常量 + 右下角版本角标
 │   ├── i18n.js                           中英词典 + 语言切换
 │   ├── audio.js                          Web Audio 音色 + 全站统一 Sound 开关
 │   ├── character.js                      角色皮肤注册表（两套皮肤）+ 懒加载 / 动画时钟 / 回退
@@ -630,6 +636,7 @@ intro → streaming → scanning → verifying → result → (streaming | gameO
 │   └── paths.test.mjs                    死链 / 绝对路径 / localStorage key 冲突
 ├── assets/whale-yunyue/                  鲸鱼娘运行时素材（19 张派生 WebP）+ ATTRIBUTION.md
 ├── tools/derive-character-assets.py      角色素材派生脚本（dev-only，运行时不用）
+├── tools/bump-asset-version.mjs          同步所有 HTML 的 ?v= 版本参数（dev-only）
 ├── LICENSES/YUNYUE-WHALE-PET-LICENSE.txt 鲸鱼娘的授权全文（自定义许可，不是 MIT）
 ├── THIRD_PARTY_NOTICES.md                第三方素材声明（代码 MIT / 素材各自的授权）
 ├── docs/                                 architecture.md · testing.md（各有 .en.md 英文版）

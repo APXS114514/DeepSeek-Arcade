@@ -45,6 +45,27 @@
 > 所有资源都走**相对路径**，所以放在 `/` 根目录或 `/DeepSeek-Arcade/` 之类的子路径下都能正常工作
 > （`test/paths.test.mjs` 会静态校验这一点）。
 
+## 发布与缓存（cache-busting）
+
+纯静态站没有构建步骤，所以所有本地 CSS / JS 都用 query-string 破缓存：
+
+```html
+<link rel="stylesheet" href="shared/arcade.css?v=1.6.2">
+<script src="game.js?v=1.6.2"></script>
+```
+
+**唯一真相来源是 [`shared/version.js`](shared/version.js) 里的 `VERSION`**，它同时负责在页面右下角渲染版本角标。
+改完静态资源后按三步发布：
+
+1. 只改 `shared/version.js` 的 `VERSION`；
+2. 跑 `node tools/bump-asset-version.mjs` —— 它会把所有 HTML 里的 `?v=` 同步成新版本（幂等，重复跑不会叠加参数）；
+3. `bash test/run.sh` —— 测试会校验「每个本地 css/js 引用都带 `?v=` 且等于当前版本」，
+   并确保没有给外部 / `data:` URL 加无意义参数。
+
+> 这一步不能省：如果只更新 HTML 而忘了改 `?v=`，浏览器会继续用旧的 CSS / JS 与**新 HTML 组成混合版本**，
+> 而 `?v=` 变化会让浏览器把资源当成新 URL 重新拉取。
+> CI 里可以跑 `node tools/bump-asset-version.mjs --check` 做只检查不写入的门禁。
+
 ## 测试
 
 ```bash

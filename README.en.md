@@ -47,6 +47,27 @@ Either:
 > Every asset is referenced with **relative paths**, so the site works from `/` or from a sub-path such as `/DeepSeek-Arcade/`
 > (enforced by `test/paths.test.mjs`).
 
+## Release and caching
+
+The site is purely static with no build step, so every local CSS / JS asset is cache-busted with a query string:
+
+```html
+<link rel="stylesheet" href="shared/arcade.css?v=1.6.2">
+<script src="game.js?v=1.6.2"></script>
+```
+
+**The single source of truth is `VERSION` in [`shared/version.js`](shared/version.js)**, which also renders the
+version badge in the bottom-right corner. After changing any static asset:
+
+1. bump `VERSION` in `shared/version.js` only;
+2. run `node tools/bump-asset-version.mjs` — it syncs every `?v=` in the HTML files (idempotent);
+3. run `bash test/run.sh` — the tests assert that **every local css/js reference carries `?v=` equal to the current
+   version** and that no external / `data:` URL gained a pointless parameter.
+
+> Do not skip this: publishing new HTML without bumping `?v=` lets browsers keep serving the old CSS / JS
+> alongside the new HTML — a mixed version. Changing `?v=` makes the browser treat the asset as a new URL.
+> CI can run `node tools/bump-asset-version.mjs --check` as a check-only gate.
+
 ## Tests
 
 ```bash
