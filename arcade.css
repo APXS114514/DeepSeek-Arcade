@@ -1,15 +1,20 @@
-/* DeepSeek Arcade 大厅专属样式（外壳见 shared/arcade.css） */
+/* DeepSeek Arcade 大厅专属样式。
+ * 页面外壳（body / .card / .sub / .btn / .arcade-back / 版本角标）与全部设计变量
+ * 都在 shared/arcade.css —— 这里只写大厅自己的东西：品牌头、游戏卡网格、缩略图。
+ *
+ * 刻意**没有**复用 shared 的 .head / .controls：那是游戏页的「标题 + 操作按钮」语义，
+ * 大厅这里是居中的品牌头部和一排工具按钮，长得像但语义不同，硬套只会变难读。 */
 
 .hero { display: flex; flex-direction: column; text-align: center; margin: 4px 0 20px; }
 
 .brand {
   margin: 0;
-  font-family: "Courier New", ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 34px;
   font-weight: 700;
   letter-spacing: 5px;
   color: var(--accent);
-  text-shadow: 3px 3px 0 rgba(77, 107, 254, 0.16);
+  text-shadow: 3px 3px 0 var(--brand-shadow);
 }
 
 .brand-underline {
@@ -20,7 +25,7 @@
   box-shadow: 12px 0 0 var(--accent), -12px 0 0 var(--accent);
 }
 
-.hero .sub { margin-top: 12px; }
+.hero .sub { margin-top: var(--space-5); }
 
 /* 顶部工具栏自己占一行（order: -1 提到标题前面）。
  * 以前它是 position: absolute 浮在右上角，标题一长就会被按钮压住 ——
@@ -30,54 +35,54 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
 }
 
 /* .btn.ghost 的 margin-left:auto 是给 .controls 里「单个靠右按钮」用的，
  * 工具栏里一排按钮再用它就会被拉开成一整行，这里取消掉。 */
 .hero-lang .btn.ghost { margin-left: 0; }
 
-.games { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: 1fr; }
+.games { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-6); grid-template-columns: 1fr; }
 
 .game {
   display: flex;
   flex-direction: column;
-  padding: 14px;
-  background: #fbfdff;
+  padding: var(--space-6);
+  background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  border-radius: var(--radius-xl);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
 }
 
-.game:hover { border-color: var(--accent); box-shadow: 0 8px 22px rgba(77, 107, 254, 0.14); }
+.game:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); }
 
 .thumb {
-  border-radius: 10px;
+  border-radius: var(--radius);
   overflow: hidden;
   background: var(--deep);
-  border: 1px solid #16305c;
+  border: 1px solid var(--deep-line);
 }
 
 .thumb canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
 
 .name {
-  margin: 12px 0 4px;
-  font-family: "Courier New", ui-monospace, monospace;
+  margin: var(--space-5) 0 var(--space-1);
+  font-family: var(--font-mono);
   font-size: 18px;
   letter-spacing: 1.5px;
 }
 
-.desc { margin: 0; font-size: 13px; color: var(--muted); }
+.desc { margin: 0; font-size: var(--font-md); color: var(--muted); }
 
-.foot { margin-top: auto; padding-top: 14px; display: flex; align-items: flex-end; gap: 12px; }
+.foot { margin-top: auto; padding-top: var(--space-6); display: flex; align-items: flex-end; gap: var(--space-5); }
 
 .hi { margin: 0; font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
 .hi b {
   display: block;
   margin-top: 2px;
-  font-family: "Courier New", ui-monospace, monospace;
-  font-size: 20px;
+  font-family: var(--font-mono);
+  font-size: var(--font-2xl);
   color: var(--accent);
 }
 
@@ -86,24 +91,24 @@
 
 /* 五款游戏之后的那句“以后再说”，不做成假卡片 */
 .more-note {
-  margin: 16px 0 0;
+  margin: var(--space-7) 0 0;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--font-sm);
   letter-spacing: 1px;
   color: var(--muted);
 }
 
-.lobby-foot { margin: 18px 0 0; font-size: 12px; line-height: 1.7; color: var(--muted); text-align: center; }
+.lobby-foot { margin: var(--space-8) 0 0; font-size: var(--font-sm); line-height: 1.7; color: var(--muted); text-align: center; }
 
 @media (min-width: 760px) {
-  .games { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .games { grid-template-columns: 1fr 1fr; gap: var(--space-7); }
 }
 
 @media (max-width: 720px) {
   .brand { font-size: 24px; letter-spacing: 3px; }
-  .brand-underline { width: 56px; margin-top: 8px; }
-  .hero { margin-bottom: 14px; }
-  .hero-lang { margin-bottom: 8px; }
+  .brand-underline { width: 56px; margin-top: var(--space-3); }
+  .hero { margin-bottom: var(--space-6); }
+  .hero-lang { margin-bottom: var(--space-3); }
   .hero-lang .btn { flex: 1 1 0; width: auto; }
   .foot .play { min-width: 96px; }
 }

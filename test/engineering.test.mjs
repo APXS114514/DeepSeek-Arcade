@@ -560,9 +560,11 @@ export function run() {
         if (!owners.get(m[1]).includes(f)) owners.get(m[1]).push(f);
       }
     }
-    const dupes = [...owners.entries()].filter(([, files]) => files.length > 1);
-    ok('同一个设计变量不在多个文件里重复定义', dupes.length === 0,
-      dupes.map(([t, files]) => t + '@' + files.join('|')).join(', '));
+    /* 只约束公共变量：游戏本地的参数型变量（--hunt-* 这类）是各玩法的私有语义，
+     * 不该被误判成「重复定义」。 */
+    const redefine = defined.filter((t) => (owners.get(t) || []).some((f) => f !== 'shared/arcade.css'));
+    ok('公共设计变量只在 shared/arcade.css 定义一次（游戏本地不另起一套）',
+      redefine.length === 0, redefine.join(', '));
   }
 
   return out;

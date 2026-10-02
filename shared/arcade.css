@@ -19,6 +19,7 @@
   --card-bg: #ffffff;            /* 卡片 / 面板 / 浮起的白色面 */
   --surface: #f2f7fc;            /* 次级面：按钮默认底 */
   --surface-hover: #e8f0f8;      /* 次级面 hover */
+  --surface-soft: #fbfdff;       /* 更靠近白的面：大厅卡片底 */
   --text: #16324f;               /* 主文字 */
   --muted: #6b8299;              /* 次要文字 */
   --text-accent: #46618a;        /* 强调文字：比 muted 深、比 text 浅 */
@@ -26,12 +27,15 @@
   --accent: #4d6bfe;             /* 品牌主色（= theme-color） */
   --accent-dark: #3d5be8;        /* 主色 hover */
   --accent-ghost: #f4f8ff;       /* hover 时的极淡蓝面 */
+  --brand-shadow: rgba(77, 107, 254, 0.16);   /* 品牌字的实心投影 */
   --deep: #08152c;               /* 深海蓝：贪吃蛇场地、缩略图底、大厅深色块 */
+  --deep-line: #16305c;          /* 深色面上的描边 */
   --focus-ring: var(--accent);   /* 键盘焦点环颜色 */
 
   /* ---------- 圆角 ---------- */
   --radius-sm: 8px;
   --radius: 10px;
+  --radius-xl: 14px;
   --radius-2xl: 18px;
   --radius-pill: 999px;
 
@@ -52,6 +56,7 @@
   /* ---------- 排版 ---------- */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "Courier New", ui-monospace, monospace;   /* 街机/终端味的展示字体 */
   --font-sm: 12px;
   --font-md: 13px;
   --font-lg: 15px;
@@ -60,6 +65,7 @@
 
   /* ---------- 阴影 / 过渡 ---------- */
   --shadow: 0 12px 34px rgba(20, 55, 100, 0.13);
+  --shadow-hover: 0 8px 22px rgba(77, 107, 254, 0.14);
   --transition: .15s ease;
 }
 
