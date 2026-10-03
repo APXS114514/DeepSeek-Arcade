@@ -166,22 +166,66 @@
   }
 
   /* ---------------- 6) FABRICATED_DETAIL ----------------
-   * 追加一条**凭空捏造的出处/精度细节**。它不是「改写事实」，而是「伪造来源」，
-   * 这正是模型幻觉最典型的一种形态。 */
+   * 追加一条**凭空捏造的出处/精度细节**。这一类 mutation 很容易变成“固定坏人
+   * 后缀”，所以只允许出现在语义能承受这种附加说明的 claim 上：
+   *   - 显式数值 claim -> measurement
+   *   - 带明确年份的历史 claim -> archival
+   * 其它普通身份/关系陈述一律不硬贴“测量项目/误差范围”之类来源。 */
   var FABRICATED = {
-    zh: ['，这一数据由 1997 年的国际测量项目确认。', '，其误差范围不超过 0.1%。', '，该记录最早见于 19 世纪的一份手稿。'],
-    en: [' — a figure confirmed by a 1997 international survey.',
-      ', with a margin of error under 0.1%.',
-      ' — first recorded in a 19th-century manuscript.']
+    zh: {
+      measurement: [
+        '，后续的一次独立复测给出了相同的数值。',
+        '，一份技术附录还声称其误差范围低于 0.2%。',
+        '，该数值据称在另一组仪器复核中保持不变。',
+        '，一份跨机构复核记录也列出了这一结果。'
+      ],
+      archival: [
+        '，一份后来整理的档案抄本也记载了这一事件。',
+        '，该说法据称还能在一份未署名的同期记录中找到。',
+        '，后来的编年材料也重复了这一记载。',
+        '，一份馆藏目录将这一细节列为已经确认的记录。'
+      ]
+    },
+    en: {
+      measurement: [
+        ', and a later independent remeasurement reportedly produced the same figure.',
+        ', with a technical appendix claiming an uncertainty below 0.2%.',
+        ', and the value was reportedly unchanged in a separate instrument check.',
+        ', with a cross-institution review also listing the same result.'
+      ],
+      archival: [
+        ', and a later archival copy reportedly records the same event.',
+        ', with the same claim supposedly appearing in an unsigned contemporary record.',
+        ', and a later chronicle reportedly repeats the same account.',
+        ', with a collection catalogue treating this detail as a confirmed record.'
+      ]
+    }
   };
-  function fabricatedApply(claim, rng, lang) {
-    var base = render(claim.t, claim.s);
-    var pool = FABRICATED[lang] || FABRICATED.en;
+  function fabricatedKind(fact, claim, lang) {
+    if (!claim) return null;
+    if (claim.num && claim.s && claim.s.n !== undefined) return 'measurement';
+    if (fact && fact.category === 'history' && YEAR_RE.test(render(claim.t, claim.s))) return 'archival';
+    return null;
+  }
+  function stripTerminalPunctuation(text, lang) {
+    var base = String(text || '').replace(/\s+$/, '');
+    return lang === 'zh'
+      ? base.replace(/[。！？!?]+$/, '')
+      : base.replace(/[.!?]+$/, '');
+  }
+  function fabricatedApply(claim, rng, lang, fact) {
+    var kind = fabricatedKind(fact, claim, lang);
+    if (!kind) return null;
+    var groups = FABRICATED[lang] || FABRICATED.en;
+    var pool = groups[kind] || [];
     var add = rng.pick(pool);
     if (!add) return null;
-    var text = base.replace(/\s+$/, '') + add;
+    var base = render(claim.t, claim.s);
+    var text = stripTerminalPunctuation(base, lang) + add;
     if (text === base) return null;
-    return { text: text, meta: { type: 'FABRICATED_DETAIL', original: '', replacement: add.trim() } };
+    return { text: text, meta: {
+      type: 'FABRICATED_DETAIL', original: '', replacement: add.trim(), detailKind: kind
+    } };
   }
 
   /* ---------------- 7) CONTRADICTION ----------------
@@ -251,7 +295,7 @@
       },
       apply: negationApply },
     { type: 'FABRICATED_DETAIL', minLoad: 4,
-      canApply: function () { return true; },
+      canApply: function (f, c, l) { return fabricatedKind(f, c, l) !== null; },
       apply: fabricatedApply },
     { type: 'CONTRADICTION', minLoad: 5,
       canApply: function (f, c) { return hasAlt(c); },
