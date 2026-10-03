@@ -134,7 +134,7 @@
     var order = rng.shuffle(pool);
     for (var i = 0; i < order.length; i++) {
       var r = null;
-      try { r = order[i].apply(claim.src, rng, lang); } catch (e) { r = null; }
+      try { r = order[i].apply(claim.src, rng, lang, fact); } catch (e) { r = null; }
       if (r && typeof r.text === 'string' && r.text && r.text !== claim.canonical) return r;
     }
     return null;
