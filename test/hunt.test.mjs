@@ -134,7 +134,7 @@ export function run() {
             try { can = !!mut.canApply(fact, claim, lang); } catch (e) { throwCount++; }
             if (!can) continue;
             let res = null;
-            try { res = mut.apply(claim, RNG.create(i * 131 + lang.length), lang); } catch (e) { throwCount++; }
+            try { res = mut.apply(claim, RNG.create(i * 131 + lang.length), lang, fact); } catch (e) { throwCount++; }
             if (!res) continue;
             const canonical = M.render(claim.t, claim.s);
             if (!res.text || !res.text.trim()) emptyCount++;
@@ -194,12 +194,36 @@ export function run() {
       if (!/not|no |cannot|不|没/.test(p.text)) negOk = false;
     }
     ok('NEGATION：语义真的被否定（文本变长且出现否定词）', negOk && negSeen > 0, String(negSeen));
-    let fabOk = true, fabSeen = 0;
+    let fabOk = true, fabSeen = 0, fabPunct = 0, fabBadGiveaway = 0;
     for (const p of (byType.FABRICATED_DETAIL || [])) {
       fabSeen++;
       if (p.text.length <= p.canonical.length) fabOk = false;
+      if (/。\s*，|[.!?]\s*,/.test(p.text)) fabPunct++;
+      if (/1997 年的国际测量项目|1997 international survey/i.test(p.text)) fabBadGiveaway++;
     }
-    ok('FABRICATED_DETAIL：追加了额外细节', fabOk && fabSeen > 0, String(fabSeen));
+    ok('FABRICATED_DETAIL：只给适配的 claim 追加额外细节', fabOk && fabSeen > 0, String(fabSeen));
+    ok('FABRICATED_DETAIL：不会产生句号后逗号的双标点', fabPunct === 0, String(fabPunct));
+    ok('FABRICATED_DETAIL：不再出现固定的 1997 国际测量项目 giveaway', fabBadGiveaway === 0, String(fabBadGiveaway));
+
+    /* 回归：普通历史身份/关系陈述不能再被硬贴“测量项目”式伪来源。 */
+    {
+      const hist = C.facts.find((f) => f.id && f.id.indexOf('constantinople') >= 0) ||
+        C.facts.find((f) => f.zh && f.zh.topic === '君士坦丁堡');
+      const fm = M.MUTATORS.find((m) => m.type === 'FABRICATED_DETAIL');
+      let relationRejected = true, datedAccepted = false;
+      if (hist && fm) {
+        for (let i = 0; i < hist.zh.claims.length; i++) {
+          const c = hist.zh.claims[i];
+          const text = M.render(c.t, c.s);
+          const hasYear = /(?:^|[^0-9])(1[0-9]{3}|20[0-9]{2})(?![0-9])/.test(text);
+          const can = fm.canApply(hist, c, 'zh');
+          if (!hasYear && can) relationRejected = false;
+          if (hasYear && can) datedAccepted = true;
+        }
+      }
+      ok('君士坦丁堡：普通关系句不会吃到 FABRICATED_DETAIL，带年份事件仍可使用档案型细节',
+        relationRejected && datedAccepted, String(!!hist) + '/' + relationRejected + '/' + datedAccepted);
+    }
     ok('CONTRADICTION：会额外带一条原文 claim',
       (byType.CONTRADICTION || []).every((p) => !!p.meta.extraClaim), String((byType.CONTRADICTION || []).length));
   }
