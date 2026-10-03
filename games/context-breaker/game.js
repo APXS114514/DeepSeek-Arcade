@@ -719,6 +719,10 @@
     if (k === 'ArrowLeft' || k === 'KeyA' || k === 'a' || k === 'A') game.input.left = false;
     if (k === 'ArrowRight' || k === 'KeyD' || k === 'd' || k === 'D') game.input.right = false;
   }
+  function releaseHeldInput() {
+    game.input.left = false;
+    game.input.right = false;
+  }
 
   function hold(el, on, off) {
     if (!el || !el.addEventListener) return;
@@ -782,12 +786,19 @@
       doc.addEventListener('keydown', onKeyDown);
       doc.addEventListener('keyup', onKeyUp);
       doc.addEventListener('visibilitychange', function () {
-        if (doc.hidden && game.state === 'playing') { togglePause(true); syncButtons(); }
+        if (doc.hidden) {
+          releaseHeldInput();
+          if (game.state === 'playing') { togglePause(true); syncButtons(); }
+        }
       });
     }
     if (window.addEventListener) {
-      /* 失焦也暂停：沿用项目惯例，回来不会自己继续 */
-      window.addEventListener('blur', function () { if (game.state === 'playing') { togglePause(true); syncButtons(); } });
+      /* 失焦也暂停；同时清掉持续方向输入，避免 keyup/pointerup 丢失后挡板自己跑。 */
+      window.addEventListener('blur', function () {
+        releaseHeldInput();
+        if (game.state === 'playing') { togglePause(true); syncButtons(); }
+      });
+      window.addEventListener('pagehide', releaseHeldInput);
     }
     if (I18N && I18N.onChange) I18N.onChange(function () { syncSound(); syncButtons(); });
     if (Character && Character.onChange) Character.onChange(function () { /* 下一帧自动重画 */ });

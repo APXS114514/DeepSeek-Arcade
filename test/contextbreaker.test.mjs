@@ -325,14 +325,20 @@ export function run() {
     b.tick(2);
     b.key('keydown', ' ', 'Space');
     b.tick(3);
+    b.key('keydown', 'ArrowRight', 'ArrowRight');
+    ok('按住右方向时输入状态会置位', b.G.input.right === true);
     b.doc.hidden = true;
     b.fireDoc('visibilitychange');
     b.tick(2);
     ok('切走标签页自动暂停', b.G.state === 'paused', b.G.state);
+    ok('切走标签页会释放持续方向输入', !b.G.input.left && !b.G.input.right);
     b.doc.hidden = false;
     b.fireDoc('visibilitychange');
+    b.key('keydown', 'ArrowLeft', 'ArrowLeft');
+    ok('暂停状态下按住左方向仍会记录输入', b.G.input.left === true);
     b.fireWin('blur');
     ok('失焦也保持暂停（不会自己继续）', b.G.state === 'paused', b.G.state);
+    ok('失焦会释放持续方向输入', !b.G.input.left && !b.G.input.right);
   }
 
   /* ================= L. 高分持久化与 key 隔离 ================= */

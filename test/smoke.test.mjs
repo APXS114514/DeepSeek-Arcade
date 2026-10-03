@@ -70,6 +70,20 @@ export function run() {
     ok('切走自动暂停', b.log.texts.some((s) => s.indexOf('已暂停') >= 0));
     b.doc.hidden = false; b.fireDoc('visibilitychange');
   }
+  {
+    const b = harness({ exposeGame: true });
+    b.key('keydown', ' ', 'Space'); b.tick(2);
+    b.key('keydown', 'ArrowDown', 'ArrowDown'); b.tick(2);
+    ok('按住下潜时 ducking / crouch 都会置位', b.G.player.ducking && b.G.player.crouch);
+    b.doc.hidden = true; b.fireDoc('visibilitychange');
+    ok('切走标签页会释放持续下潜输入', !b.G.player.ducking && !b.G.player.crouch);
+    b.doc.hidden = false; b.fireDoc('visibilitychange');
+    b.key('keydown', ' ', 'Space');
+    b.key('keydown', 'ArrowDown', 'ArrowDown');
+    ok('恢复后仍能再次按住下潜', b.G.player.ducking);
+    b.fireWin('blur');
+    ok('窗口失焦也会释放持续下潜输入', !b.G.player.ducking);
+  }
 
   /* C. 按钮与触摸 */
   {

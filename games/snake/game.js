@@ -342,7 +342,18 @@
   var stopped = false;
   function stopLoop() { stopped = true; }
   document.addEventListener('pagehide', stopLoop);
-  if (window.addEventListener) window.addEventListener('pagehide', stopLoop);
+  if (window.addEventListener) {
+    window.addEventListener('pagehide', stopLoop);
+    /* BFCache 会保留整个 JS 上下文：pagehide 停掉 rAF 后，pageshow 必须显式接回来。
+     * 普通首次 pageshow 时 stopped=false，不会重复启动第二条循环。 */
+    window.addEventListener('pageshow', function () {
+      if (!stopped) return;
+      stopped = false;
+      last = 0;
+      acc = 0;
+      requestAnimationFrame(frame);
+    });
+  }
 
   updateSoundButton();
 

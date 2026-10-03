@@ -269,6 +269,10 @@ export function run() {
     b.tick(1);
     ok('离开页面后不再排队 rAF', !b.hasPendingRaf());
     ok('离开页面过程无异常', b.errors.length === 0, b.errors[0]);
+    b.fireWin('pageshow');
+    ok('BFCache 返回后重新排队 rAF', b.hasPendingRaf());
+    b.tick(2);
+    ok('BFCache 返回后循环继续且无异常', b.hasPendingRaf() && b.errors.length === 0, b.errors[0]);
   }
 
   /* ---------- i18n 关键文案（三种状态下都取得到） ---------- */

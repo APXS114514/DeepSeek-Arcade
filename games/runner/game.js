@@ -578,9 +578,26 @@
   canvas.addEventListener('pointerdown', function (e) { e.preventDefault(); doJump(); });
   canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
 
+  /* 持续输入必须在失焦时主动释放：浏览器切标签页/切应用时不保证会补发 keyup/pointerup。
+   * 否则按住 ↓ / S / 下潜按钮切走，再回来会一直保持 ducking=true。 */
+  function releaseHeldInput() {
+    var p = game.player;
+    p.ducking = false;
+    if (p.onGround && p.crouch) {
+      p.crouch = false;
+      p.y = GROUND_Y - WHALE_H;
+    }
+  }
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden && game.state === 'running') game.state = 'paused';
+    if (document.hidden) {
+      releaseHeldInput();
+      if (game.state === 'running') game.state = 'paused';
+    }
   });
+  if (window.addEventListener) {
+    window.addEventListener('blur', releaseHeldInput);
+    window.addEventListener('pagehide', releaseHeldInput);
+  }
 
   updateSoundButton();
 
