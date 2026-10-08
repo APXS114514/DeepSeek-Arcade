@@ -194,35 +194,48 @@ export function run() {
       if (!/not|no |cannot|不|没/.test(p.text)) negOk = false;
     }
     ok('NEGATION：语义真的被否定（文本变长且出现否定词）', negOk && negSeen > 0, String(negSeen));
-    let fabOk = true, fabSeen = 0, fabPunct = 0, fabBadGiveaway = 0;
+    let fabOk = true, fabSeen = 0, fabPunct = 0, fabHedge = 0, fabUndecidable = 0;
+    const HEDGE = /据称|声称|据说|reportedly|supposedly|claiming|allegedly/i;
     for (const p of (byType.FABRICATED_DETAIL || [])) {
       fabSeen++;
       if (p.text.length <= p.canonical.length) fabOk = false;
-      if (/。\s*，|[.!?]\s*,/.test(p.text)) fabPunct++;
-      if (/1997 年的国际测量项目|1997 international survey/i.test(p.text)) fabBadGiveaway++;
+      if (/[.。!！?？]\s*[”’"')）」』]*\s*(?:[，；,;]|, and )/.test(p.text)) fabPunct++;
+      if (HEDGE.test(p.text) && !HEDGE.test(p.canonical)) fabHedge++;
+      /* 可判定：附加细节必须是一条把正确值换成错误值的具体陈述 */
+      const d = p.meta && p.meta.detail;
+      if (!d || !p.meta.original || !p.meta.replacement || p.meta.original === p.meta.replacement ||
+        d.indexOf(p.meta.replacement) < 0 || p.text.indexOf(d.replace(/^(The|A|An|It|In|At|On|Its) /, (m) => m.toLowerCase())) < 0) fabUndecidable++;
     }
     ok('FABRICATED_DETAIL：只给适配的 claim 追加额外细节', fabOk && fabSeen > 0, String(fabSeen));
-    ok('FABRICATED_DETAIL：不会产生句号后逗号的双标点', fabPunct === 0, String(fabPunct));
-    ok('FABRICATED_DETAIL：不再出现固定的 1997 国际测量项目 giveaway', fabBadGiveaway === 0, String(fabBadGiveaway));
+    ok('FABRICATED_DETAIL：不会产生句号后接连接符的双标点（含收尾引号的情况）', fabPunct === 0, String(fabPunct));
+    ok('FABRICATED_DETAIL：不引入“据称/reportedly”之类原文没有的模糊词', fabHedge === 0, String(fabHedge));
+    ok('FABRICATED_DETAIL：附加细节是可判定的错误陈述', fabUndecidable === 0, String(fabUndecidable));
 
-    /* 回归：普通历史身份/关系陈述不能再被硬贴“测量项目”式伪来源。 */
+    /* 回归：遍历全部 fact 的中英两侧，FABRICATED_DETAIL 产出的附加细节都来自同 fact
+     * 兄弟 claim 的错误值替换，不再出现与 claim 语义无关的“复测/误差/编年”套话。 */
     {
-      const hist = C.facts.find((f) => f.id && f.id.indexOf('constantinople') >= 0) ||
-        C.facts.find((f) => f.zh && f.zh.topic === '君士坦丁堡');
       const fm = M.MUTATORS.find((m) => m.type === 'FABRICATED_DETAIL');
-      let relationRejected = true, datedAccepted = false;
-      if (hist && fm) {
-        for (let i = 0; i < hist.zh.claims.length; i++) {
-          const c = hist.zh.claims[i];
-          const text = M.render(c.t, c.s);
-          const hasYear = /(?:^|[^0-9])(1[0-9]{3}|20[0-9]{2})(?![0-9])/.test(text);
-          const can = fm.canApply(hist, c, 'zh');
-          if (!hasYear && can) relationRejected = false;
-          if (hasYear && can) datedAccepted = true;
+      const BOILER = /复测|误差范围|仪器|编年|档案|remeasurement|uncertainty|instrument|chronicle|archival|1997/i;
+      let applied = 0, boiler = 0, selfDonor = 0;
+      const rng = RNG.create(77);
+      for (const f of C.facts) {
+        for (const lang of ['zh', 'en']) {
+          for (const c of f[lang].claims) {
+            if (!fm.canApply(f, c, lang)) continue;
+            const r = fm.apply(c, rng, lang, f);
+            if (!r) continue;
+            applied++;
+            const base = M.render(c.t, c.s);
+            if (BOILER.test(r.text) && !BOILER.test(base) && !f[lang].claims.some((x) => BOILER.test(M.render(x.t, x.s)))) boiler++;
+            if (r.meta.detail === M.render(c.t, Object.assign({}, c.s, { [M.valueSlot(c)]: r.meta.replacement }))) selfDonor++;
+          }
         }
       }
-      ok('君士坦丁堡：普通关系句不会吃到 FABRICATED_DETAIL，带年份事件仍可使用档案型细节',
-        relationRejected && datedAccepted, String(!!hist) + '/' + relationRejected + '/' + datedAccepted);
+      ok('FABRICATED_DETAIL：全库中英两侧都只用同 fact 兄弟 claim 造细节', applied > 0 && boiler === 0 && selfDonor === 0,
+        applied + '/' + boiler + '/' + selfDonor);
+      ok('stripTerminalPunctuation：保留收尾引号、去掉句末标点',
+        M.stripTerminalPunctuation('他说“好。”') === '他说“好”' && M.stripTerminalPunctuation('It is here.') === 'It is here' &&
+        M.stripTerminalPunctuation('无标点') === '无标点' && M.stripTerminalPunctuation('(see above.)') === '(see above)');
     }
     ok('CONTRADICTION：会额外带一条原文 claim',
       (byType.CONTRADICTION || []).every((p) => !!p.meta.extraClaim), String((byType.CONTRADICTION || []).length));
