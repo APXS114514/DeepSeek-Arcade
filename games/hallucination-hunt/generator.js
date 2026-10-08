@@ -250,7 +250,7 @@
         if (!c.replacement) errors.push('claim ' + i + ' 缺少 replacement');
         if (typeof c.canonical !== 'string' || c.canonical === c.text) errors.push('claim ' + i + ' 的 mutation 与原文相同');
         if (String(c.canonical).trim() === String(c.text).trim()) errors.push('claim ' + i + ' 的 mutation 无法判定');
-        if (c.mutationType !== 'FABRICATED_DETAIL' && !c.original) errors.push('claim ' + i + ' 缺少 original');
+        if (!c.original) errors.push('claim ' + i + ' 缺少 original');
       }
     }
 
@@ -280,7 +280,7 @@
         mutationType: null, original: null, replacement: null };
     });
     var target = claims[0];
-    var res = MUT.MUTATORS[0].apply(target.src, rng, lang) ||
+    var res = MUT.MUTATORS[0].apply(target.src, rng, lang, fact) ||
       { text: target.canonical + ' ', meta: { type: 'ENTITY_SWAP', original: '?', replacement: '?' } };
     target.text = res.text;
     target.isHallucination = true;

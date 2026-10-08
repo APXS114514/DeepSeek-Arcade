@@ -4,8 +4,11 @@
  * 职责：把**真实事实**（canonical claim）自动改造成一条看起来合理、但事实上
  * 错误的 claim。不手写错误答案 —— 所有 hallucination 都是程序从正确文本里造出来的。
  *
- * 每个 mutator 都是纯函数：apply(claim, rng, lang) -> { text, meta } | null
- * 返回 null = 这条 claim 不适用（Validator 会跳过）。
+ * 每个 mutator 都是纯函数：
+ *   canApply(fact, claim, lang) -> boolean
+ *   apply(claim, rng, lang, fact) -> { text, meta } | null
+ * fact 是 claim 所属的整条事实；FABRICATED_DETAIL 需要它取同一 fact 的其它 claim，
+ * 所以调用方必须传。返回 null = 这条 claim 不适用（Validator 会跳过）。
  *
  * meta 统一带：{ type, original, replacement }，供 UI 展示与测试断言。
  * ============================================================ */
@@ -166,65 +169,55 @@
   }
 
   /* ---------------- 6) FABRICATED_DETAIL ----------------
-   * 追加一条**凭空捏造的出处/精度细节**。这一类 mutation 很容易变成“固定坏人
-   * 后缀”，所以只允许出现在语义能承受这种附加说明的 claim 上：
-   *   - 显式数值 claim -> measurement
-   *   - 带明确年份的历史 claim -> archival
-   * 其它普通身份/关系陈述一律不硬贴“测量项目/误差范围”之类来源。 */
-  var FABRICATED = {
-    zh: {
-      measurement: [
-        '，后续的一次独立复测给出了相同的数值。',
-        '，一份技术附录还声称其误差范围低于 0.2%。',
-        '，该数值据称在另一组仪器复核中保持不变。',
-        '，一份跨机构复核记录也列出了这一结果。'
-      ],
-      archival: [
-        '，一份后来整理的档案抄本也记载了这一事件。',
-        '，该说法据称还能在一份未署名的同期记录中找到。',
-        '，后来的编年材料也重复了这一记载。',
-        '，一份馆藏目录将这一细节列为已经确认的记录。'
-      ]
-    },
-    en: {
-      measurement: [
-        ', and a later independent remeasurement reportedly produced the same figure.',
-        ', with a technical appendix claiming an uncertainty below 0.2%.',
-        ', and the value was reportedly unchanged in a separate instrument check.',
-        ', with a cross-institution review also listing the same result.'
-      ],
-      archival: [
-        ', and a later archival copy reportedly records the same event.',
-        ', with the same claim supposedly appearing in an unsigned contemporary record.',
-        ', and a later chronicle reportedly repeats the same account.',
-        ', with a collection catalogue treating this detail as a confirmed record.'
-      ]
-    }
-  };
-  function fabricatedKind(fact, claim, lang) {
-    if (!claim) return null;
-    if (claim.num && claim.s && claim.s.n !== undefined) return 'measurement';
-    if (fact && fact.category === 'history' && YEAR_RE.test(render(claim.t, claim.s))) return 'archival';
-    return null;
+   * 在一条**真实** claim 后面捎带一个捏造的附加细节。细节不再从固定后缀池里抽
+   * （那样要么是“1997 国际测量项目”式的固定 giveaway，要么是“据称/reportedly”
+   * 这类模糊词 —— 原始事实从不用这些词，玩家扫关键词就能找出幻觉；而且“后来
+   * 有人复核过”这种说法往往是真的或无从证伪，题目就判不了）。
+   *
+   * 现在的做法：从同一 fact 的**另一条带 alt 的 claim** 里取材，把它的值换成
+   * 错误的同类值，再接到当前 claim 后面。于是：
+   *   - 附加细节是具体、确定的错误陈述（可判定）；
+   *   - 用词全部来自题库本身，没有专属于这个 mutator 的固定词；
+   *   - 不论数值还是年份都不需要再猜“这个数是不是测量值”。 */
+  var DETAIL_JOIN = { zh: ['，', '；'], en: [', and ', '; '] };
+
+  function sameSideClaims(fact, lang) {
+    var side = fact && (fact[lang] || fact.en || fact.zh);
+    return (side && side.claims) || [];
   }
-  function stripTerminalPunctuation(text, lang) {
-    var base = String(text || '').replace(/\s+$/, '');
-    return lang === 'zh'
-      ? base.replace(/[。！？!?]+$/, '')
-      : base.replace(/[.!?]+$/, '');
+  /* 同一 fact、同一语言里能造出错误细节的兄弟 claim（排除自己） */
+  function detailDonors(fact, claim, lang) {
+    if (!claim) return [];
+    var self = render(claim.t, claim.s);
+    return sameSideClaims(fact, lang).filter(function (c) {
+      return c && c !== claim && hasAlt(c) && render(c.t, c.s) !== self;
+    });
+  }
+  /* 去掉句末标点；若句末是收尾引号/括号，把它们保留下来，只删其前面的标点 */
+  function stripTerminalPunctuation(text) {
+    var m = /^([\s\S]*?)([.。!！?？]*)([”’"')）」』]*)\s*$/.exec(String(text || ''));
+    if (!m) return String(text || '');
+    var body = m[1], punct = m[2], closers = m[3];
+    if (!closers) return body;
+    /* 引号里的句子：句号在引号内属于引文本身，只去掉引号外的部分 */
+    return body + punct.replace(/[.。!！?？]+$/, '') + closers;
+  }
+  function lowerLead(text) {
+    return /^(The|A|An|It|In|At|On|Its) /.test(text) ? text.charAt(0).toLowerCase() + text.slice(1) : text;
   }
   function fabricatedApply(claim, rng, lang, fact) {
-    var kind = fabricatedKind(fact, claim, lang);
-    if (!kind) return null;
-    var groups = FABRICATED[lang] || FABRICATED.en;
-    var pool = groups[kind] || [];
-    var add = rng.pick(pool);
-    if (!add) return null;
-    var base = render(claim.t, claim.s);
-    var text = stripTerminalPunctuation(base, lang) + add;
-    if (text === base) return null;
+    var donors = detailDonors(fact, claim, lang);
+    if (!donors.length) return null;
+    var donor = rng.pick(donors);
+    var swapped = swapApply(donor, rng, lang, 'FABRICATED_DETAIL');
+    if (!swapped) return null;
+    var joins = DETAIL_JOIN[lang] || DETAIL_JOIN.en;
+    var join = rng.pick(joins);
+    var detail = lang === 'zh' ? swapped.text : lowerLead(swapped.text);
+    var text = stripTerminalPunctuation(render(claim.t, claim.s)) + join + detail;
     return { text: text, meta: {
-      type: 'FABRICATED_DETAIL', original: '', replacement: add.trim(), detailKind: kind
+      type: 'FABRICATED_DETAIL', original: swapped.meta.original, replacement: swapped.meta.replacement,
+      slot: swapped.meta.slot, detail: swapped.text
     } };
   }
 
@@ -295,7 +288,7 @@
       },
       apply: negationApply },
     { type: 'FABRICATED_DETAIL', minLoad: 4,
-      canApply: function (f, c, l) { return fabricatedKind(f, c, l) !== null; },
+      canApply: function (f, c, l) { return detailDonors(f, c, l).length > 0; },
       apply: fabricatedApply },
     { type: 'CONTRADICTION', minLoad: 5,
       canApply: function (f, c) { return hasAlt(c); },
@@ -308,6 +301,7 @@
     placeholders: placeholders,
     valueSlot: valueSlot,
     semanticSwapLabel: semanticSwapLabel,
+    stripTerminalPunctuation: stripTerminalPunctuation,
     types: function () { return MUTATORS.map(function (m) { return m.type; }); }
   };
 })(window);
